@@ -19,10 +19,10 @@ public class Protocol {
     @Column(name = "protocol_uri", nullable = false)
     private String protocolUri;
 
-    // Many-to-One to Employee
+    // Many-to-One to Employee (now User)
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "employee_id", nullable = false)
-    private Employee employee;
+    private User employee;
 
     // Many-to-One to Organization
     @ManyToOne(fetch = FetchType.LAZY)

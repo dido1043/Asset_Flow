@@ -4,8 +4,6 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.util.List;
-
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -16,6 +14,5 @@ public class ProductDto {
     private String productModel;
     private String assetTag;
     private Long organizationId;
-    private List<Long> assignmentIds;
 }
 

@@ -22,15 +22,15 @@ public class Organization {
     @Column(name = "organization_name", unique = true, nullable = false)
     private String organizationName;
 
-    // One-to-One or Many-to-One relationship with Leader
+    // One-to-One or Many-to-One relationship with Leader (now User)
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "leader_id")
-    private Leader leader;
+    private User leader;
 
-    // One-to-Many: Organization owns many Employees
+    // One-to-Many: Organization owns many Employees (now Users)
     @OneToMany(mappedBy = "organization", cascade = CascadeType.ALL)
     @JsonIgnore // Prevent infinite recursion in JSON
-    private List<Employee> employees;
+    private List<User> employees;
 
     // One-to-Many: Organization owns many Products (Inventory)
     @OneToMany(mappedBy = "organization", cascade = CascadeType.ALL)

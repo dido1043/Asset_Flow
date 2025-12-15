@@ -21,7 +21,7 @@ public class Assignment {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "employee_id", nullable = false)
     @JsonIgnore
-    private Employee employee;
+    private User employee;
 
     // Many-to-One: Assignment is linked to one Product
     @ManyToOne(fetch = FetchType.LAZY)

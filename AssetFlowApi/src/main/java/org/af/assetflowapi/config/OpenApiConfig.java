@@ -13,6 +13,7 @@ public class OpenApiConfig {
                         .title("Assert Flow API Documentation")
                         .version("1.0.0")
                         .description("Documentation for the API endpoints."));
+
     }
 }
 
