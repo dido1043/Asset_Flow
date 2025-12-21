@@ -3,10 +3,9 @@ package org.af.assetflowapi.data.model;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
+import org.af.assetflowapi.data.enums.AuthProvider;
 import org.af.assetflowapi.data.enums.RoleEnum;
-import org.jspecify.annotations.Nullable;
 import org.springframework.security.core.GrantedAuthority;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
 import java.util.Collection;
@@ -29,7 +28,7 @@ public class User implements UserDetails {
     @Column(name = "email", nullable = false, unique = true)
     private String email;
 
-    @Column(name = "password", nullable = false)
+    @Column(name = "password")
     private String password;
 
     @Column(name= "role", nullable = false)
@@ -38,6 +37,10 @@ public class User implements UserDetails {
 
     @Column(name = "age")
     private Integer age;
+
+    @Column(name = "provider_type" , length = 50)
+    @Enumerated(EnumType.STRING)
+    private AuthProvider providerType;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "organization_id", nullable = true)
@@ -49,6 +52,7 @@ public class User implements UserDetails {
     private List<Assignment> assignments;
 
 
+
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
         return List.of();
@@ -56,7 +60,7 @@ public class User implements UserDetails {
 
     @Override
     public String getUsername() {
-        return "";
+        return email;
     }
 
     @Override
