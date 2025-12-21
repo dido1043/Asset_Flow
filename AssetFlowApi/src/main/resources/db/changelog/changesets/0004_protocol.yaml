@@ -1,0 +1,31 @@
+databaseChangeLog:
+  - changeSet:
+      id: 0004-create-protocol
+      author: dev
+      preConditions:
+        - onFail: MARK_RAN
+        - not:
+            - tableExists:
+                tableName: protocol
+      changes:
+        - createTable:
+            tableName: protocol
+            columns:
+              - column:
+                  name: id
+                  type: BIGINT
+                  autoIncrement: true
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: protocol_uri
+                  type: VARCHAR(1024)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: employee_id
+                  type: BIGINT
+              - column:
+                  name: organization_id
+                  type: BIGINT

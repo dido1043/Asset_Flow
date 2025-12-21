@@ -1,0 +1,40 @@
+databaseChangeLog:
+  - changeSet:
+      id: 0003-create-product
+      author: dev
+      preConditions:
+        - onFail: MARK_RAN
+        - not:
+            - tableExists:
+                tableName: product
+      changes:
+        - createTable:
+            tableName: product
+            columns:
+              - column:
+                  name: id
+                  type: BIGINT
+                  autoIncrement: true
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: product_type
+                  type: VARCHAR(255)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: product_brand
+                  type: VARCHAR(255)
+              - column:
+                  name: product_model
+                  type: VARCHAR(255)
+              - column:
+                  name: asset_tag
+                  type: VARCHAR(255)
+                  constraints:
+                    nullable: false
+                    unique: true
+              - column:
+                  name: organization_id
+                  type: BIGINT
