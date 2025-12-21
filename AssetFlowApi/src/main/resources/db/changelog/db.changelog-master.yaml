@@ -1,0 +1,12 @@
+databaseChangeLog:
+  - include:
+      file: db/changelog/changesets/0001_organization.yaml
+  - include:
+      file: db/changelog/changesets/0002_app_user.yaml
+  - include:
+      file: db/changelog/changesets/0003_product.yaml
+  - include:
+      file: db/changelog/changesets/0004_protocol.yaml
+  - include:
+      file: db/changelog/changesets/0005_assignment.yaml
+
