@@ -16,6 +16,7 @@ import org.springframework.security.oauth2.client.authentication.OAuth2Authentic
 import org.springframework.web.bind.annotation.*;
 
 import java.io.IOException;
+import java.util.List;
 
 @RestController
 @RequestMapping("/auth")
@@ -25,6 +26,10 @@ public class AuthenticationController {
     private final JwtService jwtService;
     private final ModelMapper modelMapper;
 
+    @GetMapping("/users")
+    public ResponseEntity<List<UserDto>> getAllUsers() {
+        return ResponseEntity.ok(authenticationService.getUsers());
+    }
     @PostMapping("/register")
     public ResponseEntity<UserDto> register(@RequestBody UserDto user) {
         return ResponseEntity.status(201).body(authenticationService.register(user));
@@ -67,4 +72,15 @@ public class AuthenticationController {
 
         return ResponseEntity.status(200).body(loginResponse);
     }
+
+    @PutMapping("/user/edit/{userId}")
+    public ResponseEntity<UserDto> editUser(@PathVariable Long userId, @RequestBody UserDto userDto) {
+        return ResponseEntity.ok(authenticationService.editProfile(userId, userDto));
+    }
+
+    @DeleteMapping("/user/delete/{userId}")
+    public ResponseEntity<UserDto> deleteUser(@PathVariable Long userId) {
+        return ResponseEntity.ok(authenticationService.deleteUser(userId));
+    }
+
 }
