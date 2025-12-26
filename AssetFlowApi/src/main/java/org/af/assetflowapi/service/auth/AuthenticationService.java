@@ -17,6 +17,8 @@ import org.springframework.security.oauth2.client.authentication.OAuth2Authentic
 import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
+
 @Service
 @AllArgsConstructor
 public class AuthenticationService {
@@ -75,5 +77,32 @@ public class AuthenticationService {
                 });
         return user;
     }
+    public UserDto editProfile(Long userId, UserDto userDto) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("User with id " + userId + " not found"));
 
+        user.setFullName(userDto.getFullName());
+        user.setEmail(userDto.getEmail());
+        user.setRole(userDto.getRole());
+        user.setAge(userDto.getAge());
+        if (userDto.getPassword() != null && !userDto.getPassword().trim().isEmpty()) {
+            user.setPassword(passwordEncoder.encode(userDto.getPassword()));
+        }
+
+        return modelMapper.map(userRepository.save(user), UserDto.class);
+    }
+
+    public List<UserDto> getUsers() {
+        List<User> users = userRepository.findAll();
+        return users.stream()
+                .map(user -> modelMapper.map(user, UserDto.class))
+                .toList();
+    }
+
+    public UserDto deleteUser(Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("User with id " + userId + " not found"));
+        userRepository.delete(user);
+        return modelMapper.map(user, UserDto.class);
+    }
 }
