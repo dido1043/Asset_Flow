@@ -11,7 +11,7 @@ import java.time.ZonedDateTime;
 @AllArgsConstructor
 public class AssignmentDto {
     private Long id;
-    private java.util.UUID employeeId;
+    private Long employeeId;
     private Long productId;
     private ZonedDateTime dateAssigned;
     private ZonedDateTime dateReturned;

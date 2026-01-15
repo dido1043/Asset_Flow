@@ -6,6 +6,7 @@ import lombok.AllArgsConstructor;
 
 import java.time.ZonedDateTime;
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import org.af.assetflowapi.data.dto.AssignmentDto;
 
 @Entity
 @Table(name = "assignment")
@@ -36,4 +37,6 @@ public class Assignment {
     private ZonedDateTime dateReturned;
 
     private String status;
+
+
 }
