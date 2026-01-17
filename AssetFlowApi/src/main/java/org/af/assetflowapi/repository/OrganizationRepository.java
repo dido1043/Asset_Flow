@@ -7,5 +7,5 @@ import java.util.List;
 
 public interface OrganizationRepository extends JpaRepository<Organization, Long> {
     List<Organization> findByOrganizationNameContainingIgnoreCase(String name);
-    List<Organization> findByLeaderId(Long leaderId);
+    Organization findByLeaderId(Long leaderId);
 }

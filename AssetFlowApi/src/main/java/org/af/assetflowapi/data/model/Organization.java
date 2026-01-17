@@ -36,4 +36,6 @@ public class Organization {
     @OneToMany(mappedBy = "organization", cascade = CascadeType.ALL)
     @JsonIgnore
     private List<Product> inventory;
+
+
 }

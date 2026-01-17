@@ -10,6 +10,6 @@ import lombok.NoArgsConstructor;
 public class OrganizationDto {
     private Long id;
     private String organizationName;
-    private Long leaderId;
+    //private Long leaderId;
 }
 

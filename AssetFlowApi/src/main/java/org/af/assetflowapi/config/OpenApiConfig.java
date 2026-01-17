@@ -10,7 +10,7 @@ public class OpenApiConfig {
     public OpenAPI customOpenAPI() {
         return new OpenAPI()
                 .info(new Info()
-                        .title("Assert Flow API Documentation")
+                        .title("Asset Flow API Documentation")
                         .version("1.0.0")
                         .description("Documentation for the API endpoints."));
 

@@ -20,7 +20,7 @@ public class AssignmentService {
     private final UserRepository userRepository;
     private final ProductRepository productRepository;
     private final ModelMapper modelMapper;
-//todo: Add assignmentId
+
     public List<AssignmentDto> addAssignmentToUser(Long userId, Long assignmentId) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new IllegalArgumentException("User with id " + userId + " not found"));
@@ -44,7 +44,6 @@ public class AssignmentService {
                 .toList();
     }
 
-    // Create
     public AssignmentDto createAssignment(AssignmentDto dto) {
         if (dto == null) throw new IllegalArgumentException("AssignmentDto cannot be null");
 
@@ -72,21 +71,18 @@ public class AssignmentService {
         return mapToDto(saved);
     }
 
-    // Read single
     public AssignmentDto getAssignment(Long id) {
         Assignment assignment = assignmentRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Assignment with id " + id + " not found"));
         return mapToDto(assignment);
     }
 
-    // Read all
     public List<AssignmentDto> getAllAssignments() {
         return assignmentRepository.findAll().stream()
                 .map(this::mapToDto)
                 .toList();
     }
 
-    // Update
     public AssignmentDto updateAssignment(Long id, AssignmentDto dto) {
         Assignment existing = assignmentRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Assignment with id " + id + " not found"));
@@ -103,20 +99,23 @@ public class AssignmentService {
             existing.setProduct(product);
         }
 
-        if (dto.getDateAssigned() != null) existing.setDateAssigned(dto.getDateAssigned());
+        if (dto.getDateAssigned() != null){
+            existing.setDateAssigned(dto.getDateAssigned());
+        }
         existing.setDateReturned(dto.getDateReturned()); // allow null to clear
-        if (dto.getStatus() != null) existing.setStatus(dto.getStatus());
+        if (dto.getStatus() != null) {
+            existing.setStatus(dto.getStatus());
+        }
 
         Assignment saved = assignmentRepository.save(existing);
         return mapToDto(saved);
     }
 
-    // Delete
+
     public void deleteAssignment(Long id) {
         Assignment assignment = assignmentRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Assignment with id " + id + " not found"));
 
-        // If the assignment is linked to a user, remove it from the user's collection to keep persistence context consistent
         User employee = assignment.getEmployee();
         if (employee != null && employee.getAssignments() != null) {
             employee.getAssignments().removeIf(a -> a.getId() != null && a.getId().equals(id));
@@ -126,7 +125,6 @@ public class AssignmentService {
         assignmentRepository.delete(assignment);
     }
 
-    // Additional query helpers
     public List<AssignmentDto> getAssignmentsByProduct(Long productId) {
         return assignmentRepository.findByProductId(productId).stream()
                 .map(this::mapToDto)
@@ -145,7 +143,6 @@ public class AssignmentService {
                 .toList();
     }
 
-    // Helper mapper to ensure employeeId and productId are set on the DTO
     private AssignmentDto mapToDto(Assignment assignment) {
         AssignmentDto dto = modelMapper.map(assignment, AssignmentDto.class);
         if (assignment.getEmployee() != null) dto.setEmployeeId(assignment.getEmployee().getId());

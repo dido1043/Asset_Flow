@@ -21,5 +21,5 @@ public class UserDto {
 
     // IDs referencing related entities (optional, populated when needed)
     private List<Long> assignmentIds;    // for employees: ids of assignments
-    private List<Long> organizationIds;  // for leaders: ids of organizations they lead
+   // private List<Long> organizationIds;  // for leaders: ids of organizations they lead
 }
