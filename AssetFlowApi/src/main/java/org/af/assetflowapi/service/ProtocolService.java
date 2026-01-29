@@ -8,8 +8,6 @@ import com.itextpdf.kernel.pdf.PdfWriter;
 import com.itextpdf.layout.Document;
 import com.itextpdf.layout.element.Paragraph;
 import lombok.AllArgsConstructor;
-import net.minidev.json.JSONObject;
-//import net.minidev.json.parser.JSONParser;
 import org.af.assetflowapi.data.dto.AI.AiResponseDto;
 import org.af.assetflowapi.data.dto.ProtocolDto;
 import org.af.assetflowapi.data.model.Organization;
@@ -19,19 +17,12 @@ import org.af.assetflowapi.repository.OrganizationRepository;
 import org.af.assetflowapi.repository.ProtocolRepository;
 import org.af.assetflowapi.repository.UserRepository;
 import org.af.assetflowapi.service.AI.AiService;
-import org.apache.tomcat.util.json.JSONParser;
 import org.springframework.stereotype.Service;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ObjectNode;
-
 import java.io.IOException;
-import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Instant;
-import java.util.List;
 
 @Service
 @AllArgsConstructor
@@ -105,7 +96,6 @@ public class ProtocolService {
 
         Path filePath = targetDir.resolve("protocol_" + protocolNumber + ".pdf");
 
-        // AI ONLY for purpose text (optional)
         String prompt = String.format(
                 "Generate a formal and concise purpose statement for a company asset transmission protocol. " +
                         "The protocol involves transferring various assets assigned to employee %s (%s) back to them for official use. " +
@@ -114,14 +104,16 @@ public class ProtocolService {
                         "Keep it professional and suitable for inclusion in a formal document.",
                 user.getFullName(),
                 user.getId(),
+                user.getAssignments().stream()
+                                .map(assignment ->  assignment.getProduct()
+                                        .getProductType() + " (" + assignment.getProduct().getAssetTag() + ")"),
                 organization.getOrganizationName(),
-                organization.getId()
+                organization.getId(),
+                "Generate detailed purpose statement with big amount of text for asset transmission protocol."
         );
 
         AiResponseDto aiDto = aiService.generateTextCompletion(prompt);
         String content = aiDto.getResponse();
-
-        //TODO: Create PDF with Apache PDFBox
 
         try(PdfWriter writer = new PdfWriter(filePath.toString());
             PdfDocument pdf = new PdfDocument(writer);
