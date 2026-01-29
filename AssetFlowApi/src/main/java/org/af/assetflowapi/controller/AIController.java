@@ -1,6 +1,7 @@
 package org.af.assetflowapi.controller;
 
 import lombok.AllArgsConstructor;
+import org.af.assetflowapi.data.dto.AI.AiResponseDto;
 import org.af.assetflowapi.service.AI.AiService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -15,7 +16,7 @@ public class AIController {
     private final AiService aiService;
 
     @PostMapping("/generate")
-    public ResponseEntity<String> generateContent(@RequestParam String prompt) {
+    public ResponseEntity<AiResponseDto> generateContent(@RequestParam String prompt) {
         return ResponseEntity.ok(aiService.generateTextCompletion(prompt));
     }
 }
