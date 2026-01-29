@@ -10,7 +10,7 @@ import lombok.NoArgsConstructor;
 public class ProtocolDto {
     private Long id;
     private String protocolUri;
-    private java.util.UUID employeeId;
+    private Long employeeId;
     private Long organizationId;
 }
 
