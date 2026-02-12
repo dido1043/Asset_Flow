@@ -48,6 +48,14 @@ public class AuthenticationService {
         );
         return modelMapper.map(userRepository.findByEmail(loginUserDto.getEmail()), UserDto.class);
     }
+    public UserDto getUser(Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("User with id " + userId + " not found"));
+
+        UserDto userDto = mapper(user);
+        userDto.setOrganizationId(user.getOrganization().getId());
+        return userDto;
+    }
 
     public User oAuthLogin(OAuth2AuthenticationToken oAuth2AuthenticationToken) {
         if (oAuth2AuthenticationToken == null) {
@@ -95,7 +103,7 @@ public class AuthenticationService {
     public List<UserDto> getUsers() {
         List<User> users = userRepository.findAll();
         return users.stream()
-                .map(user -> modelMapper.map(user, UserDto.class))
+                .map(user -> mapper(user))
                 .toList();
     }
 
@@ -104,5 +112,17 @@ public class AuthenticationService {
                 .orElseThrow(() -> new IllegalArgumentException("User with id " + userId + " not found"));
         userRepository.delete(user);
         return modelMapper.map(user, UserDto.class);
+    }
+
+    private UserDto mapper(User user) {
+        UserDto userDto = modelMapper.map(user, UserDto.class);
+        if (user.getOrganization() != null)
+            userDto.setOrganizationId(user.getOrganization().getId());
+        if(user.getAssignments() != null)
+            userDto.setAssignmentIds(user.getAssignments().stream()
+                    .filter(a -> a.getId() != null)
+                    .map(a -> a.getId())
+                    .toList());
+        return userDto;
     }
 }

@@ -30,6 +30,10 @@ public class AuthenticationController {
     public ResponseEntity<List<UserDto>> getAllUsers() {
         return ResponseEntity.ok(authenticationService.getUsers());
     }
+    @GetMapping("/user/{userId}")
+    public ResponseEntity<UserDto> getUser(@PathVariable Long userId) {
+        return ResponseEntity.ok(authenticationService.getUser(userId));
+    }
     @PostMapping("/register")
     public ResponseEntity<UserDto> register(@RequestBody UserDto user) {
         return ResponseEntity.status(201).body(authenticationService.register(user));
