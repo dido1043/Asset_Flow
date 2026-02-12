@@ -1,19 +1,16 @@
 package org.af.assetflowapi.service;
 
-import com.itextpdf.io.font.PdfEncodings;
-import com.itextpdf.kernel.font.PdfFont;
-import com.itextpdf.kernel.font.PdfFontFactory;
 import com.itextpdf.kernel.pdf.PdfDocument;
 import com.itextpdf.kernel.pdf.PdfWriter;
 import com.itextpdf.layout.Document;
 import com.itextpdf.layout.element.Paragraph;
 import lombok.AllArgsConstructor;
+import org.af.assetflowapi.component.prompts.ProtocolCreationPromptBuilder;
 import org.af.assetflowapi.data.dto.AI.AiResponseDto;
 import org.af.assetflowapi.data.dto.ProtocolDto;
-import org.af.assetflowapi.data.model.Organization;
-import org.af.assetflowapi.data.model.Protocol;
-import org.af.assetflowapi.data.model.User;
+import org.af.assetflowapi.data.model.*;
 import org.af.assetflowapi.repository.OrganizationRepository;
+import org.af.assetflowapi.repository.ProductRepository;
 import org.af.assetflowapi.repository.ProtocolRepository;
 import org.af.assetflowapi.repository.UserRepository;
 import org.af.assetflowapi.service.AI.AiService;
@@ -23,6 +20,8 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Instant;
+import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 @AllArgsConstructor
@@ -30,6 +29,8 @@ public class ProtocolService {
     private final OrganizationRepository organizationRepository;
     private final ProtocolRepository protocolRepository;
     private final UserRepository userRepository;
+    private final ProductRepository productRepository;
+    private final ProtocolCreationPromptBuilder promptBuilder;
 
     private final AiService aiService;
 
@@ -95,76 +96,44 @@ public class ProtocolService {
         String issuanceDate = Instant.now().toString();
 
         Path filePath = targetDir.resolve("protocol_" + protocolNumber + ".pdf");
+//Todo: Fix user assignments
+        List<Assignment> userAssignments = user.getAssignments().stream()
+                .filter(a -> a.getProduct() != null && a.getProduct().getOrganization() != null
+                        && a.getProduct().getOrganization().getId().equals(organization.getId()))
+                .toList();
+        String assetsBlock = userAssignments.stream()
+                .map(a -> {
+                    Long productId = a.getProduct().getId();
+                    Product p = productRepository.findById(productId)
+                            .orElseThrow(() -> new IllegalArgumentException("Product with id " + productId + " not found"));;
+                    return String.format(
+                            "- %s | Inventory No: %s | Condition: %s",
+                            p.getProductType(),
+                            p.getAssetTag(),
+                            a.getStatus()
+                    );
+                })
+                .collect(Collectors.joining("\n"));
 
-        String prompt = String.format(
-                "Generate a formal and concise purpose statement for a company asset transmission protocol. " +
-                        "The protocol involves transferring various assets assigned to employee %s (%s) back to them for official use. " +
-                        "The organization is %s (%s). " +
-                        "Ensure the purpose highlights the official nature of the transfer and the intended use of the assets within the company. " +
-                        "Keep it professional and suitable for inclusion in a formal document.",
-                user.getFullName(),
-                user.getId(),
-                user.getAssignments().stream()
-                                .map(assignment ->  assignment.getProduct()
-                                        .getProductType() + " (" + assignment.getProduct().getAssetTag() + ")"),
-                organization.getOrganizationName(),
-                organization.getId(),
-                "Generate detailed purpose statement with big amount of text for asset transmission protocol."
-        );
+                String prompt = promptBuilder.buildPrompt(organization.getId(), user.getId(), assetsBlock);
 
-        AiResponseDto aiDto = aiService.generateTextCompletion(prompt);
-        String content = aiDto.getResponse();
+                AiResponseDto aiDto = aiService.generateTextCompletion(prompt);
+                String content = aiDto.getResponse();
 
-        try(PdfWriter writer = new PdfWriter(filePath.toString());
-            PdfDocument pdf = new PdfDocument(writer);
-            Document doc = new Document(pdf)) {
+                try(PdfWriter writer = new PdfWriter(filePath.toString());
+                    PdfDocument pdf = new PdfDocument(writer);
+                    Document doc = new Document(pdf)) {
 
-            PdfFont fontBold = PdfFontFactory.createFont("Helvetica-Bold", PdfEncodings.UTF8);
-            PdfFont fontRegular = PdfFontFactory.createFont("Helvetica", PdfEncodings.UTF8);
-
-
-            doc.add(new Paragraph("Asset Transmission Protocol")
-                    .setFont(fontBold)
-                    .setFontSize(18)
-                    .setMarginBottom(20));
-
-            doc.add(new Paragraph("Protocol Number: " + protocolNumber)
-                    .setFont(fontRegular)
-                    .setFontSize(12)
-                    .setMarginBottom(10));
-            doc.add(new Paragraph("Issuance Date: " + issuanceDate)
-                    .setFont(fontRegular)
-                    .setFontSize(12)
-                    .setMarginBottom(10));
-            doc.add(new Paragraph("Organization: " + organization.getOrganizationName() + " (ID: " + organization.getId() + ")")
-                    .setFont(fontRegular)
-                    .setFontSize(12)
-                    .setMarginBottom(10));
-            doc.add(new Paragraph("Organization Leader: " + leaderName)
-                    .setFont(fontRegular)
-                    .setFontSize(12)
-                    .setMarginBottom(20));
-            doc.add(new Paragraph("Employee: " + user.getFullName() + " (ID: " + user.getId() + ")")
-                    .setFont(fontRegular)
-                    .setFontSize(12)
-                    .setMarginBottom(20));
-            doc.add(new Paragraph("Purpose:")
-                    .setFont(fontBold)
-                    .setFontSize(14)
-                    .setMarginBottom(10));
-            doc.add(new Paragraph(content)
-                    .setFont(fontRegular)
-                    .setFontSize(12)
-                    .setMarginBottom(20));
-            doc.add(new Paragraph("Signature:_______________________________"))
-                    .setFont(fontBold)
-                    .setFontSize(14);
-
-            doc.close();
-        }catch (IOException e) {
-            throw new RuntimeException("Failed to create protocol PDF", e);
+                    //TODO: Make real Asset Transmission Protocol PDF layout
+                    String[] lines = content.split("\n");
+                    for (String line : lines) {
+                        Paragraph p = new Paragraph(line);
+                        doc.add(p);
+                    }
+                }catch (IOException e) {
+                    throw new RuntimeException("Failed to create protocol PDF", e);
+                }
+                return filePath.toUri().toString();
+            }
         }
-        return filePath.toUri().toString();
-    }
-}
 
