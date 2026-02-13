@@ -53,7 +53,7 @@ public class AuthenticationService {
                 .orElseThrow(() -> new IllegalArgumentException("User with id " + userId + " not found"));
 
         UserDto userDto = mapper(user);
-        userDto.setOrganizationId(user.getOrganization().getId());
+        userDto.setOrganizationId(user.getOrganization() != null? user.getOrganization().getId() : null);
         return userDto;
     }
 

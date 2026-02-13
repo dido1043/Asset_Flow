@@ -44,21 +44,15 @@ public class AssignmentService {
                 .toList();
     }
 
+    //Todo: Put this method inside to addAssignmentToUser and make it private
     public AssignmentDto createAssignment(AssignmentDto dto) {
         if (dto == null) throw new IllegalArgumentException("AssignmentDto cannot be null");
 
-        User employee = null;
-        Product product = null;
+        User employee =  userRepository.findById(dto.getEmployeeId())
+                .orElseThrow(() -> new IllegalArgumentException("User with id " + dto.getEmployeeId() + " not found"));
+        Product product = productRepository.findById(dto.getProductId())
+                .orElseThrow(() -> new IllegalArgumentException("Product with id " + dto.getProductId() + " not found"));
 
-        if (dto.getEmployeeId() != null) {
-            employee = userRepository.findById(dto.getEmployeeId())
-                    .orElseThrow(() -> new IllegalArgumentException("User with id " + dto.getEmployeeId() + " not found"));
-        }
-
-        if (dto.getProductId() != null) {
-            product = productRepository.findById(dto.getProductId())
-                    .orElseThrow(() -> new IllegalArgumentException("Product with id " + dto.getProductId() + " not found"));
-        }
 
         Assignment assignment = new Assignment();
         assignment.setEmployee(employee);
