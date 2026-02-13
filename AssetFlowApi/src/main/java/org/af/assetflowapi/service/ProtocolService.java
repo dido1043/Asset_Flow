@@ -97,10 +97,7 @@ public class ProtocolService {
 
         Path filePath = targetDir.resolve("protocol_" + protocolNumber + ".pdf");
 //Todo: Fix user assignments
-        List<Assignment> userAssignments = user.getAssignments().stream()
-                .filter(a -> a.getProduct() != null && a.getProduct().getOrganization() != null
-                        && a.getProduct().getOrganization().getId().equals(organization.getId()))
-                .toList();
+        List<Assignment> userAssignments = user.getAssignments();
         String assetsBlock = userAssignments.stream()
                 .map(a -> {
                     Long productId = a.getProduct().getId();
