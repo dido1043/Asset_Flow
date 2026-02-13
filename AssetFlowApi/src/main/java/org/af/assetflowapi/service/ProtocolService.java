@@ -81,10 +81,6 @@ public class ProtocolService {
         return result;
     }
     public String generateProtocolPdfUri(Organization organization, User user) {
-
-        String leaderName = organization.getLeader() != null ? organization.getLeader().getFullName() : "(not specified)";
-
-
         Path targetDir = Path.of("target", "protocols");
         try {
             Files.createDirectories(targetDir);
@@ -93,12 +89,36 @@ public class ProtocolService {
         }
 
         String protocolNumber = "PROT-" + organization.getId() + "-" + user.getId() + "-" + System.currentTimeMillis();
-        String issuanceDate = Instant.now().toString();
-
         Path filePath = targetDir.resolve("protocol_" + protocolNumber + ".pdf");
-//Todo: Fix user assignments
+
         List<Assignment> userAssignments = user.getAssignments();
-        String assetsBlock = userAssignments.stream()
+
+        String assetsBlock = userAssetsToString(userAssignments);
+
+        String prompt = promptBuilder.buildPrompt(organization.getId(), user.getId(), assetsBlock);
+
+        AiResponseDto aiDto = aiService.generateTextCompletion(prompt);
+        String content = aiDto.getResponse();
+
+        try(PdfWriter writer = new PdfWriter(filePath.toString());
+            PdfDocument pdf = new PdfDocument(writer);
+            Document doc = new Document(pdf)) {
+            String[] lines = content.split("\n");
+            for (String line : lines) {
+                Paragraph p = new Paragraph(line);
+                doc.add(p);
+            }
+        }catch (IOException e) {
+            throw new RuntimeException("Failed to create protocol PDF", e);
+        }
+        return filePath.toUri().toString();
+    }
+
+    private String userAssetsToString(List<Assignment> userAssignments) {
+        if (userAssignments == null || userAssignments.isEmpty()) {
+            return "No assets assigned.";
+        }
+        return userAssignments.stream()
                 .map(a -> {
                     Long productId = a.getProduct().getId();
                     Product p = productRepository.findById(productId)
@@ -111,26 +131,6 @@ public class ProtocolService {
                     );
                 })
                 .collect(Collectors.joining("\n"));
-
-                String prompt = promptBuilder.buildPrompt(organization.getId(), user.getId(), assetsBlock);
-
-                AiResponseDto aiDto = aiService.generateTextCompletion(prompt);
-                String content = aiDto.getResponse();
-
-                try(PdfWriter writer = new PdfWriter(filePath.toString());
-                    PdfDocument pdf = new PdfDocument(writer);
-                    Document doc = new Document(pdf)) {
-
-                    //TODO: Make real Asset Transmission Protocol PDF layout
-                    String[] lines = content.split("\n");
-                    for (String line : lines) {
-                        Paragraph p = new Paragraph(line);
-                        doc.add(p);
-                    }
-                }catch (IOException e) {
-                    throw new RuntimeException("Failed to create protocol PDF", e);
-                }
-                return filePath.toUri().toString();
-            }
-        }
+    }
+}
 
