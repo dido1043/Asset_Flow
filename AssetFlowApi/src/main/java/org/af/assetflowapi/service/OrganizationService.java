@@ -45,4 +45,16 @@ public class OrganizationService {
         userRepository.save(user);
     }
 
+    public OrganizationDto addEmployeeToOrganization(Long organizationId, Long userId) {
+        Organization organization = organizationRepository.findById(organizationId)
+                .orElseThrow(() -> new IllegalArgumentException("Organization with id " + organizationId + " not found"));
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("User with id " + userId + " not found"));
+        organization.getEmployees().add(user);
+        user.setOrganization(organization);
+        userRepository.save(user);
+        organizationRepository.save(organization);
+        return modelMapper.map(organization, OrganizationDto.class);
+    }
+
 }

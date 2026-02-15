@@ -27,5 +27,9 @@ public class OrganizationController {
         organizationService.becomeLeader(userId, organizationId);
         return ResponseEntity.ok().build();
     }
+    @PostMapping("/join/{userId}/{organizationId}")
+    public ResponseEntity<OrganizationDto> joinOrganization(@PathVariable Long userId, @PathVariable Long organizationId) {
+       return ResponseEntity.ok(organizationService.addEmployeeToOrganization(organizationId, userId));
+    }
 
 }
