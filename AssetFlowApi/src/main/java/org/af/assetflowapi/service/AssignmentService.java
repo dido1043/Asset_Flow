@@ -21,20 +21,6 @@ public class AssignmentService {
     private final ProductRepository productRepository;
     private final ModelMapper modelMapper;
 
-    public List<AssignmentDto> addAssignmentToUser(Long userId, Long assignmentId) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new IllegalArgumentException("User with id " + userId + " not found"));
-        Assignment assignment = assignmentRepository.findById(assignmentId)
-                .orElseThrow(() -> new IllegalArgumentException("Assignment with id " + assignmentId + " not found"));
-
-        user.getAssignments().add(assignment);
-        userRepository.save(user);
-        return user.getAssignments().stream()
-                .map(a -> modelMapper.map(a, AssignmentDto.class))
-                .toList();
-
-    }
-
     public List<AssignmentDto> getUserAssignments(Long userId) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new IllegalArgumentException("User with id " + userId + " not found"));
@@ -44,7 +30,6 @@ public class AssignmentService {
                 .toList();
     }
 
-    //Todo: Put this method inside to addAssignmentToUser and make it private
     public AssignmentDto createAssignment(AssignmentDto dto) {
         if (dto == null) throw new IllegalArgumentException("AssignmentDto cannot be null");
 

@@ -7,7 +7,7 @@ import java.util.List;
 import java.util.UUID;
 
 public interface AssignmentRepository extends JpaRepository<Assignment, Long> {
-    List<Assignment> findByEmployeeId(UUID employeeId);
+    List<Assignment> findByEmployeeId(Long employeeId);
     List<Assignment> findByProductId(Long productId);
     List<Assignment> findByStatus(String status);
     List<Assignment> findByDateReturnedIsNull(); // currently assigned (not returned)

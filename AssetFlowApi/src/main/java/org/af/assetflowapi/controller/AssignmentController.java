@@ -47,11 +47,6 @@ public class AssignmentController {
         return ResponseEntity.ok(assignmentService.getUserAssignments(userId));
     }
 
-    @PostMapping("/user/add/{userId}/{assignmentId}")
-    public ResponseEntity<List<AssignmentDto>> addAssignmentToUser(@PathVariable Long userId, @PathVariable Long assignmentId) {
-        return ResponseEntity.ok(assignmentService.addAssignmentToUser(userId, assignmentId));
-    }
-
     @GetMapping("/product/{productId}")
     public ResponseEntity<List<AssignmentDto>> getAssignmentsByProduct(@PathVariable Long productId) {
         return ResponseEntity.ok(assignmentService.getAssignmentsByProduct(productId));
