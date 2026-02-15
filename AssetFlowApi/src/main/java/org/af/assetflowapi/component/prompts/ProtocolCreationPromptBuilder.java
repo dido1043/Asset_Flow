@@ -64,7 +64,7 @@ ASSET TABLE RULES (MANDATORY)
 - Render ALL assets in a table under section "II. Subject of Handover".
 - The table MUST have EXACTLY these columns and order:
 
-| No | Asset | Inventory No | Condition |
+| No | Type | Brand | Model | Asset Tag | Status |
 
 - Each asset represents ONE row.
 - Do NOT skip assets.

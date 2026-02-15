@@ -19,7 +19,6 @@ import org.springframework.stereotype.Service;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.time.Instant;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -80,6 +79,7 @@ public class ProtocolService {
 
         return result;
     }
+    //Todo: Add translate to other language
     public String generateProtocolPdfUri(Organization organization, User user) {
         Path targetDir = Path.of("target", "protocols");
         try {
@@ -124,8 +124,10 @@ public class ProtocolService {
                     Product p = productRepository.findById(productId)
                             .orElseThrow(() -> new IllegalArgumentException("Product with id " + productId + " not found"));;
                     return String.format(
-                            "- %s | Inventory No: %s | Condition: %s",
+                            "- %s | Brand: %s | Model: %s | Asset Tag: %s | Status: %s ",
                             p.getProductType(),
+                            p.getProductBrand(),
+                            p.getProductModel(),
                             p.getAssetTag(),
                             a.getStatus()
                     );
