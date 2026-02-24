@@ -12,6 +12,7 @@ import org.af.assetflowapi.repository.ProductRepository;
 import org.af.assetflowapi.repository.UserRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.core.annotation.Order;
@@ -26,7 +27,6 @@ import java.util.Optional;
 
 @Component
 @Order(1)
-@AllArgsConstructor
 public class DatabaseSeeder implements ApplicationRunner {
     private static final Logger log = LoggerFactory.getLogger(DatabaseSeeder.class);
 
@@ -36,8 +36,29 @@ public class DatabaseSeeder implements ApplicationRunner {
     private final AssignmentRepository assignmentRepository;
     private final PasswordEncoder passwordEncoder;
 
+    // Allow disabling seeding in tests (default true)
+    @Value("${app.db.seed:true}")
+    private boolean seedEnabled;
+
+    // Explicit constructor - do not include seedEnabled so it is injected via @Value on the field
+    public DatabaseSeeder(OrganizationRepository organizationRepository,
+                          UserRepository userRepository,
+                          ProductRepository productRepository,
+                          AssignmentRepository assignmentRepository,
+                          PasswordEncoder passwordEncoder) {
+        this.organizationRepository = organizationRepository;
+        this.userRepository = userRepository;
+        this.productRepository = productRepository;
+        this.assignmentRepository = assignmentRepository;
+        this.passwordEncoder = passwordEncoder;
+    }
+
     @Override
     public void run(ApplicationArguments args) throws Exception {
+        if (!seedEnabled) {
+            log.info("Database seeding disabled by app.db.seed=false");
+            return;
+        }
         seedOrganizations();
         seedUsers();
         seedProducts();
@@ -171,4 +192,3 @@ public class DatabaseSeeder implements ApplicationRunner {
         }
     }
 }
-
