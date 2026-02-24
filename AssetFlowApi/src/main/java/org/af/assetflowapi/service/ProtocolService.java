@@ -1,5 +1,11 @@
 package org.af.assetflowapi.service;
 
+import com.itextpdf.io.font.FontProgram;
+import com.itextpdf.io.font.FontProgramFactory;
+import com.itextpdf.io.font.constants.StandardFonts;
+import com.itextpdf.io.font.PdfEncodings;
+import com.itextpdf.kernel.font.PdfFont;
+import com.itextpdf.kernel.font.PdfFontFactory;
 import com.itextpdf.kernel.pdf.PdfDocument;
 import com.itextpdf.kernel.pdf.PdfWriter;
 import com.itextpdf.layout.Document;
@@ -17,6 +23,7 @@ import org.af.assetflowapi.service.AI.AiService;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
@@ -103,6 +110,13 @@ public class ProtocolService {
         try(PdfWriter writer = new PdfWriter(filePath.toString());
             PdfDocument pdf = new PdfDocument(writer);
             Document doc = new Document(pdf)) {
+
+            // Create or choose a Unicode-capable font. Prefer a bundled font in resources (src/main/resources/fonts/NotoSans-Regular.ttf)
+            // If not present, try common system font paths. As a last resort fall back to Helvetica.
+            PdfFont unicodeFont = getUnicodePdfFont();
+            doc.setFont(unicodeFont);
+
+            if (content == null) content = "";
             String[] lines = content.split("\n");
             for (String line : lines) {
                 Paragraph p = new Paragraph(line);
@@ -122,7 +136,7 @@ public class ProtocolService {
                 .map(a -> {
                     Long productId = a.getProduct().getId();
                     Product p = productRepository.findById(productId)
-                            .orElseThrow(() -> new IllegalArgumentException("Product with id " + productId + " not found"));;
+                            .orElseThrow(() -> new IllegalArgumentException("Product with id " + productId + " not found"));
                     return String.format(
                             "- %s | Brand: %s | Model: %s | Asset Tag: %s | Status: %s ",
                             p.getProductType(),
@@ -134,5 +148,46 @@ public class ProtocolService {
                 })
                 .collect(Collectors.joining("\n"));
     }
-}
 
+    // Try to find/create a PdfFont that supports Unicode (IDENTITY_H). First check bundled resource, then common system paths.
+    private PdfFont getUnicodePdfFont() {
+        // Try classpath bundled font: src/main/resources/fonts/NotoSans-Regular.ttf
+        try (InputStream is = getClass().getResourceAsStream("/fonts/NotoSans-Regular.ttf")) {
+            if (is != null) {
+                byte[] bytes = is.readAllBytes();
+                try {
+                    FontProgram fp = FontProgramFactory.createFont(bytes);
+                    return PdfFontFactory.createFont(fp, PdfEncodings.IDENTITY_H);
+                } catch (IOException ex) {
+                    // fall through to next candidate
+                }
+            }
+        } catch (IOException ignored) {
+        }
+
+        // Common font locations on macOS / Linux
+        String[] candidates = new String[] {
+                "/Library/Fonts/Arial Unicode.ttf",
+                "/System/Library/Fonts/Supplemental/Arial Unicode.ttf",
+                "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+                "/usr/share/fonts/truetype/noto/NotoSans-Regular.ttf",
+                "/usr/share/fonts/truetype/freefont/FreeSans.ttf"
+        };
+        for (String pathStr : candidates) {
+            Path p = Path.of(pathStr);
+            if (Files.exists(p)) {
+                try {
+                    return PdfFontFactory.createFont(pathStr, PdfEncodings.IDENTITY_H);
+                } catch (IOException ignored) {
+                }
+            }
+        }
+
+        // Last resort: use a standard font (may not render all languages)
+        try {
+            return PdfFontFactory.createFont(StandardFonts.HELVETICA);
+        } catch (IOException e) {
+            throw new RuntimeException("Failed to create any PDF font", e);
+        }
+    }
+}

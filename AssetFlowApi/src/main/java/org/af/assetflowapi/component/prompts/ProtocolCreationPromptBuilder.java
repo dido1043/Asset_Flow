@@ -21,7 +21,7 @@ public class ProtocolCreationPromptBuilder {
         return String.format("""
 You are an enterprise legal document generator.
 
-Your task is to generate a formal "Asset Handover Protocol" in English.
+Your task is to generate a formal "Asset Handover Protocol".
 
 STRICT RULES:
 - Use ONLY the data provided below.
@@ -87,6 +87,5 @@ TERMS AND CONDITIONS (FIXED TEXT)
                         ? "- NONE"
                         : assetsBlock
         );
-
     }
 }
