@@ -1,8 +1,9 @@
 package org.af.assetflowapi.config.security;
 
-import lombok.AllArgsConstructor;
+import lombok.RequiredArgsConstructor;
 import org.af.assetflowapi.config.JwtAuthenticationFilter;
 import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationProvider;
@@ -17,19 +18,25 @@ import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import java.util.List;
+
 @Configuration
 @EnableWebSecurity
-@AllArgsConstructor
+@RequiredArgsConstructor
 public class SecurityConfig {
+
+        @Value("${frontend.url:*}")
+        private String frontendUrl;
+
     private final AuthenticationProvider authenticationProvider;
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
     private final ObjectProvider<ClientRegistrationRepository> clientRegistrationRepositoryProvider;
 
+   
     @Bean
         public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
 
             http
-                    .cors(cors -> {})
+                    .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                     .csrf(csrf -> csrf.disable())
                     .authorizeHttpRequests(auth -> auth
                             .requestMatchers(
@@ -51,17 +58,17 @@ public class SecurityConfig {
     }
 
     @Bean
-    CorsConfigurationSource corsConfigurationSource() {
-        CorsConfiguration configuration = new CorsConfiguration();
+        CorsConfigurationSource corsConfigurationSource() {
+                CorsConfiguration configuration = new CorsConfiguration();
 
-        configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE"));
-        configuration.setAllowedHeaders(List.of("Authorization", "Content-Type"));
-        configuration.setAllowCredentials(true);
-        configuration.setAllowedOrigins(List.of("*"));
-        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+                configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE"));
+                configuration.setAllowedHeaders(List.of("Authorization", "Content-Type", "Accept", "Origin"));
+                configuration.setAllowCredentials(true);
+                configuration.setAllowedOriginPatterns(List.of(frontendUrl));
 
-        source.registerCorsConfiguration("/**", configuration);
+                UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+                source.registerCorsConfiguration("/**", configuration);
 
-        return source;
-    }
+                return source;
+        }
 }
