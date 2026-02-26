@@ -1,14 +1,17 @@
 package org.af.assetflowapi.controller;
 
 import jakarta.servlet.http.HttpServletResponse;
-import lombok.AllArgsConstructor;
+import lombok.RequiredArgsConstructor;
 import org.af.assetflowapi.data.dto.UserDto;
 import org.af.assetflowapi.data.dto.auth.LoginUserDto;
+import org.af.assetflowapi.data.dto.auth.OAuthCodeExchangeRequest;
 import org.af.assetflowapi.data.dto.response.LoginResponse;
 import org.af.assetflowapi.data.model.User;
 import org.af.assetflowapi.service.auth.AuthenticationService;
 import org.af.assetflowapi.service.auth.JwtService;
+import org.af.assetflowapi.service.auth.OAuthCodeService;
 import org.modelmapper.ModelMapper;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -16,15 +19,22 @@ import org.springframework.security.oauth2.client.authentication.OAuth2Authentic
 import org.springframework.web.bind.annotation.*;
 
 import java.io.IOException;
+import java.net.URI;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 @RestController
 @RequestMapping("/auth")
-@AllArgsConstructor
+@RequiredArgsConstructor
 public class AuthenticationController {
     private final AuthenticationService authenticationService;
     private final JwtService jwtService;
+    private final OAuthCodeService oAuthCodeService;
     private final ModelMapper modelMapper;
+
+    @Value("${frontend.url:http://localhost:3000}")
+    private String frontendUrl;
 
     @GetMapping("/users")
     public ResponseEntity<List<UserDto>> getAllUsers() {
@@ -74,7 +84,24 @@ public class AuthenticationController {
         loginResponse.setRole(user.getRole().toString());
         loginResponse.setUserId(user.getId());
 
-        return ResponseEntity.status(200).body(loginResponse);
+        String exchangeCode = oAuthCodeService.createCode(loginResponse);
+        String baseUrl = frontendUrl.endsWith("/") ? frontendUrl.substring(0, frontendUrl.length() - 1) : frontendUrl;
+        String redirectUrl = String.format(
+                "%s/oauth/callback?code=%s",
+                baseUrl,
+                URLEncoder.encode(exchangeCode, StandardCharsets.UTF_8)
+        );
+
+        return ResponseEntity.status(HttpStatus.FOUND).location(URI.create(redirectUrl)).build();
+    }
+
+    @PostMapping("/oauth/exchange")
+    public ResponseEntity<LoginResponse> exchangeOAuthCode(@RequestBody OAuthCodeExchangeRequest request) {
+        LoginResponse response = oAuthCodeService.consumeCode(request.code());
+        if (response == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+        return ResponseEntity.ok(response);
     }
 
     @PutMapping("/user/edit/{userId}")
