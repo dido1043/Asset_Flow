@@ -21,7 +21,7 @@ const Home = () => {
             <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center">
               <Link
                 href="/user/register"
-                className="inline-flex h-12 items-center justify-center rounded-xl bg-brand-600 px-5 text-base font-semibold text-white shadow-lg shadow-brand-200 transition hover:bg-brand-700"
+                className="inline-flex h-12 items-center justify-center rounded-xl bg-brand-600 px-5 text-base font-semibold text-black shadow-lg shadow-brand-200 transition hover:bg-brand-700"
               >
                 Create account
               </Link>
