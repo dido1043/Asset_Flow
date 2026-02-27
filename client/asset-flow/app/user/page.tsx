@@ -1,5 +1,4 @@
 import React from "react";
-import Navigation from "../components/shared/Navigation/Navigation";
 
 interface User {
   id:number,
@@ -21,9 +20,7 @@ const UserPage = async() => {
 
   return (
     <div>
-      <Navigation/>
       <h1>User Page</h1>
-
       <ul>
         {
           users.map(u =>(
