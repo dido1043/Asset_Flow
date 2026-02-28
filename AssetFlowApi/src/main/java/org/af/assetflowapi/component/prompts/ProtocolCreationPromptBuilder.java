@@ -79,6 +79,8 @@ TERMS AND CONDITIONS (FIXED TEXT)
 2. The Recipient is responsible for proper use and safekeeping of the assets.
 3. Upon termination of employment or upon request, the assets must be returned in good condition, normal wear and tear accepted.
 4. Any damage caused by the Recipient shall be compensated in accordance with internal company policies.
+
+        [IMPORTANT: MAKE LEGAL DOCUMENTATION FOR BULGARIAN JURISDICTION, IN BULGARIAN LANGUAGE, AND IN THE STYLE OF BULGARIAN LEGAL DOCUMENTS. DO NOT TRANSLATE THE FIXED TEXT TERMS AND CONDITIONS, BUT RENDER THEM IN BULGARIAN LEGAL STYLE.]
 """,
                 org.getOrganizationName(),
                 org.getLeader().getFullName(),
