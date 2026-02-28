@@ -20,7 +20,7 @@ public class AiService {
     public AiResponseDto generateTextCompletion(String prompt) {
         try {
             ObjectNode reqNode = objectMapper.createObjectNode();
-            reqNode.put("model", "gpt-oss:20b-cloud");
+            reqNode.put("model", "tazarov/bg-gpt:latest");
             reqNode.put("prompt", prompt);
             reqNode.put("stream", false);
 
