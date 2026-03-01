@@ -18,18 +18,6 @@ public class ProductService {
     private final OrganizationRepository organizationRepository;
     private ModelMapper modelMapper;
 
-    public List<ProductDto> findByOrganizationId(Long organizationId) {
-        List<Product> products = productRepository.findByOrganizationId(organizationId);
-        return products.stream()
-                .map(product -> {
-                    ProductDto dto = modelMapper.map(product, ProductDto.class);
-                    if (product.getOrganization() != null) dto.setOrganizationId(product.getOrganization().getId());
-                    return dto;
-                })
-                .toList();
-    }
-
-
     public ProductDto addProduct(ProductDto productDto) {
         Product product = modelMapper.map(productDto, Product.class);
 
