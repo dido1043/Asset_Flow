@@ -45,8 +45,8 @@ const RegisterForm = () => {
         setLoading(true);
         setError(null);
         setSuccess(false);
-    try{
-      const response = await fetch(`${apiBaseUrl}/auth/register`, {
+        try {
+            const response = await fetch(`${apiBaseUrl}/auth/register`, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
@@ -75,6 +75,15 @@ const RegisterForm = () => {
         window.location.href = `${apiBaseUrl}/auth/oauth2/login`;
     }
 
+    const handleRoleChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+        const { value } = e.target;
+        setFormData((prev) => ({
+            ...prev,
+            role: value,
+            organizationId: value === "EMPLOYEE" ? prev.organizationId : 0,
+        }));
+    };
+    
     return (
         <div>
             <form onSubmit={handleSubmit} className="mt-8 space-y-5">
@@ -113,7 +122,7 @@ const RegisterForm = () => {
                             id="role"
                             name="role"
                             value={formData.role}
-                            onChange={(e) => setFormData((prev) => ({ ...prev, role: e.target.value }))}
+                            onChange={handleRoleChange}
                             className="mt-2 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm text-slate-900 shadow-sm outline-none transition placeholder:text-slate-400 focus:border-brand-500 focus:bg-white focus:ring-2 focus:ring-brand-200"
                             required
                         >
@@ -135,17 +144,21 @@ const RegisterForm = () => {
                             min={0}
                         />
                     </div>
-
+                    {formData.role === "EMPLOYEE" ? (
+                        <div>
+                            <Label htmlFor="organizationId">Organization ID</Label>
+                            <Input
+                                id="organizationId"
+                                name="organizationId"
+                                type="number"
+                                value={formData.organizationId}
+                                onChange={handleChange}
+                                min={0}
+                            />
+                        </div>
+                    ) : null}
                     <div>
-                        <Label htmlFor="organizationId">Organization ID</Label>
-                        <Input
-                            id="organizationId"
-                            name="organizationId"
-                            type="number"
-                            value={formData.organizationId}
-                            onChange={handleChange}
-                            min={0}
-                        />
+
                     </div>
                 </div>
 

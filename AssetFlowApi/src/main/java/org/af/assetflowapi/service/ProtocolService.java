@@ -111,8 +111,6 @@ public class ProtocolService {
             PdfDocument pdf = new PdfDocument(writer);
             Document doc = new Document(pdf)) {
 
-            // Create or choose a Unicode-capable font. Prefer a bundled font in resources (src/main/resources/fonts/NotoSans-Regular.ttf)
-            // If not present, try common system font paths. As a last resort fall back to Helvetica.
             PdfFont unicodeFont = getUnicodePdfFont();
             doc.setFont(unicodeFont);
 
