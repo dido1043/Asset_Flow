@@ -1,0 +1,15 @@
+databaseChangeLog:
+  - changeSet:
+      id: 0006-drop-assignment-status
+      author: dev
+      preConditions:
+        - onFail: MARK_RAN
+        - tableExists:
+            tableName: assignment
+        - columnExists:
+            tableName: assignment
+            columnName: status
+      changes:
+        - dropColumn:
+            tableName: assignment
+            columnName: status

@@ -9,4 +9,6 @@ databaseChangeLog:
       file: db/changelog/changesets/0004_protocol.yaml
   - include:
       file: db/changelog/changesets/0005_assignment.yaml
+  - include:
+      file: db/changelog/changesets/0006_drop_assignment_status.yaml
 

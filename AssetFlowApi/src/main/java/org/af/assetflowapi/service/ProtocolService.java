@@ -138,12 +138,11 @@ public class ProtocolService {
                     Product p = productRepository.findById(productId)
                             .orElseThrow(() -> new IllegalArgumentException("Product with id " + productId + " not found"));
                     return String.format(
-                            "- %s | Brand: %s | Model: %s | Asset Tag: %s | Status: %s ",
+                "- %s | Brand: %s | Model: %s | Asset Tag: %s ",
                             p.getProductType(),
                             p.getProductBrand(),
                             p.getProductModel(),
-                            p.getAssetTag(),
-                            a.getStatus()
+                p.getAssetTag()
                     );
                 })
                 .collect(Collectors.joining("\n"));

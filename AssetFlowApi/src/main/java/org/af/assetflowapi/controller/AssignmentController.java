@@ -52,11 +52,6 @@ public class AssignmentController {
         return ResponseEntity.ok(assignmentService.getAssignmentsByProduct(productId));
     }
 
-    @GetMapping("/status/{status}")
-    public ResponseEntity<List<AssignmentDto>> getAssignmentsByStatus(@PathVariable String status) {
-        return ResponseEntity.ok(assignmentService.getAssignmentsByStatus(status));
-    }
-
     @GetMapping("/current")
     public ResponseEntity<List<AssignmentDto>> getCurrentlyAssigned() {
         return ResponseEntity.ok(assignmentService.getCurrentlyAssigned());
