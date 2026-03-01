@@ -15,11 +15,6 @@ import java.util.List;
 public class ProductController {
     private final ProductService productService;
 
-    @GetMapping("/all/{orgId}")
-    public ResponseEntity<List<ProductDto>> getProductsByOrganizationId(@PathVariable Long orgId) {
-        return ResponseEntity.ok(productService.findByOrganizationId(orgId));
-    }
-
     // Create
     @PostMapping
     public ResponseEntity<ProductDto> createProduct(@RequestBody ProductDto dto) {

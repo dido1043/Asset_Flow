@@ -6,7 +6,6 @@ import lombok.AllArgsConstructor;
 
 import java.time.ZonedDateTime;
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import org.af.assetflowapi.data.dto.AssignmentDto;
 
 @Entity
 @Table(name = "assignment")
@@ -24,7 +23,6 @@ public class Assignment {
     @JsonIgnore
     private User employee;
 
-    // Many-to-One: Assignment is linked to one Product
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "product_id", nullable = false)
     @JsonIgnore

@@ -3,13 +3,17 @@ package org.af.assetflowapi.service;
 import lombok.AllArgsConstructor;
 import org.af.assetflowapi.data.dto.AssignmentDto;
 import org.af.assetflowapi.data.model.Assignment;
+import org.af.assetflowapi.data.model.Organization;
 import org.af.assetflowapi.data.model.Product;
 import org.af.assetflowapi.data.model.User;
 import org.af.assetflowapi.repository.AssignmentRepository;
+import org.af.assetflowapi.repository.OrganizationRepository;
 import org.af.assetflowapi.repository.ProductRepository;
 import org.af.assetflowapi.repository.UserRepository;
 import org.modelmapper.ModelMapper;
 import org.springframework.stereotype.Service;
+
+import com.fasterxml.jackson.annotation.JsonTypeInfo.As;
 
 import java.util.List;
 
@@ -19,6 +23,7 @@ public class AssignmentService {
     private final AssignmentRepository assignmentRepository;
     private final UserRepository userRepository;
     private final ProductRepository productRepository;
+    private final OrganizationRepository organizationRepository;
     private final ModelMapper modelMapper;
 
     public List<AssignmentDto> getUserAssignments(Long userId) {
@@ -29,26 +34,50 @@ public class AssignmentService {
                 .map(assignment -> modelMapper.map(assignment, AssignmentDto.class))
                 .toList();
     }
+    //For remove
+    // public AssignmentDto createAssignment(AssignmentDto dto) {
+    //     if (dto == null) throw new IllegalArgumentException("AssignmentDto cannot be null");
 
-    public AssignmentDto createAssignment(AssignmentDto dto) {
-        if (dto == null) throw new IllegalArgumentException("AssignmentDto cannot be null");
+    //     User employee =  userRepository.findById(dto.getEmployeeId())
+    //             .orElseThrow(() -> new IllegalArgumentException("User with id " + dto.getEmployeeId() + " not found"));
+    //     Product product = productRepository.findById(dto.getProductId())
+    //             .orElseThrow(() -> new IllegalArgumentException("Product with id " + dto.getProductId() + " not found"));
 
-        User employee =  userRepository.findById(dto.getEmployeeId())
-                .orElseThrow(() -> new IllegalArgumentException("User with id " + dto.getEmployeeId() + " not found"));
-        Product product = productRepository.findById(dto.getProductId())
-                .orElseThrow(() -> new IllegalArgumentException("Product with id " + dto.getProductId() + " not found"));
 
+    //     Assignment assignment = new Assignment();
+    //     assignment.setEmployee(employee);
+    //     assignment.setProduct(product);
+    //     assignment.setDateAssigned(dto.getDateAssigned());
+    //     assignment.setDateReturned(dto.getDateReturned());
+
+    //     Assignment saved = assignmentRepository.save(assignment);
+    //     return mapToDto(saved);
+    // }
+
+    public AssignmentDto createAssignmentToUser(AssignmentDto assignmentDtoDto) {
+        if (assignmentDtoDto == null) throw new IllegalArgumentException("AssignmentDto cannot be null");
+
+        User employee =  userRepository.findById(assignmentDtoDto.getEmployeeId())
+                .orElseThrow(() -> new IllegalArgumentException("User with id " + assignmentDtoDto.getEmployeeId() + " not found"));
+        Product product = productRepository.findById(assignmentDtoDto.getProductId())
+                .orElseThrow(() -> new IllegalArgumentException("Product with id " + assignmentDtoDto.getProductId() + " not found"));
+        Organization organization = organizationRepository.findById(employee.getOrganization().getId())
+                .orElseThrow(() -> new IllegalArgumentException("Organization for user with id " + assignmentDtoDto.getEmployeeId() + " not found"));
+        
+        if (organization.getInventory() == null || !organization.getInventory().contains(product)) {
+            throw new IllegalArgumentException("Product with id " + assignmentDtoDto.getProductId() +
+                    " does not belong to the organization of user with id " + assignmentDtoDto.getEmployeeId());
+        }
 
         Assignment assignment = new Assignment();
         assignment.setEmployee(employee);
         assignment.setProduct(product);
-        assignment.setDateAssigned(dto.getDateAssigned());
-        assignment.setDateReturned(dto.getDateReturned());
+        assignment.setDateAssigned(assignmentDtoDto.getDateAssigned());
+        assignment.setDateReturned(assignmentDtoDto.getDateReturned());
 
         Assignment saved = assignmentRepository.save(assignment);
         return mapToDto(saved);
     }
-
     public AssignmentDto getAssignment(Long id) {
         Assignment assignment = assignmentRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Assignment with id " + id + " not found"));

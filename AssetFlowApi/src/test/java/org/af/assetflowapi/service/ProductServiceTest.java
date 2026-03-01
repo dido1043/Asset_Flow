@@ -52,21 +52,21 @@ class ProductServiceTest {
     }
 
     @Test
-    void findByOrganizationId_mapsProductsToDto() {
+    void getAllProducts_mapsOrganizationId() {
         Organization org = new Organization();
         org.setId(5L);
         product.setOrganization(org);
 
-        when(productRepository.findByOrganizationId(5L)).thenReturn(List.of(product));
-        when(modelMapper.map(any(), eq(ProductDto.class))).thenReturn(productDto);
+        when(productRepository.findAll()).thenReturn(List.of(product));
+        when(modelMapper.map(any(), eq(ProductDto.class))).thenReturn(new ProductDto());
 
-        List<ProductDto> results = productService.findByOrganizationId(5L);
+        List<ProductDto> results = productService.getAllProducts();
 
         assertNotNull(results);
         assertEquals(1, results.size());
         assertEquals(5L, results.get(0).getOrganizationId());
 
-        verify(productRepository, times(1)).findByOrganizationId(5L);
+        verify(productRepository, times(1)).findAll();
     }
 
     @Test

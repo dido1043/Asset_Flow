@@ -1,10 +1,15 @@
 package org.af.assetflowapi.service;
 
 import lombok.AllArgsConstructor;
+import java.util.List;
+
+import org.af.assetflowapi.data.dto.ProductDto;
 import org.af.assetflowapi.data.dto.OrganizationDto;
 import org.af.assetflowapi.data.model.Organization;
+import org.af.assetflowapi.data.model.Product;
 import org.af.assetflowapi.data.model.User;
 import org.af.assetflowapi.repository.OrganizationRepository;
+import org.af.assetflowapi.repository.ProductRepository;
 import org.af.assetflowapi.repository.UserRepository;
 import org.modelmapper.ModelMapper;
 import org.springframework.stereotype.Service;
@@ -13,6 +18,7 @@ import org.springframework.stereotype.Service;
 @AllArgsConstructor
 public class OrganizationService {
     private final OrganizationRepository organizationRepository;
+    private final ProductRepository productRepository;
     private final UserRepository userRepository;
     private final ModelMapper modelMapper;
 
@@ -57,4 +63,21 @@ public class OrganizationService {
         return modelMapper.map(organization, OrganizationDto.class);
     }
 
+    public List<ProductDto> getOrganizationProducts(Long organizationId) {
+        List<Product> products = productRepository.findByOrganizationId(organizationId);
+        return products.stream()
+                .map(product -> {
+                    ProductDto dto = modelMapper.map(product, ProductDto.class);
+                    if (product.getOrganization() != null) dto.setOrganizationId(product.getOrganization().getId());
+                    return dto;
+                })
+                .toList();
+    }
+
+
+    private ProductDto mapToDto(Long organizationId, Product product) {
+        ProductDto dto = modelMapper.map(product, ProductDto.class);
+        dto.setOrganizationId(organizationId);
+        return dto;
+    }
 }

@@ -59,7 +59,7 @@ const Navigation = () => {
                                 Sign in
                             </Link>
                             <Link href="/user/register" className="inline-flex">
-                                <span className="inline-flex h-9 items-center justify-center rounded-xl bg-brand-600 px-4 text-sm font-semibold text-white shadow-lg shadow-brand-200 transition hover:bg-brand-700">
+                                <span className="inline-flex h-9 items-center justify-center rounded-xl bg-brand-600 px-4 text-sm font-semibold text-black shadow-lg shadow-brand-200 transition hover:bg-brand-700">
                                     Get started
                                 </span>
                             </Link>

@@ -28,7 +28,7 @@ const AccountPage = () => {
                 setLoading(false);
                 return;
             }
-
+            
             const authJson = JSON.parse(authData);
             try{
                 const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/user/${authJson.userId}`, {
