@@ -2,9 +2,11 @@ package org.af.assetflowapi.service;
 
 import org.af.assetflowapi.data.dto.AssignmentDto;
 import org.af.assetflowapi.data.model.Assignment;
+import org.af.assetflowapi.data.model.Organization;
 import org.af.assetflowapi.data.model.Product;
 import org.af.assetflowapi.data.model.User;
 import org.af.assetflowapi.repository.AssignmentRepository;
+import org.af.assetflowapi.repository.OrganizationRepository;
 import org.af.assetflowapi.repository.ProductRepository;
 import org.af.assetflowapi.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -34,6 +36,9 @@ class AssignmentServiceTest {
     ProductRepository productRepository;
 
     @Mock
+    OrganizationRepository organizationRepository;
+
+    @Mock
     ModelMapper modelMapper;
 
     @InjectMocks
@@ -41,6 +46,7 @@ class AssignmentServiceTest {
 
     User user;
     Product product;
+    Organization organization;
     Assignment assignment;
     AssignmentDto dto;
 
@@ -50,8 +56,12 @@ class AssignmentServiceTest {
         user.setId(2L);
         product = new Product();
         product.setId(3L);
+    organization = new Organization();
+    organization.setId(11L);
         assignment = new Assignment();
         assignment.setId(4L);
+    assignment.setEmployee(user);
+    assignment.setProduct(product);
 
         dto = new AssignmentDto();
         dto.setEmployeeId(2L);
@@ -60,12 +70,15 @@ class AssignmentServiceTest {
 
     @Test
     void createAssignment_happyPath_savesAndReturnsDto() {
+        user.setOrganization(organization);
+        organization.setInventory(java.util.List.of(product));
         when(userRepository.findById(2L)).thenReturn(Optional.of(user));
         when(productRepository.findById(3L)).thenReturn(Optional.of(product));
+        when(organizationRepository.findById(11L)).thenReturn(Optional.of(organization));
         when(assignmentRepository.save(any())).thenReturn(assignment);
-        when(modelMapper.map(assignment, AssignmentDto.class)).thenReturn(dto);
+        when(modelMapper.map(assignment, AssignmentDto.class)).thenReturn(new AssignmentDto());
 
-        AssignmentDto result = assignmentService.createAssignment(dto);
+        AssignmentDto result = assignmentService.createAssignmentToUser(dto);
 
         assertNotNull(result);
         assertEquals(2L, result.getEmployeeId());
@@ -74,7 +87,7 @@ class AssignmentServiceTest {
 
     @Test
     void createAssignment_withNull_throws() {
-        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () -> assignmentService.createAssignment(null));
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () -> assignmentService.createAssignmentToUser(null));
         assertTrue(ex.getMessage().contains("AssignmentDto cannot be null"));
     }
 

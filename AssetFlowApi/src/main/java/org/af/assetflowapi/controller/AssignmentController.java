@@ -17,7 +17,7 @@ public class AssignmentController {
 
     @PostMapping("/add")
     public ResponseEntity<AssignmentDto> createAssignment(@RequestBody AssignmentDto dto) {
-        AssignmentDto created = assignmentService.createAssignment(dto);
+        AssignmentDto created = assignmentService.createAssignmentToUser(dto);
         return ResponseEntity.status(HttpStatus.CREATED).body(created);
     }
 
