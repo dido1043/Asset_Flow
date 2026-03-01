@@ -15,6 +15,5 @@ public class AssignmentDto {
     private Long productId;
     private ZonedDateTime dateAssigned;
     private ZonedDateTime dateReturned;
-    private String status;
 }
 

@@ -1,6 +1,5 @@
 package org.af.assetflowapi.config.seeder;
 
-import lombok.AllArgsConstructor;
 import org.af.assetflowapi.data.enums.RoleEnum;
 import org.af.assetflowapi.data.model.Assignment;
 import org.af.assetflowapi.data.model.Organization;
@@ -21,7 +20,6 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.ZonedDateTime;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -180,7 +178,6 @@ public class DatabaseSeeder implements ApplicationRunner {
                 a.setEmployee(user);
                 a.setProduct(product);
                 a.setDateAssigned(ZonedDateTime.now());
-                a.setStatus("ASSIGNED");
 
                 assignmentRepository.save(a);
                 log.info("Seeded assignment for user {} and product {}", user.getEmail(), product.getAssetTag());

@@ -44,7 +44,6 @@ public class AssignmentService {
         assignment.setProduct(product);
         assignment.setDateAssigned(dto.getDateAssigned());
         assignment.setDateReturned(dto.getDateReturned());
-        assignment.setStatus(dto.getStatus());
 
         Assignment saved = assignmentRepository.save(assignment);
         return mapToDto(saved);
@@ -82,9 +81,6 @@ public class AssignmentService {
             existing.setDateAssigned(dto.getDateAssigned());
         }
         existing.setDateReturned(dto.getDateReturned()); // allow null to clear
-        if (dto.getStatus() != null) {
-            existing.setStatus(dto.getStatus());
-        }
 
         Assignment saved = assignmentRepository.save(existing);
         return mapToDto(saved);
@@ -106,12 +102,6 @@ public class AssignmentService {
 
     public List<AssignmentDto> getAssignmentsByProduct(Long productId) {
         return assignmentRepository.findByProductId(productId).stream()
-                .map(this::mapToDto)
-                .toList();
-    }
-
-    public List<AssignmentDto> getAssignmentsByStatus(String status) {
-        return assignmentRepository.findByStatus(status).stream()
                 .map(this::mapToDto)
                 .toList();
     }

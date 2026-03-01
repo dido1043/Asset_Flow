@@ -35,8 +35,4 @@ public class Assignment {
 
     @Column(name = "date_returned")
     private ZonedDateTime dateReturned;
-
-    private String status;
-
-
 }
