@@ -156,13 +156,16 @@ const RegisterForm = () => {
                                 min={0}
                             />
                         </div>
+
+
                     ) : null}
                     <div>
 
                     </div>
                 </div>
-
-                <div>
+                {
+                    formData.role === "EMPLOYEE" ? (
+                        <div>
                     <Label htmlFor="assignmentIds">Assignment IDs</Label>
                     <div className="mt-2 flex flex-col gap-2 sm:flex-row sm:items-center">
                         <Input
@@ -186,8 +189,17 @@ const RegisterForm = () => {
                         <span className="text-xs text-slate-500">Separate IDs with commas</span>
                     </div>
                 </div>
+                    ) : null
+                }
+                
 
-                <Button type="submit" className="w-full" size="lg" disabled={loading}>
+                <Button
+                    type="submit"
+                    className="w-full bg-white text-black"
+                    size="lg"
+                    disabled={loading}
+                    style={{ color: "#000", opacity: 1 }}
+                >
                     {loading ? "Creating account…" : "Create account"}
                 </Button>
             </form>

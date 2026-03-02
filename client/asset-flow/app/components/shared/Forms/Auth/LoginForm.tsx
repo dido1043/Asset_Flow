@@ -55,6 +55,7 @@ const LoginForm = () => {
 
             const authPayload = await response.json();
             localStorage.setItem("auth", JSON.stringify(authPayload));
+            window.location.href = "/user/account"; 
         } catch (err: unknown) {
             const message = err instanceof Error ? err.message : "Unable to login. Please try again.";
             setError(message);
@@ -102,7 +103,7 @@ const LoginForm = () => {
                     </div>
                 </div>
 
-                <Button type="submit" className="w-full" size="lg" disabled={loading}>
+                <Button type="submit" className="w-full" size="lg" disabled={loading} style={{ color: "#000000ff" }}>
                     {loading ? "Signing in…" : "Sign in"}
                 </Button>
             </form>
