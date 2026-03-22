@@ -26,10 +26,11 @@ jobs:
         distribution: 'temurin'
         cache: maven
 
+    - name: Grant execute permission for mvnw
+      run: chmod +x AssetFlowApi/mvnw
+
     - name: Build with Maven
-      working-directory: AssetFlowApi
-      run: ./mvnw -B package
+      run: ./mvnw -B package --file AssetFlowApi/pom.xml
 
     - name: Run tests
-      working-directory: AssetFlowApi
-      run: ./mvnw -B test
+      run: ./mvnw -B test --file AssetFlowApi/pom.xml
