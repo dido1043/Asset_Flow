@@ -27,7 +27,7 @@ jobs:
         cache: maven
 
     - name: Build with Maven
-      run: mvn -B package --file AssetFlowApi/pom.xml
+      run: ./mvnw -B package --file AssetFlowApi/pom.xml
 
     - name: Run tests
-      run: mvn -B test --file AssetFlowApi/pom.xml
+      run: ./mvnw -B test --file AssetFlowApi/pom.xml
