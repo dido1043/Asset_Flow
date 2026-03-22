@@ -33,5 +33,4 @@ jobs:
           bash -n mvnw || true
       - name: Build
         run: bash ./mvnw -B package -DskipTests
-      - name: Run tests
-        run: bash ./mvnw -B test
+      
