@@ -52,6 +52,17 @@ type EmptyStateProps = {
   description: string;
 };
 
+type KnownOrganization = OrganizationDto & {
+  leaderId: number | null;
+  leaderName: string | null;
+  memberCount: number;
+};
+
+type SelectOption = {
+  value: string;
+  label: string;
+};
+
 const roleOptions: Role[] = ["LEADER", "EMPLOYEE"];
 
 const selectClassName =
@@ -208,6 +219,45 @@ function EmptyState({ title, description }: EmptyStateProps) {
   );
 }
 
+function FieldHint({ children }: { children: React.ReactNode }) {
+  return <p className="mt-2 text-xs text-slate-500">{children}</p>;
+}
+
+function SelectField({
+  id,
+  label,
+  value,
+  onChange,
+  options,
+  placeholder,
+  hint,
+  className,
+}: {
+  id: string;
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  options: SelectOption[];
+  placeholder?: string;
+  hint?: React.ReactNode;
+  className?: string;
+}) {
+  return (
+    <div className={className}>
+      <Label htmlFor={id}>{label}</Label>
+      <select id={id} className={selectClassName} value={value} onChange={(event) => onChange(event.target.value)}>
+        <option value="">{placeholder ?? `Select ${label.toLowerCase()}`}</option>
+        {options.map((option) => (
+          <option key={option.value} value={option.value}>
+            {option.label}
+          </option>
+        ))}
+      </select>
+      {hint ? <FieldHint>{hint}</FieldHint> : null}
+    </div>
+  );
+}
+
 const AccountPage = () => {
   const router = useRouter();
   const seededIdsRef = React.useRef(false);
@@ -222,6 +272,7 @@ const AccountPage = () => {
   const [currentUser, setCurrentUser] = React.useState<UserDto | null>(null);
   const [users, setUsers] = React.useState<UserDto[]>([]);
   const [selectedUser, setSelectedUser] = React.useState<UserDto | null>(null);
+  const [organizations, setOrganizations] = React.useState<KnownOrganization[]>([]);
 
   const [leaderOrganization, setLeaderOrganization] = React.useState<OrganizationDto | null>(null);
   const [organizationInventory, setOrganizationInventory] = React.useState<ProductDto[]>([]);
@@ -460,6 +511,200 @@ const AccountPage = () => {
     seededIdsRef.current = true;
   }, [currentUser]);
 
+  React.useEffect(() => {
+    const leaderUsers = users.filter((user) => user.role === "LEADER" && typeof user.id === "number");
+
+    if (leaderUsers.length === 0) {
+      setOrganizations([]);
+      return;
+    }
+
+    let cancelled = false;
+
+    const loadOrganizations = async () => {
+      const results = await Promise.allSettled(
+        leaderUsers.map(async (leader) => {
+          const organization = await apiRequest<OrganizationDto>(`/org/leader/${leader.id}`);
+          return { leader, organization };
+        }),
+      );
+
+      if (cancelled) {
+        return;
+      }
+
+      const nextOrganizations = results.flatMap((result) => {
+        if (result.status !== "fulfilled") {
+          return [];
+        }
+
+        const { leader, organization } = result.value;
+
+        if (organization.id == null) {
+          return [];
+        }
+
+        return [
+          {
+            ...organization,
+            leaderId: leader.id ?? null,
+            leaderName: leader.fullName ?? null,
+            memberCount: users.filter((user) => user.organizationId === organization.id).length,
+          },
+        ];
+      });
+
+      const uniqueOrganizations = nextOrganizations.reduce<KnownOrganization[]>((accumulator, organization) => {
+        if (accumulator.some((item) => item.id === organization.id)) {
+          return accumulator;
+        }
+
+        return [...accumulator, organization];
+      }, []);
+
+      setOrganizations(
+        uniqueOrganizations.sort((left, right) => left.organizationName.localeCompare(right.organizationName)),
+      );
+    };
+
+    void loadOrganizations();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [users]);
+
+  const upsertOrganizationSummary = React.useCallback(
+    (organization: OrganizationDto, leaderId?: number | null) => {
+      if (organization.id == null) {
+        return;
+      }
+
+      setOrganizations((previous) => {
+        const current = previous.find((item) => item.id === organization.id);
+        const leader = typeof leaderId === "number" ? users.find((user) => user.id === leaderId) : null;
+
+        const nextOrganization: KnownOrganization = {
+          ...organization,
+          leaderId: leaderId ?? current?.leaderId ?? null,
+          leaderName: leader?.fullName ?? current?.leaderName ?? null,
+          memberCount: users.filter((user) => user.organizationId === organization.id).length,
+        };
+
+        return [...previous.filter((item) => item.id !== organization.id), nextOrganization].sort((left, right) =>
+          left.organizationName.localeCompare(right.organizationName),
+        );
+      });
+    },
+    [users],
+  );
+
+  const allOrganizations = leaderOrganization?.id && !organizations.some((organization) => organization.id === leaderOrganization.id)
+    ? [
+        ...organizations,
+        {
+          ...leaderOrganization,
+          leaderId: null,
+          leaderName: null,
+          memberCount: users.filter((user) => user.organizationId === leaderOrganization.id).length,
+        },
+      ]
+    : organizations;
+
+  const getUserName = (userId?: number | null) => {
+    if (userId == null) {
+      return "Not assigned";
+    }
+
+    const user = users.find((candidate) => candidate.id === userId) ?? (currentUser?.id === userId ? currentUser : null);
+    return user ? user.fullName : `User #${userId}`;
+  };
+
+  const getUserOptionLabel = (user: UserDto) => `${user.fullName} • ${user.email}`;
+
+  const getOrganizationName = (organizationId?: number | null) => {
+    if (organizationId == null) {
+      return "Not assigned";
+    }
+
+    const organization = allOrganizations.find((candidate) => candidate.id === organizationId);
+    return organization ? organization.organizationName : `Company #${organizationId}`;
+  };
+
+  const getOrganizationOptionLabel = (organization: KnownOrganization) =>
+    organization.leaderName
+      ? `${organization.organizationName} • led by ${organization.leaderName}`
+      : organization.organizationName;
+
+  const getProductLabel = (product?: ProductDto | null) => {
+    if (!product) {
+      return "Unknown asset";
+    }
+
+    return `${product.productBrand} ${product.productModel} • ${product.assetTag}`;
+  };
+
+  const getProductName = (productId?: number | null) => {
+    if (productId == null) {
+      return "No asset selected";
+    }
+
+    const product = products.find((candidate) => candidate.id === productId);
+    return product ? getProductLabel(product) : `Product #${productId}`;
+  };
+
+  const leaderUsers = users.filter((user) => user.role === "LEADER" && typeof user.id === "number");
+  const usersWithIds = users.filter((user) => typeof user.id === "number");
+  const employeeUsers = users.filter((user) => user.role === "EMPLOYEE" && typeof user.id === "number");
+  const productsWithIds = products.filter((product) => typeof product.id === "number");
+  const assignmentsWithIds = assignments.filter((assignment) => typeof assignment.id === "number");
+
+  const userOptions: SelectOption[] = usersWithIds.map((user) => ({
+    value: String(user.id),
+    label: getUserOptionLabel(user),
+  }));
+
+  const leaderOptions: SelectOption[] = leaderUsers.map((user) => ({
+    value: String(user.id),
+    label: getUserOptionLabel(user),
+  }));
+
+  const employeeOptions: SelectOption[] = employeeUsers.map((user) => ({
+    value: String(user.id),
+    label: getUserOptionLabel(user),
+  }));
+
+  const organizationOptions: SelectOption[] = allOrganizations
+    .filter((organization) => typeof organization.id === "number")
+    .map((organization) => ({
+      value: String(organization.id),
+      label: getOrganizationOptionLabel(organization),
+    }));
+
+  const productOptions: SelectOption[] = productsWithIds.map((product) => ({
+    value: String(product.id),
+    label: getProductLabel(product),
+  }));
+
+  const assignmentOptions: SelectOption[] = assignmentsWithIds.map((assignment) => ({
+    value: String(assignment.id),
+    label: `#${assignment.id} • ${getUserName(assignment.employeeId)} • ${getProductName(assignment.productId)}`,
+  }));
+
+  const selectedProtocolOrganizationId = parseOptionalNumber(protocolCreateForm.organizationId);
+  const protocolUserOptions: SelectOption[] = usersWithIds
+    .filter((user) => {
+      if (selectedProtocolOrganizationId == null) {
+        return true;
+      }
+
+      return user.organizationId === selectedProtocolOrganizationId;
+    })
+    .map((user) => ({
+      value: String(user.id),
+      label: getUserOptionLabel(user),
+    }));
+
   const refreshCurrentUserSnapshot = async () => {
     if (!session) {
       return null;
@@ -578,7 +823,7 @@ const AccountPage = () => {
   const handleDeleteUser = async () => {
     const userId = parseRequiredNumber(deleteUserId, "Delete user ID");
 
-    if (!window.confirm(`Delete user ${userId}? This cannot be undone.`)) {
+    if (!window.confirm(`Delete ${getUserName(userId)}? This cannot be undone.`)) {
       return;
     }
 
@@ -611,6 +856,7 @@ const AccountPage = () => {
 
     if (organization) {
       setLeaderOrganization(organization);
+      upsertOrganizationSummary(organization, leaderId);
     }
   };
 
@@ -635,6 +881,7 @@ const AccountPage = () => {
     }
 
     setLeaderOrganization(organization);
+    upsertOrganizationSummary(organization, leaderId);
     if (session?.userId === leaderId) {
       await refreshCurrentUserSnapshot();
     }
@@ -661,6 +908,7 @@ const AccountPage = () => {
     }
 
     setLeaderOrganization(organization);
+    upsertOrganizationSummary(organization);
     if (session?.userId === userId) {
       await refreshCurrentUserSnapshot();
     }
@@ -701,6 +949,7 @@ const AccountPage = () => {
     await refreshUsersList();
     const organization = await apiRequest<OrganizationDto>(`/org/leader/${userId}`);
     setLeaderOrganization(organization);
+    upsertOrganizationSummary(organization, userId);
   };
 
   const handleLoadOrganizationInventory = async () => {
@@ -823,7 +1072,7 @@ const AccountPage = () => {
   const handleDeleteProduct = async () => {
     const productId = parseRequiredNumber(productLookupId || productForm.id, "Product ID");
 
-    if (!window.confirm(`Delete product ${productId}?`)) {
+    if (!window.confirm(`Delete ${getProductName(productId)}?`)) {
       return;
     }
 
@@ -977,7 +1226,7 @@ const AccountPage = () => {
   const handleDeleteAssignment = async () => {
     const assignmentId = parseRequiredNumber(assignmentLookupId || assignmentForm.id, "Assignment ID");
 
-    if (!window.confirm(`Delete assignment ${assignmentId}?`)) {
+    if (!window.confirm(`Delete assignment #${assignmentId}?`)) {
       return;
     }
 
@@ -1310,9 +1559,9 @@ const AccountPage = () => {
                     <dd className="font-semibold text-slate-900">{currentUser.email}</dd>
                   </div>
                   <div className="flex justify-between gap-4">
-                    <dt>Organization</dt>
+                    <dt>Company</dt>
                     <dd className="font-semibold text-slate-900">
-                      {currentUser.organizationId ?? "Not assigned"}
+                      {getOrganizationName(currentUser.organizationId)}
                     </dd>
                   </div>
                   <div className="flex justify-between gap-4">
@@ -1358,16 +1607,30 @@ const AccountPage = () => {
             <FeedbackMessage feedback={feedbackByKey.users} />
 
             <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
-              <p className="text-sm font-semibold text-slate-900">Find user by ID</p>
+              <p className="text-sm font-semibold text-slate-900">Choose a teammate</p>
               <div className="mt-4 flex flex-col gap-3 sm:flex-row">
                 <div className="flex-1">
-                  <Label htmlFor="user-lookup-id">User ID</Label>
-                  <Input
-                    id="user-lookup-id"
-                    type="number"
-                    value={userLookupId}
-                    onChange={(event) => setUserLookupId(event.target.value)}
-                  />
+                  {userOptions.length > 0 ? (
+                    <SelectField
+                      id="user-lookup-id"
+                      label="User"
+                      value={userLookupId}
+                      onChange={setUserLookupId}
+                      options={userOptions}
+                      placeholder="Select a teammate"
+                      hint="Names are shown here, while the backend still receives the selected user ID."
+                    />
+                  ) : (
+                    <>
+                      <Label htmlFor="user-lookup-id">User ID</Label>
+                      <Input
+                        id="user-lookup-id"
+                        type="number"
+                        value={userLookupId}
+                        onChange={(event) => setUserLookupId(event.target.value)}
+                      />
+                    </>
+                  )}
                 </div>
                 <div className="flex items-end">
                   <Button onClick={handleLookupUser} disabled={Boolean(pendingByKey.users)}>
@@ -1378,16 +1641,29 @@ const AccountPage = () => {
             </div>
 
             <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
-              <p className="text-sm font-semibold text-slate-900">Delete user</p>
+              <p className="text-sm font-semibold text-slate-900">Remove a user</p>
               <div className="mt-4 flex flex-col gap-3 sm:flex-row">
                 <div className="flex-1">
-                  <Label htmlFor="delete-user-id">Delete user ID</Label>
-                  <Input
-                    id="delete-user-id"
-                    type="number"
-                    value={deleteUserId}
-                    onChange={(event) => setDeleteUserId(event.target.value)}
-                  />
+                  {userOptions.length > 0 ? (
+                    <SelectField
+                      id="delete-user-id"
+                      label="User to remove"
+                      value={deleteUserId}
+                      onChange={setDeleteUserId}
+                      options={userOptions}
+                      placeholder="Select a teammate"
+                    />
+                  ) : (
+                    <>
+                      <Label htmlFor="delete-user-id">Delete user ID</Label>
+                      <Input
+                        id="delete-user-id"
+                        type="number"
+                        value={deleteUserId}
+                        onChange={(event) => setDeleteUserId(event.target.value)}
+                      />
+                    </>
+                  )}
                 </div>
                 <div className="flex items-end">
                   <Button variant="danger" onClick={handleDeleteUser} disabled={Boolean(pendingByKey.users)}>
@@ -1422,9 +1698,9 @@ const AccountPage = () => {
                     <dd className="font-semibold text-slate-900">{selectedUser.age ?? "Not set"}</dd>
                   </div>
                   <div className="flex justify-between gap-4">
-                    <dt>Organization</dt>
+                    <dt>Company</dt>
                     <dd className="font-semibold text-slate-900">
-                      {selectedUser.organizationId ?? "Not assigned"}
+                      {getOrganizationName(selectedUser.organizationId)}
                     </dd>
                   </div>
                   <div className="flex justify-between gap-4">
@@ -1438,7 +1714,7 @@ const AccountPage = () => {
             ) : (
               <EmptyState
                 title="No user selected"
-                description="Load a specific user by ID to inspect their details here."
+                description="Choose a teammate from the selector to inspect their details here."
               />
             )}
           </div>
@@ -1463,7 +1739,7 @@ const AccountPage = () => {
                     </div>
                     <div className="mt-4 space-y-2 text-sm text-slate-600">
                       <p>User ID: {user.id}</p>
-                      <p>Organization: {user.organizationId ?? "Not assigned"}</p>
+                      <p>Company: {getOrganizationName(user.organizationId)}</p>
                       <p>Assignments: {user.assignmentIds?.length ?? 0}</p>
                     </div>
                     <div className="mt-4">
@@ -1501,16 +1777,29 @@ const AccountPage = () => {
             <FeedbackMessage feedback={feedbackByKey.organizations} />
 
             <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
-              <p className="text-sm font-semibold text-slate-900">Lookup by leader</p>
+              <p className="text-sm font-semibold text-slate-900">Find a company by leader</p>
               <div className="mt-4 flex flex-col gap-3 sm:flex-row">
                 <div className="flex-1">
-                  <Label htmlFor="organization-leader-id">Leader ID</Label>
-                  <Input
-                    id="organization-leader-id"
-                    type="number"
-                    value={organizationLookupLeaderId}
-                    onChange={(event) => setOrganizationLookupLeaderId(event.target.value)}
-                  />
+                  {leaderOptions.length > 0 ? (
+                    <SelectField
+                      id="organization-leader-id"
+                      label="Leader"
+                      value={organizationLookupLeaderId}
+                      onChange={setOrganizationLookupLeaderId}
+                      options={leaderOptions}
+                      placeholder="Select a leader"
+                    />
+                  ) : (
+                    <>
+                      <Label htmlFor="organization-leader-id">Leader ID</Label>
+                      <Input
+                        id="organization-leader-id"
+                        type="number"
+                        value={organizationLookupLeaderId}
+                        onChange={(event) => setOrganizationLookupLeaderId(event.target.value)}
+                      />
+                    </>
+                  )}
                 </div>
                 <div className="flex items-end">
                   <Button onClick={handleLookupOrganization} disabled={Boolean(pendingByKey.organizations)}>
@@ -1526,22 +1815,39 @@ const AccountPage = () => {
             >
               <p className="text-sm font-semibold text-slate-900">Create organization</p>
               <div className="mt-4 grid gap-4 sm:grid-cols-2">
-                <div>
-                  <Label htmlFor="create-organization-leader-id">Leader ID</Label>
-                  <Input
+                {leaderOptions.length > 0 ? (
+                  <SelectField
                     id="create-organization-leader-id"
-                    type="number"
+                    label="Leader"
                     value={organizationCreateForm.leaderId}
-                    onChange={(event) =>
+                    onChange={(value) =>
                       setOrganizationCreateForm((previous) => ({
                         ...previous,
-                        leaderId: event.target.value,
+                        leaderId: value,
                       }))
                     }
+                    options={leaderOptions}
+                    placeholder="Select who leads this company"
+                    hint="The selected leader name is shown here, but the backend still uses that leader's ID."
                   />
-                </div>
+                ) : (
+                  <div>
+                    <Label htmlFor="create-organization-leader-id">Leader ID</Label>
+                    <Input
+                      id="create-organization-leader-id"
+                      type="number"
+                      value={organizationCreateForm.leaderId}
+                      onChange={(event) =>
+                        setOrganizationCreateForm((previous) => ({
+                          ...previous,
+                          leaderId: event.target.value,
+                        }))
+                      }
+                    />
+                  </div>
+                )}
                 <div>
-                  <Label htmlFor="create-organization-name">Organization name</Label>
+                  <Label htmlFor="create-organization-name">Company name</Label>
                   <Input
                     id="create-organization-name"
                     value={organizationCreateForm.organizationName}
@@ -1564,34 +1870,66 @@ const AccountPage = () => {
             <form onSubmit={handleJoinOrganization} className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
               <p className="text-sm font-semibold text-slate-900">Join organization</p>
               <div className="mt-4 grid gap-4 sm:grid-cols-2">
-                <div>
-                  <Label htmlFor="join-user-id">User ID</Label>
-                  <Input
+                {userOptions.length > 0 ? (
+                  <SelectField
                     id="join-user-id"
-                    type="number"
+                    label="Teammate"
                     value={joinOrganizationForm.userId}
-                    onChange={(event) =>
+                    onChange={(value) =>
                       setJoinOrganizationForm((previous) => ({
                         ...previous,
-                        userId: event.target.value,
+                        userId: value,
                       }))
                     }
+                    options={userOptions}
+                    placeholder="Select a teammate"
                   />
-                </div>
-                <div>
-                  <Label htmlFor="join-organization-id">Organization ID</Label>
-                  <Input
+                ) : (
+                  <div>
+                    <Label htmlFor="join-user-id">User ID</Label>
+                    <Input
+                      id="join-user-id"
+                      type="number"
+                      value={joinOrganizationForm.userId}
+                      onChange={(event) =>
+                        setJoinOrganizationForm((previous) => ({
+                          ...previous,
+                          userId: event.target.value,
+                        }))
+                      }
+                    />
+                  </div>
+                )}
+                {organizationOptions.length > 0 ? (
+                  <SelectField
                     id="join-organization-id"
-                    type="number"
+                    label="Company"
                     value={joinOrganizationForm.organizationId}
-                    onChange={(event) =>
+                    onChange={(value) =>
                       setJoinOrganizationForm((previous) => ({
                         ...previous,
-                        organizationId: event.target.value,
+                        organizationId: value,
                       }))
                     }
+                    options={organizationOptions}
+                    placeholder="Select a company"
                   />
-                </div>
+                ) : (
+                  <div>
+                    <Label htmlFor="join-organization-id">Organization ID</Label>
+                    <Input
+                      id="join-organization-id"
+                      type="number"
+                      value={joinOrganizationForm.organizationId}
+                      onChange={(event) =>
+                        setJoinOrganizationForm((previous) => ({
+                          ...previous,
+                          organizationId: event.target.value,
+                        }))
+                      }
+                    />
+                  </div>
+                )}
               </div>
               <div className="mt-4">
                 <Button type="submit" disabled={Boolean(pendingByKey.organizations)}>
@@ -1603,34 +1941,66 @@ const AccountPage = () => {
             <form onSubmit={handleBecomeLeader} className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
               <p className="text-sm font-semibold text-slate-900">Become leader</p>
               <div className="mt-4 grid gap-4 sm:grid-cols-2">
-                <div>
-                  <Label htmlFor="leader-user-id">User ID</Label>
-                  <Input
+                {userOptions.length > 0 ? (
+                  <SelectField
                     id="leader-user-id"
-                    type="number"
+                    label="New leader"
                     value={becomeLeaderForm.userId}
-                    onChange={(event) =>
+                    onChange={(value) =>
                       setBecomeLeaderForm((previous) => ({
                         ...previous,
-                        userId: event.target.value,
+                        userId: value,
                       }))
                     }
+                    options={userOptions}
+                    placeholder="Select who becomes leader"
                   />
-                </div>
-                <div>
-                  <Label htmlFor="leader-organization-id">Organization ID</Label>
-                  <Input
+                ) : (
+                  <div>
+                    <Label htmlFor="leader-user-id">User ID</Label>
+                    <Input
+                      id="leader-user-id"
+                      type="number"
+                      value={becomeLeaderForm.userId}
+                      onChange={(event) =>
+                        setBecomeLeaderForm((previous) => ({
+                          ...previous,
+                          userId: event.target.value,
+                        }))
+                      }
+                    />
+                  </div>
+                )}
+                {organizationOptions.length > 0 ? (
+                  <SelectField
                     id="leader-organization-id"
-                    type="number"
+                    label="Company"
                     value={becomeLeaderForm.organizationId}
-                    onChange={(event) =>
+                    onChange={(value) =>
                       setBecomeLeaderForm((previous) => ({
                         ...previous,
-                        organizationId: event.target.value,
+                        organizationId: value,
                       }))
                     }
+                    options={organizationOptions}
+                    placeholder="Select a company"
                   />
-                </div>
+                ) : (
+                  <div>
+                    <Label htmlFor="leader-organization-id">Organization ID</Label>
+                    <Input
+                      id="leader-organization-id"
+                      type="number"
+                      value={becomeLeaderForm.organizationId}
+                      onChange={(event) =>
+                        setBecomeLeaderForm((previous) => ({
+                          ...previous,
+                          organizationId: event.target.value,
+                        }))
+                      }
+                    />
+                  </div>
+                )}
               </div>
               <div className="mt-4">
                 <Button type="submit" disabled={Boolean(pendingByKey.organizations)}>
@@ -1642,7 +2012,7 @@ const AccountPage = () => {
 
           <div className="space-y-5">
             <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-              <p className="text-sm font-semibold text-slate-900">Selected organization</p>
+              <p className="text-sm font-semibold text-slate-900">Selected company</p>
               {leaderOrganization ? (
                 <dl className="mt-4 grid gap-3 text-sm text-slate-600">
                   <div className="flex justify-between gap-4">
@@ -1653,26 +2023,52 @@ const AccountPage = () => {
                     <dt>Name</dt>
                     <dd className="font-semibold text-slate-900">{leaderOrganization.organizationName}</dd>
                   </div>
+                  <div className="flex justify-between gap-4">
+                    <dt>Leader</dt>
+                    <dd className="font-semibold text-slate-900">
+                      {allOrganizations.find((organization) => organization.id === leaderOrganization.id)?.leaderName ||
+                        "Unknown"}
+                    </dd>
+                  </div>
+                  <div className="flex justify-between gap-4">
+                    <dt>Members</dt>
+                    <dd className="font-semibold text-slate-900">
+                      {users.filter((user) => user.organizationId === leaderOrganization.id).length}
+                    </dd>
+                  </div>
                 </dl>
               ) : (
                 <EmptyState
-                  title="No organization selected"
-                  description="Use the leader lookup or organization creation form to load one here."
-                />
+                title="No organization selected"
+                description="Use the leader lookup or company creation form to load one here."
+              />
               )}
             </div>
 
             <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
-              <p className="text-sm font-semibold text-slate-900">Inventory by organization</p>
+              <p className="text-sm font-semibold text-slate-900">Inventory by company</p>
               <div className="mt-4 flex flex-col gap-3 sm:flex-row">
                 <div className="flex-1">
-                  <Label htmlFor="inventory-organization-id">Organization ID</Label>
-                  <Input
-                    id="inventory-organization-id"
-                    type="number"
-                    value={inventoryOrgId}
-                    onChange={(event) => setInventoryOrgId(event.target.value)}
-                  />
+                  {organizationOptions.length > 0 ? (
+                    <SelectField
+                      id="inventory-organization-id"
+                      label="Company"
+                      value={inventoryOrgId}
+                      onChange={setInventoryOrgId}
+                      options={organizationOptions}
+                      placeholder="Select a company"
+                    />
+                  ) : (
+                    <>
+                      <Label htmlFor="inventory-organization-id">Organization ID</Label>
+                      <Input
+                        id="inventory-organization-id"
+                        type="number"
+                        value={inventoryOrgId}
+                        onChange={(event) => setInventoryOrgId(event.target.value)}
+                      />
+                    </>
+                  )}
                 </div>
                 <div className="flex items-end">
                   <Button onClick={handleLoadOrganizationInventory} disabled={Boolean(pendingByKey.organizations)}>
@@ -1709,7 +2105,7 @@ const AccountPage = () => {
             ) : (
               <EmptyState
                 title="No inventory loaded"
-                description="Load products by organization to see them listed here."
+                description="Load products by company to see them listed here."
               />
             )}
           </div>
@@ -1732,6 +2128,7 @@ const AccountPage = () => {
 
             <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
               <p className="text-sm font-semibold text-slate-900">Create or update product</p>
+              <FieldHint>Companies are shown by name here. The selected company ID is still sent to the backend.</FieldHint>
               <div className="mt-4 grid gap-4 sm:grid-cols-2">
                 <div>
                   <Label htmlFor="product-id">Product ID for update</Label>
@@ -1744,20 +2141,36 @@ const AccountPage = () => {
                     }
                   />
                 </div>
-                <div>
-                  <Label htmlFor="product-organization-id">Organization ID</Label>
-                  <Input
+                {organizationOptions.length > 0 ? (
+                  <SelectField
                     id="product-organization-id"
-                    type="number"
+                    label="Company"
                     value={productForm.organizationId}
-                    onChange={(event) =>
+                    onChange={(value) =>
                       setProductForm((previous) => ({
                         ...previous,
-                        organizationId: event.target.value,
+                        organizationId: value,
                       }))
                     }
+                    options={organizationOptions}
+                    placeholder="Select a company"
                   />
-                </div>
+                ) : (
+                  <div>
+                    <Label htmlFor="product-organization-id">Organization ID</Label>
+                    <Input
+                      id="product-organization-id"
+                      type="number"
+                      value={productForm.organizationId}
+                      onChange={(event) =>
+                        setProductForm((previous) => ({
+                          ...previous,
+                          organizationId: event.target.value,
+                        }))
+                      }
+                    />
+                  </div>
+                )}
                 <div>
                   <Label htmlFor="product-type">Product type</Label>
                   <Input
@@ -1827,15 +2240,26 @@ const AccountPage = () => {
             <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
               <p className="text-sm font-semibold text-slate-900">Read and delete</p>
               <div className="mt-4 grid gap-4 sm:grid-cols-2">
-                <div>
-                  <Label htmlFor="product-lookup-id">Product ID</Label>
-                  <Input
+                {productOptions.length > 0 ? (
+                  <SelectField
                     id="product-lookup-id"
-                    type="number"
+                    label="Asset"
                     value={productLookupId}
-                    onChange={(event) => setProductLookupId(event.target.value)}
+                    onChange={setProductLookupId}
+                    options={productOptions}
+                    placeholder="Select an asset"
                   />
-                </div>
+                ) : (
+                  <div>
+                    <Label htmlFor="product-lookup-id">Product ID</Label>
+                    <Input
+                      id="product-lookup-id"
+                      type="number"
+                      value={productLookupId}
+                      onChange={(event) => setProductLookupId(event.target.value)}
+                    />
+                  </div>
+                )}
                 <div>
                   <Label htmlFor="product-asset-search">Asset tag</Label>
                   <Input
@@ -1892,7 +2316,7 @@ const AccountPage = () => {
                   <div className="flex justify-between gap-4">
                     <dt>Organization</dt>
                     <dd className="font-semibold text-slate-900">
-                      {selectedProduct.organizationId ?? "Not assigned"}
+                      {getOrganizationName(selectedProduct.organizationId)}
                     </dd>
                   </div>
                 </dl>
@@ -1921,6 +2345,9 @@ const AccountPage = () => {
                       <p className="mt-1 text-sm text-slate-600">
                         {product.productType} • {product.assetTag}
                       </p>
+                      <p className="mt-1 text-sm text-slate-500">
+                        Company: {getOrganizationName(product.organizationId)}
+                      </p>
                       <div className="mt-3">
                         <Button variant="outline" onClick={() => populateProductForm(product)}>
                           Use in form
@@ -1945,6 +2372,9 @@ const AccountPage = () => {
                           </p>
                           <p className="text-sm text-slate-600">
                             {product.productType} • {product.assetTag}
+                          </p>
+                          <p className="text-sm text-slate-500">
+                            Company: {getOrganizationName(product.organizationId)}
                           </p>
                         </div>
                         <span className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-slate-700">
@@ -1986,46 +2416,92 @@ const AccountPage = () => {
 
             <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
               <p className="text-sm font-semibold text-slate-900">Create or update assignment</p>
+              <FieldHint>Choose a teammate and asset by name. The form still sends their IDs to the backend.</FieldHint>
               <div className="mt-4 grid gap-4 sm:grid-cols-2">
-                <div>
-                  <Label htmlFor="assignment-id">Assignment ID for update</Label>
-                  <Input
+                {assignmentOptions.length > 0 ? (
+                  <SelectField
                     id="assignment-id"
-                    type="number"
+                    label="Assignment for update"
                     value={assignmentForm.id}
-                    onChange={(event) =>
-                      setAssignmentForm((previous) => ({ ...previous, id: event.target.value }))
+                    onChange={(value) =>
+                      setAssignmentForm((previous) => ({ ...previous, id: value }))
                     }
+                    options={assignmentOptions}
+                    placeholder="Select an assignment"
                   />
-                </div>
-                <div>
-                  <Label htmlFor="assignment-employee-id">Employee ID</Label>
-                  <Input
+                ) : (
+                  <div>
+                    <Label htmlFor="assignment-id">Assignment ID for update</Label>
+                    <Input
+                      id="assignment-id"
+                      type="number"
+                      value={assignmentForm.id}
+                      onChange={(event) =>
+                        setAssignmentForm((previous) => ({ ...previous, id: event.target.value }))
+                      }
+                    />
+                  </div>
+                )}
+                {employeeOptions.length > 0 ? (
+                  <SelectField
                     id="assignment-employee-id"
-                    type="number"
+                    label="Teammate"
                     value={assignmentForm.employeeId}
-                    onChange={(event) =>
+                    onChange={(value) =>
                       setAssignmentForm((previous) => ({
                         ...previous,
-                        employeeId: event.target.value,
+                        employeeId: value,
                       }))
                     }
+                    options={employeeOptions}
+                    placeholder="Select a teammate"
                   />
-                </div>
-                <div>
-                  <Label htmlFor="assignment-product-id">Product ID</Label>
-                  <Input
+                ) : (
+                  <div>
+                    <Label htmlFor="assignment-employee-id">Employee ID</Label>
+                    <Input
+                      id="assignment-employee-id"
+                      type="number"
+                      value={assignmentForm.employeeId}
+                      onChange={(event) =>
+                        setAssignmentForm((previous) => ({
+                          ...previous,
+                          employeeId: event.target.value,
+                        }))
+                      }
+                    />
+                  </div>
+                )}
+                {productOptions.length > 0 ? (
+                  <SelectField
                     id="assignment-product-id"
-                    type="number"
+                    label="Asset"
                     value={assignmentForm.productId}
-                    onChange={(event) =>
+                    onChange={(value) =>
                       setAssignmentForm((previous) => ({
                         ...previous,
-                        productId: event.target.value,
+                        productId: value,
                       }))
                     }
+                    options={productOptions}
+                    placeholder="Select an asset"
                   />
-                </div>
+                ) : (
+                  <div>
+                    <Label htmlFor="assignment-product-id">Product ID</Label>
+                    <Input
+                      id="assignment-product-id"
+                      type="number"
+                      value={assignmentForm.productId}
+                      onChange={(event) =>
+                        setAssignmentForm((previous) => ({
+                          ...previous,
+                          productId: event.target.value,
+                        }))
+                      }
+                    />
+                  </div>
+                )}
                 <div>
                   <Label htmlFor="assignment-date-assigned">Date assigned</Label>
                   <Input
@@ -2068,33 +2544,67 @@ const AccountPage = () => {
             <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
               <p className="text-sm font-semibold text-slate-900">Read, filter, and delete</p>
               <div className="mt-4 grid gap-4 sm:grid-cols-2">
-                <div>
-                  <Label htmlFor="assignment-lookup-id">Assignment ID</Label>
-                  <Input
+                {assignmentOptions.length > 0 ? (
+                  <SelectField
                     id="assignment-lookup-id"
-                    type="number"
+                    label="Assignment"
                     value={assignmentLookupId}
-                    onChange={(event) => setAssignmentLookupId(event.target.value)}
+                    onChange={setAssignmentLookupId}
+                    options={assignmentOptions}
+                    placeholder="Select an assignment"
                   />
-                </div>
-                <div>
-                  <Label htmlFor="assignment-user-filter">User ID</Label>
-                  <Input
+                ) : (
+                  <div>
+                    <Label htmlFor="assignment-lookup-id">Assignment ID</Label>
+                    <Input
+                      id="assignment-lookup-id"
+                      type="number"
+                      value={assignmentLookupId}
+                      onChange={(event) => setAssignmentLookupId(event.target.value)}
+                    />
+                  </div>
+                )}
+                {userOptions.length > 0 ? (
+                  <SelectField
                     id="assignment-user-filter"
-                    type="number"
+                    label="Teammate"
                     value={assignmentUserId}
-                    onChange={(event) => setAssignmentUserId(event.target.value)}
+                    onChange={setAssignmentUserId}
+                    options={userOptions}
+                    placeholder="Select a teammate"
                   />
-                </div>
-                <div className="sm:col-span-2">
-                  <Label htmlFor="assignment-product-filter">Product ID</Label>
-                  <Input
+                ) : (
+                  <div>
+                    <Label htmlFor="assignment-user-filter">User ID</Label>
+                    <Input
+                      id="assignment-user-filter"
+                      type="number"
+                      value={assignmentUserId}
+                      onChange={(event) => setAssignmentUserId(event.target.value)}
+                    />
+                  </div>
+                )}
+                {productOptions.length > 0 ? (
+                  <SelectField
                     id="assignment-product-filter"
-                    type="number"
+                    label="Asset"
                     value={assignmentProductId}
-                    onChange={(event) => setAssignmentProductId(event.target.value)}
+                    onChange={setAssignmentProductId}
+                    options={productOptions}
+                    placeholder="Select an asset"
+                    className="sm:col-span-2"
                   />
-                </div>
+                ) : (
+                  <div className="sm:col-span-2">
+                    <Label htmlFor="assignment-product-filter">Product ID</Label>
+                    <Input
+                      id="assignment-product-filter"
+                      type="number"
+                      value={assignmentProductId}
+                      onChange={(event) => setAssignmentProductId(event.target.value)}
+                    />
+                  </div>
+                )}
               </div>
               <div className="mt-5 flex flex-wrap gap-3">
                 <Button variant="outline" onClick={handleLookupAssignment} disabled={Boolean(pendingByKey.assignments)}>
@@ -2123,7 +2633,7 @@ const AccountPage = () => {
                   <div>
                     <p className="text-sm font-semibold text-slate-900">Assignment #{selectedAssignment.id}</p>
                     <p className="text-sm text-slate-500">
-                      Employee {selectedAssignment.employeeId} • Product {selectedAssignment.productId}
+                      {getUserName(selectedAssignment.employeeId)} • {getProductName(selectedAssignment.productId)}
                     </p>
                   </div>
                   <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">
@@ -2164,7 +2674,7 @@ const AccountPage = () => {
                   {userAssignments.map((assignment) => (
                     <div key={assignment.id} className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
                       <p className="font-semibold text-slate-900">
-                        Assignment #{assignment.id} • Product {assignment.productId}
+                        Assignment #{assignment.id} • {getProductName(assignment.productId)}
                       </p>
                       <p className="mt-1 text-sm text-slate-600">
                         Assigned {formatDateTime(assignment.dateAssigned)}
@@ -2187,7 +2697,7 @@ const AccountPage = () => {
                   {productAssignments.map((assignment) => (
                     <div key={assignment.id} className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
                       <p className="font-semibold text-slate-900">
-                        Assignment #{assignment.id} • Employee {assignment.employeeId}
+                        Assignment #{assignment.id} • {getUserName(assignment.employeeId)}
                       </p>
                       <p className="mt-1 text-sm text-slate-600">
                         Returned {formatDateTime(assignment.dateReturned)}
@@ -2210,10 +2720,10 @@ const AccountPage = () => {
                   {currentAssignments.map((assignment) => (
                     <div key={assignment.id} className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
                       <p className="font-semibold text-slate-900">
-                        Assignment #{assignment.id} • Product {assignment.productId}
+                        Assignment #{assignment.id} • {getProductName(assignment.productId)}
                       </p>
                       <p className="mt-1 text-sm text-slate-600">
-                        Employee {assignment.employeeId} • {formatDateTime(assignment.dateAssigned)}
+                        {getUserName(assignment.employeeId)} • {formatDateTime(assignment.dateAssigned)}
                       </p>
                       <div className="mt-3">
                         <Button variant="outline" onClick={() => populateAssignmentForm(assignment)}>
@@ -2245,35 +2755,68 @@ const AccountPage = () => {
 
             <form onSubmit={handleCreateProtocol} className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
               <p className="text-sm font-semibold text-slate-900">Create protocol</p>
+              <FieldHint>Pick the company and teammate by name. The matching IDs are still sent to the backend.</FieldHint>
               <div className="mt-4 grid gap-4 sm:grid-cols-2">
-                <div>
-                  <Label htmlFor="protocol-organization-id">Organization ID</Label>
-                  <Input
+                {organizationOptions.length > 0 ? (
+                  <SelectField
                     id="protocol-organization-id"
-                    type="number"
+                    label="Company"
                     value={protocolCreateForm.organizationId}
-                    onChange={(event) =>
+                    onChange={(value) =>
                       setProtocolCreateForm((previous) => ({
                         ...previous,
-                        organizationId: event.target.value,
+                        organizationId: value,
                       }))
                     }
+                    options={organizationOptions}
+                    placeholder="Select a company"
                   />
-                </div>
-                <div>
-                  <Label htmlFor="protocol-user-id">User ID</Label>
-                  <Input
+                ) : (
+                  <div>
+                    <Label htmlFor="protocol-organization-id">Organization ID</Label>
+                    <Input
+                      id="protocol-organization-id"
+                      type="number"
+                      value={protocolCreateForm.organizationId}
+                      onChange={(event) =>
+                        setProtocolCreateForm((previous) => ({
+                          ...previous,
+                          organizationId: event.target.value,
+                        }))
+                      }
+                    />
+                  </div>
+                )}
+                {protocolUserOptions.length > 0 ? (
+                  <SelectField
                     id="protocol-user-id"
-                    type="number"
+                    label={selectedProtocolOrganizationId == null ? "Teammate" : "Teammate in this company"}
                     value={protocolCreateForm.userId}
-                    onChange={(event) =>
+                    onChange={(value) =>
                       setProtocolCreateForm((previous) => ({
                         ...previous,
-                        userId: event.target.value,
+                        userId: value,
                       }))
                     }
+                    options={protocolUserOptions}
+                    placeholder="Select a teammate"
                   />
-                </div>
+                ) : (
+                  <div>
+                    <Label htmlFor="protocol-user-id">User ID</Label>
+                    <Input
+                      id="protocol-user-id"
+                      type="number"
+                      value={protocolCreateForm.userId}
+                      onChange={(event) =>
+                        setProtocolCreateForm((previous) => ({
+                          ...previous,
+                          userId: event.target.value,
+                        }))
+                      }
+                    />
+                  </div>
+                )}
               </div>
               <div className="mt-4">
                 <Button type="submit" disabled={Boolean(pendingByKey.protocols)}>
@@ -2307,12 +2850,14 @@ const AccountPage = () => {
                 <p className="text-sm font-semibold text-slate-900">Protocol #{selectedProtocol.id}</p>
                 <dl className="mt-4 grid gap-3 text-sm text-slate-600">
                   <div className="flex justify-between gap-4">
-                    <dt>Employee</dt>
-                    <dd className="font-semibold text-slate-900">{selectedProtocol.employeeId}</dd>
+                    <dt>Teammate</dt>
+                    <dd className="font-semibold text-slate-900">{getUserName(selectedProtocol.employeeId)}</dd>
                   </div>
                   <div className="flex justify-between gap-4">
-                    <dt>Organization</dt>
-                    <dd className="font-semibold text-slate-900">{selectedProtocol.organizationId}</dd>
+                    <dt>Company</dt>
+                    <dd className="font-semibold text-slate-900">
+                      {getOrganizationName(selectedProtocol.organizationId)}
+                    </dd>
                   </div>
                 </dl>
                 <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600">

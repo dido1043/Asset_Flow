@@ -1,12 +1,18 @@
 'use client';
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { apiRequest, buildApiUrl, getErrorMessage } from "@/app/lib/api";
-import type { Role, UserDto } from "@/app/lib/types";
+import type { OrganizationDto, Role, UserDto } from "@/app/lib/types";
 import { Button } from "../../ui/Button";
 import { Input } from "../../ui/Input";
 import { Label } from "../../ui/Label";
+
+type KnownOrganizationOption = {
+    id: number;
+    organizationName: string;
+    leaderName: string | null;
+};
 
 interface RegisterFormData {
     fullName: string;
@@ -32,6 +38,75 @@ const RegisterForm = () => {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [success, setSuccess] = useState(false);
+    const [organizations, setOrganizations] = useState<KnownOrganizationOption[]>([]);
+
+    useEffect(() => {
+        let cancelled = false;
+
+        const loadOrganizations = async () => {
+            try {
+                const users = await apiRequest<UserDto[]>("/auth/users", {
+                    auth: false,
+                });
+
+                const leaders = users.filter((user) => user.role === "LEADER" && typeof user.id === "number");
+                const results = await Promise.allSettled(
+                    leaders.map(async (leader) => {
+                        const organization = await apiRequest<OrganizationDto>(`/org/leader/${leader.id}`, {
+                            auth: false,
+                        });
+
+                        return {
+                            leader,
+                            organization,
+                        };
+                    }),
+                );
+
+                if (cancelled) {
+                    return;
+                }
+
+                const nextOrganizations = results.flatMap((result) => {
+                    if (result.status !== "fulfilled") {
+                        return [];
+                    }
+
+                    const { leader, organization } = result.value;
+
+                    if (organization.id == null) {
+                        return [];
+                    }
+
+                    return [{
+                        id: organization.id,
+                        organizationName: organization.organizationName,
+                        leaderName: leader.fullName ?? null,
+                    }];
+                }).reduce<KnownOrganizationOption[]>((accumulator, organization) => {
+                    if (accumulator.some((item) => item.id === organization.id)) {
+                        return accumulator;
+                    }
+
+                    return [...accumulator, organization];
+                }, []);
+
+                setOrganizations(
+                    nextOrganizations.sort((left, right) => left.organizationName.localeCompare(right.organizationName)),
+                );
+            } catch {
+                if (!cancelled) {
+                    setOrganizations([]);
+                }
+            }
+        };
+
+        void loadOrganizations();
+
+        return () => {
+            cancelled = true;
+        };
+    }, []);
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { name, value } = e.target;
@@ -163,15 +238,44 @@ const RegisterForm = () => {
                     </div>
                     {formData.role === "EMPLOYEE" ? (
                         <div>
-                            <Label htmlFor="organizationId">Organization ID</Label>
-                            <Input
-                                id="organizationId"
-                                name="organizationId"
-                                type="number"
-                                value={formData.organizationId}
-                                onChange={handleChange}
-                                min={0}
-                            />
+                            <Label htmlFor="organizationId">Company</Label>
+                            {organizations.length > 0 ? (
+                                <>
+                                    <select
+                                        id="organizationId"
+                                        name="organizationId"
+                                        value={formData.organizationId}
+                                        onChange={(event) =>
+                                            setFormData((prev) => ({
+                                                ...prev,
+                                                organizationId: event.target.value,
+                                            }))
+                                        }
+                                        className="mt-2 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm text-slate-900 shadow-sm outline-none transition placeholder:text-slate-400 focus:border-brand-500 focus:bg-white focus:ring-2 focus:ring-brand-200"
+                                    >
+                                        <option value="">Select your company</option>
+                                        {organizations.map((organization) => (
+                                            <option key={organization.id} value={organization.id}>
+                                                {organization.organizationName}
+                                                {organization.leaderName ? ` • ${organization.leaderName}` : ""}
+                                            </option>
+                                        ))}
+                                    </select>
+                                    <p className="mt-2 text-xs text-slate-500">
+                                        Company names are shown here. The matching organization ID is submitted to the backend.
+                                    </p>
+                                </>
+                            ) : (
+                                <Input
+                                    id="organizationId"
+                                    name="organizationId"
+                                    type="number"
+                                    value={formData.organizationId}
+                                    onChange={handleChange}
+                                    min={0}
+                                    placeholder="Enter the company ID if the company list is unavailable"
+                                />
+                            )}
                         </div>
 
 
@@ -183,7 +287,7 @@ const RegisterForm = () => {
                 {
                     formData.role === "EMPLOYEE" ? (
                         <div>
-                    <Label htmlFor="assignmentIds">Assignment IDs</Label>
+                    <Label htmlFor="assignmentIds">Existing assignment IDs (optional)</Label>
                     <div className="mt-2 flex flex-col gap-2 sm:flex-row sm:items-center">
                         <Input
                             id="assignmentIds"
@@ -191,10 +295,10 @@ const RegisterForm = () => {
                             type="text"
                             value={formData.assignmentIds}
                             onChange={handleChange}
-                            placeholder="e.g. 1,2,3"
+                            placeholder="Usually leave empty for new employees"
                             className="mt-0 flex-1"
                         />
-                        <span className="text-xs text-slate-500">Separate IDs with commas</span>
+                        <span className="text-xs text-slate-500">Separate IDs with commas if you really need to prefill them</span>
                     </div>
                 </div>
                     ) : null
