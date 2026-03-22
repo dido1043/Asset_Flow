@@ -1,6 +1,9 @@
 'use client';
 import React, { useState } from "react";
+import { useRouter } from "next/navigation";
 
+import { apiRequest, buildApiUrl, getErrorMessage } from "@/app/lib/api";
+import type { Role, UserDto } from "@/app/lib/types";
 import { Button } from "../../ui/Button";
 import { Input } from "../../ui/Input";
 import { Label } from "../../ui/Label";
@@ -9,36 +12,54 @@ interface RegisterFormData {
     fullName: string;
     email: string;
     password: string;
-    role: string;
-    age: number;
-    organizationId: number;
-    assignmentIds: Array<number>;
+    role: Role | "";
+    age: string;
+    organizationId: string;
+    assignmentIds: string;
 }
 
-const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || process.env.API_URL;
-
 const RegisterForm = () => {
+    const router = useRouter();
     const [formData, setFormData] = useState<RegisterFormData>({
         fullName: "",
         email: "",
         password: "",
         role: "",
-        age: 0,
-        organizationId: 0,
-        assignmentIds: []
+        age: "",
+        organizationId: "",
+        assignmentIds: ""
     });
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [success, setSuccess] = useState(false);
 
-    const handleChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { name, value } = e.target;
 
         setFormData((prev) => ({
             ...prev,
-            [name]: name === "age" || name === "organizationId" ? Number(value) : value,
+            [name]: value,
         }));
     }
+
+    const buildPayload = (): UserDto => {
+        const assignmentIds = formData.assignmentIds
+            .split(",")
+            .map((value) => value.trim())
+            .filter(Boolean)
+            .map((value) => Number(value))
+            .filter((value) => Number.isFinite(value));
+
+        return {
+            fullName: formData.fullName.trim(),
+            email: formData.email.trim(),
+            password: formData.password,
+            role: formData.role || "EMPLOYEE",
+            age: formData.age ? Number(formData.age) : null,
+            organizationId: formData.role === "EMPLOYEE" && formData.organizationId ? Number(formData.organizationId) : null,
+            assignmentIds: formData.role === "EMPLOYEE" ? assignmentIds : [],
+        };
+    };
 
     const handleSubmit = async (e: React.SubmitEvent<HTMLFormElement>) => {
         e.preventDefault();
@@ -46,21 +67,17 @@ const RegisterForm = () => {
         setError(null);
         setSuccess(false);
         try {
-            const response = await fetch(`${apiBaseUrl}/auth/register`, {
+            await apiRequest<UserDto>("/auth/register", {
                 method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    "Accept": "*/*",
-                },
-                body: JSON.stringify(formData),
+                auth: false,
+                json: buildPayload(),
             });
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.message || "Registration failed");
-            }
             setSuccess(true);
+            window.setTimeout(() => {
+                router.push("/user/login");
+            }, 1200);
         } catch (error: unknown) {
-            const message = error instanceof Error ? error.message : "Registration failed";
+            const message = getErrorMessage(error) || "Registration failed";
             setError(message);
         } finally {
             setLoading(false);
@@ -72,15 +89,16 @@ const RegisterForm = () => {
         setError(null);
         setSuccess(false);
 
-        window.location.href = `${apiBaseUrl}/auth/oauth2/login`;
+        window.location.href = buildApiUrl("/auth/oauth2/login");
     }
 
     const handleRoleChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
         const { value } = e.target;
         setFormData((prev) => ({
             ...prev,
-            role: value,
-            organizationId: value === "EMPLOYEE" ? prev.organizationId : 0,
+            role: value as Role | "",
+            organizationId: value === "EMPLOYEE" ? prev.organizationId : "",
+            assignmentIds: value === "EMPLOYEE" ? prev.assignmentIds : "",
         }));
     };
     
@@ -129,7 +147,6 @@ const RegisterForm = () => {
                             <option value="">Select role</option>
                             <option value="EMPLOYEE">Employee</option>
                             <option value="LEADER">Leader</option>
-                            <option value="ADMIN">Admin</option>
                         </select>
                     </div>
 
@@ -172,17 +189,8 @@ const RegisterForm = () => {
                             id="assignmentIds"
                             name="assignmentIds"
                             type="text"
-                            value={formData.assignmentIds.join(",")}
-                            onChange={(e) => {
-                                const text = e.target.value;
-                                const arr = text
-                                    .split(",")
-                                    .map((s) => s.trim())
-                                    .filter(Boolean)
-                                    .map((n) => Number(n))
-                                    .filter((n) => !Number.isNaN(n));
-                                setFormData((prev) => ({ ...prev, assignmentIds: arr }));
-                            }}
+                            value={formData.assignmentIds}
+                            onChange={handleChange}
                             placeholder="e.g. 1,2,3"
                             className="mt-0 flex-1"
                         />
@@ -215,7 +223,7 @@ const RegisterForm = () => {
             {error && <p className="mt-4 rounded-xl border border-red-100 bg-red-50 px-4 py-2 text-sm text-red-700">{error}</p>}
             {success && (
                 <p className="mt-4 rounded-xl border border-emerald-100 bg-emerald-50 px-4 py-2 text-sm text-emerald-700">
-                    Registered successfully.
+                    Registered successfully. Redirecting you to sign in...
                 </p>
             )}
         </div>

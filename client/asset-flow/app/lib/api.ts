@@ -1,0 +1,119 @@
+import { readAuthSession } from "./session";
+
+type Primitive = string | number | boolean;
+
+type ApiRequestOptions = Omit<RequestInit, "body"> & {
+  auth?: boolean;
+  body?: BodyInit | null;
+  json?: unknown;
+  searchParams?: Record<string, Primitive | null | undefined>;
+};
+
+type ApiErrorResponse = {
+  message?: string;
+  error?: string;
+  details?: string;
+};
+
+export class ApiError extends Error {
+  status: number;
+  details?: unknown;
+
+  constructor(message: string, status: number, details?: unknown) {
+    super(message);
+    this.name = "ApiError";
+    this.status = status;
+    this.details = details;
+  }
+}
+
+export function getApiBaseUrl() {
+  return process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
+}
+
+export function buildApiUrl(
+  path: string,
+  searchParams?: Record<string, Primitive | null | undefined>,
+) {
+  const base = getApiBaseUrl().replace(/\/$/, "");
+  const normalizedPath = path.startsWith("/") ? path : `/${path}`;
+  const url = new URL(`${base}${normalizedPath}`);
+
+  if (searchParams) {
+    Object.entries(searchParams).forEach(([key, value]) => {
+      if (value === null || value === undefined || value === "") {
+        return;
+      }
+
+      url.searchParams.set(key, String(value));
+    });
+  }
+
+  return url.toString();
+}
+
+async function buildApiError(response: Response) {
+  const contentType = response.headers.get("content-type") || "";
+
+  if (contentType.includes("application/json")) {
+    const payload = (await response.json().catch(() => null)) as ApiErrorResponse | null;
+    const message = payload?.message || payload?.error || payload?.details || `Request failed with ${response.status}`;
+    return new ApiError(message, response.status, payload);
+  }
+
+  const text = await response.text().catch(() => "");
+  return new ApiError(text || `Request failed with ${response.status}`, response.status, text);
+}
+
+export async function apiRequest<T>(path: string, options: ApiRequestOptions = {}): Promise<T> {
+  const { auth = true, json, searchParams, headers, body, ...rest } = options;
+  const requestHeaders = new Headers(headers);
+
+  requestHeaders.set("Accept", "application/json, text/plain, */*");
+
+  if (json !== undefined && !requestHeaders.has("Content-Type")) {
+    requestHeaders.set("Content-Type", "application/json");
+  }
+
+  if (auth) {
+    const session = readAuthSession();
+    if (session?.token) {
+      requestHeaders.set("Authorization", `Bearer ${session.token}`);
+    }
+  }
+
+  const response = await fetch(buildApiUrl(path, searchParams), {
+    ...rest,
+    headers: requestHeaders,
+    body: json !== undefined ? JSON.stringify(json) : body,
+    cache: "no-store",
+  });
+
+  if (!response.ok) {
+    throw await buildApiError(response);
+  }
+
+  if (response.status === 204) {
+    return undefined as T;
+  }
+
+  const contentType = response.headers.get("content-type") || "";
+
+  if (contentType.includes("application/json")) {
+    return (await response.json()) as T;
+  }
+
+  return (await response.text()) as T;
+}
+
+export function getErrorMessage(error: unknown) {
+  if (error instanceof ApiError) {
+    return error.message;
+  }
+
+  if (error instanceof Error) {
+    return error.message;
+  }
+
+  return "Something went wrong while talking to the API.";
+}

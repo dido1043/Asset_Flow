@@ -1,6 +1,10 @@
 'use client';
 import React from "react";
+import { useRouter } from "next/navigation";
 
+import { apiRequest, buildApiUrl, getErrorMessage } from "@/app/lib/api";
+import { saveAuthSession } from "@/app/lib/session";
+import type { LoginResponse } from "@/app/lib/types";
 import { Button } from "../../ui/Button";
 import { Input } from "../../ui/Input";
 import { Label } from "../../ui/Label";
@@ -11,9 +15,8 @@ interface LoginFormData {
     password: string;
 }
 
-const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || process.env.API_URL;
-
 const LoginForm = () => {
+    const router = useRouter();
 
     const [formData, setFormData] = React.useState<LoginFormData>({
         name: "",
@@ -39,25 +42,15 @@ const LoginForm = () => {
         setError(null);
 
         try {
-            const response = await fetch(`${apiBaseUrl}/auth/login`, {
+            const authPayload = await apiRequest<LoginResponse>("/auth/login", {
                 method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    "Accept": "*/*"
-                },
-                body: JSON.stringify(formData),
+                auth: false,
+                json: formData,
             });
-
-            if (!response.ok) {
-                const errorData = await response.json().catch(() => ({}));
-                throw new Error(errorData.message || "Login failed. Please check your credentials.");
-            }
-
-            const authPayload = await response.json();
-            localStorage.setItem("auth", JSON.stringify(authPayload));
-            window.location.href = "/user/account"; 
+            saveAuthSession(authPayload);
+            router.replace("/user/account");
         } catch (err: unknown) {
-            const message = err instanceof Error ? err.message : "Unable to login. Please try again.";
+            const message = getErrorMessage(err) || "Unable to login. Please try again.";
             setError(message);
             console.error("Login failed:", err);
         } finally {
@@ -66,7 +59,7 @@ const LoginForm = () => {
     }
 
     const handleGoogleLogin = () => {
-        window.location.href = `${apiBaseUrl}/auth/oauth2/login`;
+        window.location.href = buildApiUrl("/auth/oauth2/login");
     }
 
     return (

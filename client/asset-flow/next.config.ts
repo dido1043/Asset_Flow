@@ -9,15 +9,17 @@ const nextConfig: NextConfig = {
     if (process.env.NEXT_TURBOPACK === "1") return config;
 
     // Reduce watcher load by ignoring heavy backend build outputs in the monorepo.
-    config.watchOptions ??= {};
-    const ignored = config.watchOptions.ignored ?? [];
-    config.watchOptions.ignored = [
-      ...ignored,
-      "**/target/**",
-      "**/protocols/**",
-      "**/.git/**",
-    ];
-    return config;
+    return {
+      ...config,
+      watchOptions: {
+        ...(config.watchOptions ?? {}),
+        ignored: [
+          "**/target/**",
+          "**/protocols/**",
+          "**/.git/**",
+        ],
+      },
+    };
   },
 };
 
