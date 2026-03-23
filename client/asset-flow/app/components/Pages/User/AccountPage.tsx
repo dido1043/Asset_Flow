@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import React from "react";
 
@@ -8,10 +7,9 @@ import { Button } from "@/app/components/shared/ui/Button";
 import { Input } from "@/app/components/shared/ui/Input";
 import { Label } from "@/app/components/shared/ui/Label";
 import { Textarea } from "@/app/components/shared/ui/Textarea";
-import { apiRequest, getApiBaseUrl, getErrorMessage } from "@/app/lib/api";
+import { apiRequest, getErrorMessage } from "@/app/lib/api";
 import {
   clearAuthSession,
-  formatSessionExpiry,
   readAuthSession,
   saveAuthSession,
   subscribeToAuthChanges,
@@ -68,14 +66,14 @@ const roleOptions: Role[] = ["LEADER", "EMPLOYEE"];
 const selectClassName =
   "mt-2 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm text-slate-900 shadow-sm outline-none transition focus:border-brand-500 focus:bg-white focus:ring-2 focus:ring-brand-200";
 
-const quickLinks = [
-  { href: "#profile", label: "Profile" },
-  { href: "#users", label: "Users" },
-  { href: "#organizations", label: "Organizations" },
-  { href: "#products", label: "Products" },
-  { href: "#assignments", label: "Assignments" },
-  { href: "#protocols", label: "Protocols" },
-  { href: "#ai-tools", label: "AI" },
+const workspaceSections = [
+  { href: "#profile", label: "Profile", helper: "Account and session" },
+  { href: "#users", label: "Users", helper: "Teammates and roles" },
+  { href: "#organizations", label: "Organizations", helper: "Companies and leaders" },
+  { href: "#products", label: "Products", helper: "Inventory and assets" },
+  { href: "#assignments", label: "Assignments", helper: "Issued equipment" },
+  { href: "#protocols", label: "Protocols", helper: "PDF generation" },
+  { href: "#ai-tools", label: "AI", helper: "Prompt tools" },
 ];
 
 function parseOptionalNumber(value: string) {
@@ -263,6 +261,7 @@ const AccountPage = () => {
   const seededIdsRef = React.useRef(false);
 
   const [session, setSession] = React.useState<AuthSession | null>(null);
+  const [sessionChecked, setSessionChecked] = React.useState(false);
   const [bootstrapping, setBootstrapping] = React.useState(true);
   const [bootstrapError, setBootstrapError] = React.useState<string | null>(null);
 
@@ -347,8 +346,6 @@ const AccountPage = () => {
 
   const [aiPrompt, setAiPrompt] = React.useState("");
 
-  const apiBaseUrl = getApiBaseUrl();
-  const sessionExpiresAt = formatSessionExpiry(session);
   const myAssignmentsCount = currentUser?.assignmentIds?.length ?? 0;
 
   const setFeedback = React.useCallback((key: string, feedback: Feedback | null) => {
@@ -396,11 +393,18 @@ const AccountPage = () => {
   React.useEffect(() => {
     const syncSession = () => {
       setSession(readAuthSession());
+      setSessionChecked(true);
     };
 
     syncSession();
     return subscribeToAuthChanges(syncSession);
   }, []);
+
+  React.useEffect(() => {
+    if (sessionChecked && !session) {
+      router.replace("/user/login");
+    }
+  }, [router, session, sessionChecked]);
 
   React.useEffect(() => {
     if (!session) {
@@ -617,7 +621,7 @@ const AccountPage = () => {
     }
 
     const user = users.find((candidate) => candidate.id === userId) ?? (currentUser?.id === userId ? currentUser : null);
-    return user ? user.fullName : `User #${userId}`;
+    return user ? user.fullName : "Unknown teammate";
   };
 
   const getUserOptionLabel = (user: UserDto) => `${user.fullName} • ${user.email}`;
@@ -628,7 +632,7 @@ const AccountPage = () => {
     }
 
     const organization = allOrganizations.find((candidate) => candidate.id === organizationId);
-    return organization ? organization.organizationName : `Company #${organizationId}`;
+    return organization ? organization.organizationName : "Unknown company";
   };
 
   const getOrganizationOptionLabel = (organization: KnownOrganization) =>
@@ -650,7 +654,7 @@ const AccountPage = () => {
     }
 
     const product = products.find((candidate) => candidate.id === productId);
-    return product ? getProductLabel(product) : `Product #${productId}`;
+    return product ? getProductLabel(product) : "Unknown asset";
   };
 
   const leaderUsers = users.filter((user) => user.role === "LEADER" && typeof user.id === "number");
@@ -704,6 +708,16 @@ const AccountPage = () => {
       value: String(user.id),
       label: getUserOptionLabel(user),
     }));
+
+  const workspaceSectionBadges: Record<string, string> = {
+    profile: currentUser?.role || String(session?.role || "You"),
+    users: String(users.length),
+    organizations: String(allOrganizations.length),
+    products: String(products.length),
+    assignments: String(assignments.length),
+    protocols: selectedProtocol?.id ? `#${selectedProtocol.id}` : "PDF",
+    "ai-tools": aiResult ? "Ready" : "Live",
+  };
 
   const refreshCurrentUserSnapshot = async () => {
     if (!session) {
@@ -813,7 +827,7 @@ const AccountPage = () => {
   };
 
   const handleLookupUser = async () => {
-    const userId = parseRequiredNumber(userLookupId, "User ID");
+    const userId = parseRequiredNumber(userLookupId, "Teammate");
     const user = await runAction("users", () => apiRequest<UserDto>(`/auth/user/${userId}`), "User loaded.");
     if (user) {
       setSelectedUser(user);
@@ -821,7 +835,7 @@ const AccountPage = () => {
   };
 
   const handleDeleteUser = async () => {
-    const userId = parseRequiredNumber(deleteUserId, "Delete user ID");
+    const userId = parseRequiredNumber(deleteUserId, "Teammate");
 
     if (!window.confirm(`Delete ${getUserName(userId)}? This cannot be undone.`)) {
       return;
@@ -847,7 +861,7 @@ const AccountPage = () => {
   };
 
   const handleLookupOrganization = async () => {
-    const leaderId = parseRequiredNumber(organizationLookupLeaderId, "Leader ID");
+    const leaderId = parseRequiredNumber(organizationLookupLeaderId, "Leader");
     const organization = await runAction(
       "organizations",
       () => apiRequest<OrganizationDto>(`/org/leader/${leaderId}`),
@@ -863,7 +877,7 @@ const AccountPage = () => {
   const handleCreateOrganization = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
-    const leaderId = parseRequiredNumber(organizationCreateForm.leaderId, "Leader ID");
+    const leaderId = parseRequiredNumber(organizationCreateForm.leaderId, "Leader");
     const organizationName = requireText(organizationCreateForm.organizationName, "Organization name");
 
     const organization = await runAction(
@@ -891,8 +905,8 @@ const AccountPage = () => {
   const handleJoinOrganization = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
-    const userId = parseRequiredNumber(joinOrganizationForm.userId, "User ID");
-    const organizationId = parseRequiredNumber(joinOrganizationForm.organizationId, "Organization ID");
+    const userId = parseRequiredNumber(joinOrganizationForm.userId, "Teammate");
+    const organizationId = parseRequiredNumber(joinOrganizationForm.organizationId, "Company");
 
     const organization = await runAction(
       "organizations",
@@ -918,8 +932,8 @@ const AccountPage = () => {
   const handleBecomeLeader = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
-    const userId = parseRequiredNumber(becomeLeaderForm.userId, "User ID");
-    const organizationId = parseRequiredNumber(becomeLeaderForm.organizationId, "Organization ID");
+    const userId = parseRequiredNumber(becomeLeaderForm.userId, "Teammate");
+    const organizationId = parseRequiredNumber(becomeLeaderForm.organizationId, "Company");
 
     const result = await runAction(
       "organizations",
@@ -953,7 +967,7 @@ const AccountPage = () => {
   };
 
   const handleLoadOrganizationInventory = async () => {
-    const organizationId = parseRequiredNumber(inventoryOrgId, "Organization ID");
+    const organizationId = parseRequiredNumber(inventoryOrgId, "Company");
     const inventory = await runAction(
       "organizations",
       () => apiRequest<ProductDto[]>(`/org/inventory/${organizationId}`),
@@ -983,7 +997,7 @@ const AccountPage = () => {
           method: "POST",
           json: buildProductPayload(),
         }),
-      legacy ? "Product created through legacy endpoint." : "Product created.",
+      legacy ? "Product created in compatibility mode." : "Product created.",
     );
 
     if (!product) {
@@ -995,7 +1009,7 @@ const AccountPage = () => {
   };
 
   const handleUpdateProduct = async () => {
-    const productId = parseRequiredNumber(productForm.id, "Product ID");
+    const productId = parseRequiredNumber(productForm.id, "Asset");
 
     const payload = {
       productType: productForm.productType.trim() || undefined,
@@ -1031,7 +1045,7 @@ const AccountPage = () => {
   };
 
   const handleLookupProduct = async () => {
-    const productId = parseRequiredNumber(productLookupId, "Product ID");
+    const productId = parseRequiredNumber(productLookupId, "Asset");
     const product = await runAction(
       "products",
       () => apiRequest<ProductDto>(`/product/${productId}`),
@@ -1070,7 +1084,7 @@ const AccountPage = () => {
   };
 
   const handleDeleteProduct = async () => {
-    const productId = parseRequiredNumber(productLookupId || productForm.id, "Product ID");
+    const productId = parseRequiredNumber(productLookupId || productForm.id, "Asset");
 
     if (!window.confirm(`Delete ${getProductName(productId)}?`)) {
       return;
@@ -1096,8 +1110,8 @@ const AccountPage = () => {
   };
 
   const buildAssignmentPayload = () => ({
-    employeeId: parseRequiredNumber(assignmentForm.employeeId, "Employee ID"),
-    productId: parseRequiredNumber(assignmentForm.productId, "Product ID"),
+    employeeId: parseRequiredNumber(assignmentForm.employeeId, "Teammate"),
+    productId: parseRequiredNumber(assignmentForm.productId, "Asset"),
     dateAssigned: toIsoDateTime(assignmentForm.dateAssigned),
     dateReturned: toIsoDateTime(assignmentForm.dateReturned),
   });
@@ -1132,7 +1146,7 @@ const AccountPage = () => {
   };
 
   const handleUpdateAssignment = async () => {
-    const assignmentId = parseRequiredNumber(assignmentForm.id, "Assignment ID");
+    const assignmentId = parseRequiredNumber(assignmentForm.id, "Assignment");
 
     const assignment = await runAction(
       "assignments",
@@ -1161,7 +1175,7 @@ const AccountPage = () => {
   };
 
   const handleLookupAssignment = async () => {
-    const assignmentId = parseRequiredNumber(assignmentLookupId, "Assignment ID");
+    const assignmentId = parseRequiredNumber(assignmentLookupId, "Assignment");
     const assignment = await runAction(
       "assignments",
       () => apiRequest<AssignmentDto>(`/assignment/get/${assignmentId}`),
@@ -1186,7 +1200,7 @@ const AccountPage = () => {
   };
 
   const handleLoadAssignmentsByUser = async () => {
-    const userId = parseRequiredNumber(assignmentUserId, "User ID");
+    const userId = parseRequiredNumber(assignmentUserId, "Teammate");
     const result = await runAction(
       "assignments",
       () => apiRequest<AssignmentDto[]>(`/assignment/user/${userId}`),
@@ -1199,7 +1213,7 @@ const AccountPage = () => {
   };
 
   const handleLoadAssignmentsByProduct = async () => {
-    const productId = parseRequiredNumber(assignmentProductId, "Product ID");
+    const productId = parseRequiredNumber(assignmentProductId, "Asset");
     const result = await runAction(
       "assignments",
       () => apiRequest<AssignmentDto[]>(`/assignment/product/${productId}`),
@@ -1224,7 +1238,7 @@ const AccountPage = () => {
   };
 
   const handleDeleteAssignment = async () => {
-    const assignmentId = parseRequiredNumber(assignmentLookupId || assignmentForm.id, "Assignment ID");
+    const assignmentId = parseRequiredNumber(assignmentLookupId || assignmentForm.id, "Assignment");
 
     if (!window.confirm(`Delete assignment #${assignmentId}?`)) {
       return;
@@ -1252,7 +1266,7 @@ const AccountPage = () => {
   };
 
   const handleLookupProtocol = async () => {
-    const protocolId = parseRequiredNumber(protocolLookupId, "Protocol ID");
+    const protocolId = parseRequiredNumber(protocolLookupId, "Protocol");
     const protocol = await runAction(
       "protocols",
       () => apiRequest<ProtocolDto>(`/protocol/${protocolId}`),
@@ -1267,8 +1281,8 @@ const AccountPage = () => {
   const handleCreateProtocol = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
-    const organizationId = parseRequiredNumber(protocolCreateForm.organizationId, "Organization ID");
-    const userId = parseRequiredNumber(protocolCreateForm.userId, "User ID");
+    const organizationId = parseRequiredNumber(protocolCreateForm.organizationId, "Company");
+    const userId = parseRequiredNumber(protocolCreateForm.userId, "Teammate");
 
     const protocol = await runAction(
       "protocols",
@@ -1324,37 +1338,23 @@ const AccountPage = () => {
     });
   };
 
+  if (!sessionChecked) {
+    return (
+      <div className="rounded-3xl border border-slate-200 bg-white shadow-sm">
+        <div className="px-6 py-10 text-center sm:px-8">
+          <p className="text-base font-semibold text-slate-900">Checking your session...</p>
+          <p className="mt-2 text-sm text-slate-500">Preparing a safer workspace view.</p>
+        </div>
+      </div>
+    );
+  }
+
   if (!session) {
     return (
       <div className="rounded-3xl border border-slate-200 bg-white shadow-sm">
-        <div className="border-b border-slate-100 bg-slate-50 px-6 py-5 sm:px-8">
-          <h1 className="text-2xl font-semibold text-slate-900">Workspace</h1>
-          <p className="text-sm text-slate-500">
-            Sign in first, then this page becomes the full frontend for your backend endpoints.
-          </p>
-        </div>
-        <div className="px-6 py-8 sm:px-8">
-          <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 p-6">
-            <p className="text-base font-semibold text-slate-900">No active session found</p>
-            <p className="mt-2 max-w-2xl text-sm text-slate-600">
-              Your login, register, and Google OAuth pages are wired already. Once you sign in, this workspace opens up
-              users, organizations, products, assignments, protocols, and AI tools in one place.
-            </p>
-            <div className="mt-6 flex flex-col gap-3 sm:flex-row">
-              <Link
-                href="/user/login"
-                className="inline-flex h-11 items-center justify-center rounded-xl bg-brand-600 px-5 text-sm font-semibold text-white shadow-lg shadow-brand-200 transition hover:bg-brand-700"
-              >
-                Sign in
-              </Link>
-              <Link
-                href="/user/register"
-                className="inline-flex h-11 items-center justify-center rounded-xl border border-slate-200 bg-white px-5 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-slate-50"
-              >
-                Create account
-              </Link>
-            </div>
-          </div>
+        <div className="px-6 py-10 text-center sm:px-8">
+          <p className="text-base font-semibold text-slate-900">Redirecting to sign in...</p>
+          <p className="mt-2 text-sm text-slate-500">This workspace requires an active browser session.</p>
         </div>
       </div>
     );
@@ -1366,18 +1366,18 @@ const AccountPage = () => {
         <div className="grid gap-8 px-6 py-8 sm:px-8 lg:grid-cols-[1.25fr_0.85fr] lg:px-10">
           <div>
             <p className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-semibold uppercase tracking-[0.25em] text-slate-300">
-              Backend workspace
+              Secure workspace
             </p>
             <h1 className="mt-5 text-3xl font-semibold tracking-tight sm:text-4xl">
-              Frontend control center for every AssetFlow endpoint.
+              AssetFlow tools for secure day-to-day work.
             </h1>
             <p className="mt-4 max-w-2xl text-sm text-slate-300 sm:text-base">
-              This dashboard wires your auth flow, account editing, organization management, products, assignments,
-              protocol generation, and AI prompt endpoint into one frontend workspace.
+              Manage your profile, teammates, companies, inventory, assignments, protocols, and AI assistance from
+              one cleaner workspace without exposing backend route details on screen.
             </p>
 
-            <div className="mt-6 flex flex-wrap gap-3">
-              {quickLinks.map((link) => (
+            <div className="mt-6 flex flex-wrap gap-3 lg:hidden">
+              {workspaceSections.map((link) => (
                 <a
                   key={link.href}
                   href={link.href}
@@ -1390,46 +1390,116 @@ const AccountPage = () => {
 
             <div className="mt-6 grid gap-3 sm:grid-cols-2">
               <div className="rounded-2xl border border-white/10 bg-white/5 p-4 text-sm text-slate-200">
-                <p className="text-xs font-semibold uppercase tracking-[0.25em] text-slate-400">Session</p>
+                <p className="text-xs font-semibold uppercase tracking-[0.25em] text-slate-400">Signed in</p>
                 <p className="mt-2 font-semibold text-white">
-                  {currentUser?.fullName || `User #${session.userId}`}
+                  {currentUser?.fullName || "Active teammate"}
                 </p>
                 <p className="mt-1">Role: {currentUser?.role || session.role}</p>
-                <p className="mt-1">User ID: {session.userId}</p>
-                <p className="mt-1">Expires: {sessionExpiresAt || "Unknown"}</p>
+                <p className="mt-1">Company: {getOrganizationName(currentUser?.organizationId ?? null)}</p>
               </div>
               <div className="rounded-2xl border border-white/10 bg-white/5 p-4 text-sm text-slate-200">
-                <p className="text-xs font-semibold uppercase tracking-[0.25em] text-slate-400">API target</p>
-                <p className="mt-2 break-all font-semibold text-white">{apiBaseUrl}</p>
-                <p className="mt-1">OAuth, REST forms, and local session storage are connected.</p>
+                <p className="text-xs font-semibold uppercase tracking-[0.25em] text-slate-400">Privacy</p>
+                <p className="mt-2 font-semibold text-white">Session-protected access</p>
+                <p className="mt-1">Expired sessions are cleared automatically, and sign-in stays in this browser tab.</p>
               </div>
             </div>
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2">
-            <StatCard label="Users" value={users.length} hint="Loaded from `GET /auth/users`" />
-            <StatCard label="Products" value={products.length} hint="Loaded from `GET /product/all`" />
-            <StatCard
-              label="Assignments"
-              value={assignments.length}
-              hint="Loaded from `GET /assignment/all`"
-            />
-            <StatCard
-              label="My Assignments"
-              value={myAssignmentsCount}
-              hint="Current user assignment IDs from the auth profile"
-            />
+            <StatCard label="Users" value={users.length} hint="Teammates available in your workspace" />
+            <StatCard label="Products" value={products.length} hint="Inventory records ready to manage" />
+            <StatCard label="Assignments" value={assignments.length} hint="Equipment history currently loaded" />
+            <StatCard label="My Assignments" value={myAssignmentsCount} hint="Assets currently linked to your account" />
           </div>
         </div>
       </section>
 
+      <div className="grid gap-6 lg:grid-cols-[18rem_minmax(0,1fr)] xl:grid-cols-[19rem_minmax(0,1fr)]">
+        <aside className="space-y-5 lg:sticky lg:top-24 lg:self-start">
+          <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+            <p className="text-xs font-semibold uppercase tracking-[0.25em] text-slate-500">Workspace Nav</p>
+            <p className="mt-2 text-sm text-slate-600">
+              Jump to any workspace tool from this sidebar.
+            </p>
+
+            <nav className="mt-5 space-y-2">
+              {workspaceSections.map((section) => {
+                const sectionKey = section.href.replace("#", "");
+
+                return (
+                  <a
+                    key={section.href}
+                    href={section.href}
+                    className="flex items-center justify-between rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm transition hover:border-brand-300 hover:bg-brand-50"
+                  >
+                    <span>
+                      <span className="block font-semibold text-slate-900">{section.label}</span>
+                      <span className="block text-xs text-slate-500">{section.helper}</span>
+                    </span>
+                    <span className="rounded-full bg-white px-2.5 py-1 text-xs font-semibold text-slate-700 shadow-sm">
+                      {workspaceSectionBadges[sectionKey] ?? "Open"}
+                    </span>
+                  </a>
+                );
+              })}
+            </nav>
+          </div>
+
+          <div className="rounded-3xl bg-slate-900 p-5 text-white shadow-sm">
+            <p className="text-xs font-semibold uppercase tracking-[0.25em] text-slate-400">Workspace</p>
+            <p className="mt-3 text-lg font-semibold">{currentUser?.fullName || "Active teammate"}</p>
+            <p className="mt-1 text-sm text-slate-300">
+              {currentUser?.role || session.role} • {getOrganizationName(currentUser?.organizationId ?? null)}
+            </p>
+            <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
+              <Button
+                variant="outline"
+                className="w-full border-white/10 bg-white/5 text-white hover:bg-white/10 hover:text-white"
+                onClick={handleWorkspaceRefresh}
+                disabled={Boolean(pendingByKey.workspace || bootstrapping)}
+              >
+                {pendingByKey.workspace || bootstrapping ? "Refreshing..." : "Refresh workspace"}
+              </Button>
+              <Button
+                variant="ghost"
+                className="w-full text-slate-200 hover:bg-white/10 hover:text-white"
+                onClick={() => {
+                  clearAuthSession();
+                  router.replace("/user/login");
+                }}
+              >
+                Sign out
+              </Button>
+            </div>
+          </div>
+
+          <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+            <p className="text-sm font-semibold text-slate-900">Quick facts</p>
+            <div className="mt-4 space-y-3 text-sm text-slate-600">
+              <div className="flex items-center justify-between gap-4">
+                <span>Role</span>
+                <span className="text-right font-semibold text-slate-900">{currentUser?.role || session.role}</span>
+              </div>
+              <div className="flex items-center justify-between gap-4">
+                <span>Companies known</span>
+                <span className="font-semibold text-slate-900">{allOrganizations.length}</span>
+              </div>
+              <div className="flex items-center justify-between gap-4">
+                <span>Session storage</span>
+                <span className="text-right font-semibold text-slate-900">Current tab only</span>
+              </div>
+            </div>
+          </div>
+        </aside>
+
+        <div className="space-y-6">
       {bootstrapError ? <FeedbackMessage feedback={{ tone: "error", message: bootstrapError }} /> : null}
       {feedbackByKey.workspace ? <FeedbackMessage feedback={feedbackByKey.workspace} /> : null}
 
       <SectionCard
         id="profile"
         title="Profile"
-        description="Manage the current account with `GET /auth/user/{userId}` and `PUT /auth/user/edit/{userId}`."
+        description="Manage your account details and keep your active session under control."
         actions={
           <>
             <Button
@@ -1538,7 +1608,7 @@ const AccountPage = () => {
               <div className="flex items-center justify-between gap-3">
                 <div>
                   <p className="text-sm font-semibold text-slate-900">Current account</p>
-                  <p className="text-sm text-slate-500">Live data from your backend.</p>
+                  <p className="text-sm text-slate-500">Live workspace details for the signed-in teammate.</p>
                 </div>
                 <span
                   className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${getRoleBadgeClass(
@@ -1578,14 +1648,12 @@ const AccountPage = () => {
             </div>
 
             <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-              <p className="text-sm font-semibold text-slate-900">Auth routes covered</p>
+              <p className="text-sm font-semibold text-slate-900">Workspace safety</p>
               <ul className="mt-3 space-y-2 text-sm text-slate-600">
-                <li>`POST /auth/register` on the register page</li>
-                <li>`POST /auth/login` and Google OAuth on the login page</li>
-                <li>`POST /auth/oauth/exchange` on the OAuth callback page</li>
-                <li>
-                  {String.raw`GET /auth/user/{userId} and PUT /auth/user/edit/{userId} here in the workspace`}
-                </li>
+                <li>Signed-in access is required before the workspace loads.</li>
+                <li>Expired or invalid sessions are cleared automatically.</li>
+                <li>Names are shown instead of internal references wherever records are available.</li>
+                <li>Backend route details stay hidden from the workspace UI.</li>
               </ul>
             </div>
           </div>
@@ -1595,7 +1663,7 @@ const AccountPage = () => {
       <SectionCard
         id="users"
         title="Users"
-        description="Explore `GET /auth/users`, `GET /auth/user/{userId}`, and `DELETE /auth/user/delete/{userId}`."
+        description="Browse teammates, inspect account details, and remove access when needed."
         actions={
           <Button variant="outline" onClick={handleLoadUsers} disabled={Boolean(pendingByKey.users)}>
             {pendingByKey.users ? "Loading..." : "Reload users"}
@@ -1618,11 +1686,10 @@ const AccountPage = () => {
                       onChange={setUserLookupId}
                       options={userOptions}
                       placeholder="Select a teammate"
-                      hint="Names are shown here, while the backend still receives the selected user ID."
                     />
                   ) : (
                     <>
-                      <Label htmlFor="user-lookup-id">User ID</Label>
+                      <Label htmlFor="user-lookup-id">Teammate reference</Label>
                       <Input
                         id="user-lookup-id"
                         type="number"
@@ -1655,7 +1722,7 @@ const AccountPage = () => {
                     />
                   ) : (
                     <>
-                      <Label htmlFor="delete-user-id">Delete user ID</Label>
+                      <Label htmlFor="delete-user-id">Teammate reference</Label>
                       <Input
                         id="delete-user-id"
                         type="number"
@@ -1690,10 +1757,6 @@ const AccountPage = () => {
                 </div>
                 <dl className="mt-4 grid gap-3 text-sm text-slate-600">
                   <div className="flex justify-between gap-4">
-                    <dt>ID</dt>
-                    <dd className="font-semibold text-slate-900">{selectedUser.id}</dd>
-                  </div>
-                  <div className="flex justify-between gap-4">
                     <dt>Age</dt>
                     <dd className="font-semibold text-slate-900">{selectedUser.age ?? "Not set"}</dd>
                   </div>
@@ -1706,7 +1769,7 @@ const AccountPage = () => {
                   <div className="flex justify-between gap-4">
                     <dt>Assignments</dt>
                     <dd className="font-semibold text-slate-900">
-                      {selectedUser.assignmentIds?.join(", ") || "None"}
+                      {selectedUser.assignmentIds?.length ?? 0}
                     </dd>
                   </div>
                 </dl>
@@ -1738,7 +1801,6 @@ const AccountPage = () => {
                       </span>
                     </div>
                     <div className="mt-4 space-y-2 text-sm text-slate-600">
-                      <p>User ID: {user.id}</p>
                       <p>Company: {getOrganizationName(user.organizationId)}</p>
                       <p>Assignments: {user.assignmentIds?.length ?? 0}</p>
                     </div>
@@ -1791,7 +1853,7 @@ const AccountPage = () => {
                     />
                   ) : (
                     <>
-                      <Label htmlFor="organization-leader-id">Leader ID</Label>
+                      <Label htmlFor="organization-leader-id">Leader reference</Label>
                       <Input
                         id="organization-leader-id"
                         type="number"
@@ -1828,11 +1890,10 @@ const AccountPage = () => {
                     }
                     options={leaderOptions}
                     placeholder="Select who leads this company"
-                    hint="The selected leader name is shown here, but the backend still uses that leader's ID."
                   />
                 ) : (
                   <div>
-                    <Label htmlFor="create-organization-leader-id">Leader ID</Label>
+                    <Label htmlFor="create-organization-leader-id">Leader reference</Label>
                     <Input
                       id="create-organization-leader-id"
                       type="number"
@@ -1886,7 +1947,7 @@ const AccountPage = () => {
                   />
                 ) : (
                   <div>
-                    <Label htmlFor="join-user-id">User ID</Label>
+                    <Label htmlFor="join-user-id">Teammate reference</Label>
                     <Input
                       id="join-user-id"
                       type="number"
@@ -1916,7 +1977,7 @@ const AccountPage = () => {
                   />
                 ) : (
                   <div>
-                    <Label htmlFor="join-organization-id">Organization ID</Label>
+                    <Label htmlFor="join-organization-id">Company reference</Label>
                     <Input
                       id="join-organization-id"
                       type="number"
@@ -1957,7 +2018,7 @@ const AccountPage = () => {
                   />
                 ) : (
                   <div>
-                    <Label htmlFor="leader-user-id">User ID</Label>
+                    <Label htmlFor="leader-user-id">Teammate reference</Label>
                     <Input
                       id="leader-user-id"
                       type="number"
@@ -1987,7 +2048,7 @@ const AccountPage = () => {
                   />
                 ) : (
                   <div>
-                    <Label htmlFor="leader-organization-id">Organization ID</Label>
+                    <Label htmlFor="leader-organization-id">Company reference</Label>
                     <Input
                       id="leader-organization-id"
                       type="number"
@@ -2015,10 +2076,6 @@ const AccountPage = () => {
               <p className="text-sm font-semibold text-slate-900">Selected company</p>
               {leaderOrganization ? (
                 <dl className="mt-4 grid gap-3 text-sm text-slate-600">
-                  <div className="flex justify-between gap-4">
-                    <dt>ID</dt>
-                    <dd className="font-semibold text-slate-900">{leaderOrganization.id}</dd>
-                  </div>
                   <div className="flex justify-between gap-4">
                     <dt>Name</dt>
                     <dd className="font-semibold text-slate-900">{leaderOrganization.organizationName}</dd>
@@ -2060,7 +2117,7 @@ const AccountPage = () => {
                     />
                   ) : (
                     <>
-                      <Label htmlFor="inventory-organization-id">Organization ID</Label>
+                      <Label htmlFor="inventory-organization-id">Company reference</Label>
                       <Input
                         id="inventory-organization-id"
                         type="number"
@@ -2090,7 +2147,7 @@ const AccountPage = () => {
                         <p className="text-sm text-slate-500">{product.productType}</p>
                       </div>
                       <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">
-                        #{product.id}
+                        In stock
                       </span>
                     </div>
                     <p className="mt-3 text-sm text-slate-600">Asset tag: {product.assetTag}</p>
@@ -2115,7 +2172,7 @@ const AccountPage = () => {
       <SectionCard
         id="products"
         title="Products"
-        description="Create, update, delete, search, and list products through the product controller."
+        description="Create, update, search, and maintain inventory records from one place."
         actions={
           <Button variant="outline" onClick={handleLoadAllProducts} disabled={Boolean(pendingByKey.products)}>
             {pendingByKey.products ? "Loading..." : "Reload products"}
@@ -2128,10 +2185,10 @@ const AccountPage = () => {
 
             <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
               <p className="text-sm font-semibold text-slate-900">Create or update product</p>
-              <FieldHint>Companies are shown by name here. The selected company ID is still sent to the backend.</FieldHint>
+              <FieldHint>Choose the company by name whenever it is available in the workspace.</FieldHint>
               <div className="mt-4 grid gap-4 sm:grid-cols-2">
                 <div>
-                  <Label htmlFor="product-id">Product ID for update</Label>
+                  <Label htmlFor="product-id">Asset reference for update</Label>
                   <Input
                     id="product-id"
                     type="number"
@@ -2157,7 +2214,7 @@ const AccountPage = () => {
                   />
                 ) : (
                   <div>
-                    <Label htmlFor="product-organization-id">Organization ID</Label>
+                    <Label htmlFor="product-organization-id">Company reference</Label>
                     <Input
                       id="product-organization-id"
                       type="number"
@@ -2226,10 +2283,14 @@ const AccountPage = () => {
               </div>
               <div className="mt-5 flex flex-wrap gap-3">
                 <Button onClick={() => handleCreateProduct(false)} disabled={Boolean(pendingByKey.products)}>
-                  Create with `POST /product`
+                  Create product
                 </Button>
-                <Button variant="outline" onClick={() => handleCreateProduct(true)} disabled={Boolean(pendingByKey.products)}>
-                  Create with `POST /product/add`
+                <Button
+                  variant="outline"
+                  onClick={() => handleCreateProduct(true)}
+                  disabled={Boolean(pendingByKey.products)}
+                >
+                  Create product (compatibility mode)
                 </Button>
                 <Button variant="secondary" onClick={handleUpdateProduct} disabled={Boolean(pendingByKey.products)}>
                   Update product
@@ -2251,7 +2312,7 @@ const AccountPage = () => {
                   />
                 ) : (
                   <div>
-                    <Label htmlFor="product-lookup-id">Product ID</Label>
+                    <Label htmlFor="product-lookup-id">Asset reference</Label>
                     <Input
                       id="product-lookup-id"
                       type="number"
@@ -2279,7 +2340,7 @@ const AccountPage = () => {
               </div>
               <div className="mt-5 flex flex-wrap gap-3">
                 <Button variant="outline" onClick={handleLookupProduct} disabled={Boolean(pendingByKey.products)}>
-                  Load by ID
+                  Load details
                 </Button>
                 <Button variant="outline" onClick={handleSearchProductByAssetTag} disabled={Boolean(pendingByKey.products)}>
                   Search asset tag
@@ -2305,7 +2366,7 @@ const AccountPage = () => {
                     <p className="text-sm text-slate-500">{selectedProduct.productType}</p>
                   </div>
                   <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">
-                    #{selectedProduct.id}
+                    Asset
                   </span>
                 </div>
                 <dl className="mt-4 grid gap-3 text-sm text-slate-600">
@@ -2366,7 +2427,7 @@ const AccountPage = () => {
                   {products.map((product) => (
                     <div key={product.id} className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
                       <div className="flex items-center justify-between gap-3">
-                        <div>
+                      <div>
                           <p className="font-semibold text-slate-900">
                             {product.productBrand} {product.productModel}
                           </p>
@@ -2378,7 +2439,7 @@ const AccountPage = () => {
                           </p>
                         </div>
                         <span className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-slate-700">
-                          #{product.id}
+                          Asset
                         </span>
                       </div>
                       <div className="mt-3">
@@ -2403,7 +2464,7 @@ const AccountPage = () => {
       <SectionCard
         id="assignments"
         title="Assignments"
-        description="Drive assignment creation, lookups, filters, updates, current-assignment loading, and deletion."
+        description="Track issued equipment, update returns, and review assignment history."
         actions={
           <Button variant="outline" onClick={handleLoadAllAssignments} disabled={Boolean(pendingByKey.assignments)}>
             {pendingByKey.assignments ? "Loading..." : "Reload assignments"}
@@ -2416,7 +2477,7 @@ const AccountPage = () => {
 
             <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
               <p className="text-sm font-semibold text-slate-900">Create or update assignment</p>
-              <FieldHint>Choose a teammate and asset by name. The form still sends their IDs to the backend.</FieldHint>
+              <FieldHint>Choose a teammate and asset by name whenever those records are already loaded.</FieldHint>
               <div className="mt-4 grid gap-4 sm:grid-cols-2">
                 {assignmentOptions.length > 0 ? (
                   <SelectField
@@ -2431,7 +2492,7 @@ const AccountPage = () => {
                   />
                 ) : (
                   <div>
-                    <Label htmlFor="assignment-id">Assignment ID for update</Label>
+                    <Label htmlFor="assignment-id">Assignment reference for update</Label>
                     <Input
                       id="assignment-id"
                       type="number"
@@ -2458,7 +2519,7 @@ const AccountPage = () => {
                   />
                 ) : (
                   <div>
-                    <Label htmlFor="assignment-employee-id">Employee ID</Label>
+                    <Label htmlFor="assignment-employee-id">Teammate reference</Label>
                     <Input
                       id="assignment-employee-id"
                       type="number"
@@ -2488,7 +2549,7 @@ const AccountPage = () => {
                   />
                 ) : (
                   <div>
-                    <Label htmlFor="assignment-product-id">Product ID</Label>
+                    <Label htmlFor="assignment-product-id">Asset reference</Label>
                     <Input
                       id="assignment-product-id"
                       type="number"
@@ -2555,7 +2616,7 @@ const AccountPage = () => {
                   />
                 ) : (
                   <div>
-                    <Label htmlFor="assignment-lookup-id">Assignment ID</Label>
+                    <Label htmlFor="assignment-lookup-id">Assignment reference</Label>
                     <Input
                       id="assignment-lookup-id"
                       type="number"
@@ -2575,7 +2636,7 @@ const AccountPage = () => {
                   />
                 ) : (
                   <div>
-                    <Label htmlFor="assignment-user-filter">User ID</Label>
+                    <Label htmlFor="assignment-user-filter">Teammate reference</Label>
                     <Input
                       id="assignment-user-filter"
                       type="number"
@@ -2596,7 +2657,7 @@ const AccountPage = () => {
                   />
                 ) : (
                   <div className="sm:col-span-2">
-                    <Label htmlFor="assignment-product-filter">Product ID</Label>
+                    <Label htmlFor="assignment-product-filter">Asset reference</Label>
                     <Input
                       id="assignment-product-filter"
                       type="number"
@@ -2608,13 +2669,13 @@ const AccountPage = () => {
               </div>
               <div className="mt-5 flex flex-wrap gap-3">
                 <Button variant="outline" onClick={handleLookupAssignment} disabled={Boolean(pendingByKey.assignments)}>
-                  Load by ID
+                  Load details
                 </Button>
                 <Button variant="outline" onClick={handleLoadAssignmentsByUser} disabled={Boolean(pendingByKey.assignments)}>
-                  Load by user
+                  Load by teammate
                 </Button>
                 <Button variant="outline" onClick={handleLoadAssignmentsByProduct} disabled={Boolean(pendingByKey.assignments)}>
-                  Load by product
+                  Load by asset
                 </Button>
                 <Button variant="outline" onClick={handleLoadCurrentAssignments} disabled={Boolean(pendingByKey.assignments)}>
                   Load current
@@ -2748,14 +2809,14 @@ const AccountPage = () => {
         <SectionCard
           id="protocols"
           title="Protocols"
-          description="Create and fetch protocols with generated PDF URIs."
+          description="Create and open handover protocols for teammates and companies."
         >
           <div className="space-y-5">
             <FeedbackMessage feedback={feedbackByKey.protocols} />
 
             <form onSubmit={handleCreateProtocol} className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
               <p className="text-sm font-semibold text-slate-900">Create protocol</p>
-              <FieldHint>Pick the company and teammate by name. The matching IDs are still sent to the backend.</FieldHint>
+              <FieldHint>Pick the company and teammate by name whenever those records are available.</FieldHint>
               <div className="mt-4 grid gap-4 sm:grid-cols-2">
                 {organizationOptions.length > 0 ? (
                   <SelectField
@@ -2773,7 +2834,7 @@ const AccountPage = () => {
                   />
                 ) : (
                   <div>
-                    <Label htmlFor="protocol-organization-id">Organization ID</Label>
+                    <Label htmlFor="protocol-organization-id">Company reference</Label>
                     <Input
                       id="protocol-organization-id"
                       type="number"
@@ -2803,7 +2864,7 @@ const AccountPage = () => {
                   />
                 ) : (
                   <div>
-                    <Label htmlFor="protocol-user-id">User ID</Label>
+                    <Label htmlFor="protocol-user-id">Teammate reference</Label>
                     <Input
                       id="protocol-user-id"
                       type="number"
@@ -2826,10 +2887,10 @@ const AccountPage = () => {
             </form>
 
             <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
-              <p className="text-sm font-semibold text-slate-900">Get protocol by ID</p>
+              <p className="text-sm font-semibold text-slate-900">Open a saved protocol</p>
               <div className="mt-4 flex flex-col gap-3 sm:flex-row">
                 <div className="flex-1">
-                  <Label htmlFor="protocol-lookup-id">Protocol ID</Label>
+                  <Label htmlFor="protocol-lookup-id">Protocol reference</Label>
                   <Input
                     id="protocol-lookup-id"
                     type="number"
@@ -2847,7 +2908,7 @@ const AccountPage = () => {
 
             {selectedProtocol ? (
               <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-                <p className="text-sm font-semibold text-slate-900">Protocol #{selectedProtocol.id}</p>
+                <p className="text-sm font-semibold text-slate-900">Generated protocol</p>
                 <dl className="mt-4 grid gap-3 text-sm text-slate-600">
                   <div className="flex justify-between gap-4">
                     <dt>Teammate</dt>
@@ -2861,8 +2922,8 @@ const AccountPage = () => {
                   </div>
                 </dl>
                 <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600">
-                  <p className="font-semibold text-slate-900">Protocol URI</p>
-                  <p className="mt-2 break-all">{selectedProtocol.protocolUri}</p>
+                  <p className="font-semibold text-slate-900">Protocol file</p>
+                  <p className="mt-2">The direct file address is hidden here for safety.</p>
                   <div className="mt-4">
                     <a
                       href={selectedProtocol.protocolUri}
@@ -2870,7 +2931,7 @@ const AccountPage = () => {
                       rel="noreferrer"
                       className="inline-flex h-10 items-center justify-center rounded-xl bg-brand-600 px-4 text-sm font-semibold text-white transition hover:bg-brand-700"
                     >
-                      Open protocol URI
+                      Open protocol
                     </a>
                   </div>
                 </div>
@@ -2878,7 +2939,7 @@ const AccountPage = () => {
             ) : (
               <EmptyState
                 title="No protocol selected"
-                description="Generate a protocol or fetch one by ID to inspect its PDF URI here."
+                description="Create a protocol or load a saved one to open it from this panel."
               />
             )}
           </div>
@@ -2887,7 +2948,7 @@ const AccountPage = () => {
         <SectionCard
           id="ai-tools"
           title="AI"
-          description="Use `POST /ai/generate?prompt=...` from the frontend."
+          description="Generate drafting help and responses from the workspace assistant."
         >
           <div className="space-y-5">
             <FeedbackMessage feedback={feedbackByKey.ai} />
@@ -2897,7 +2958,7 @@ const AccountPage = () => {
               <Textarea
                 id="ai-prompt"
                 value={aiPrompt}
-                placeholder="Describe the content you want the backend AI endpoint to generate."
+                placeholder="Describe what you want the assistant to generate."
                 onChange={(event) => setAiPrompt(event.target.value)}
               />
               <div className="mt-4">
@@ -2909,18 +2970,8 @@ const AccountPage = () => {
 
             {aiResult ? (
               <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-                <div className="flex flex-wrap items-center gap-3">
-                  <span className="rounded-full bg-brand-50 px-3 py-1 text-xs font-semibold text-brand-700">
-                    {aiResult.model || "Unknown model"}
-                  </span>
-                  {aiResult.remote_model ? (
-                    <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">
-                      {aiResult.remote_model}
-                    </span>
-                  ) : null}
-                </div>
                 <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm leading-6 text-slate-700">
-                  {aiResult.response || "The endpoint returned an empty response."}
+                  {aiResult.response || "The assistant returned an empty response."}
                 </div>
                 <dl className="mt-4 grid gap-3 text-sm text-slate-600">
                   <div className="flex justify-between gap-4">
@@ -2931,31 +2982,19 @@ const AccountPage = () => {
                     <dt>Total duration</dt>
                     <dd className="font-semibold text-slate-900">{formatDuration(aiResult.total_duration)}</dd>
                   </div>
-                  <div className="flex justify-between gap-4">
-                    <dt>Prompt eval count</dt>
-                    <dd className="font-semibold text-slate-900">{aiResult.prompt_eval_count ?? "N/A"}</dd>
-                  </div>
-                  <div className="flex justify-between gap-4">
-                    <dt>Eval count</dt>
-                    <dd className="font-semibold text-slate-900">{aiResult.eval_count ?? "N/A"}</dd>
-                  </div>
                 </dl>
-                {aiResult.thinking ? (
-                  <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600">
-                    <p className="font-semibold text-slate-900">Thinking</p>
-                    <p className="mt-2 whitespace-pre-wrap">{aiResult.thinking}</p>
-                  </div>
-                ) : null}
               </div>
             ) : (
               <EmptyState
                 title="No AI response yet"
-                description="Submit a prompt to see the backend-generated response and metadata."
+                description="Submit a prompt to see the generated response here."
               />
             )}
           </div>
         </SectionCard>
+        </div>
       </div>
+    </div>
     </div>
   );
 };

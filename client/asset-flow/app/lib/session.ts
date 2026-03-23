@@ -7,6 +7,14 @@ function isBrowser() {
   return typeof window !== "undefined";
 }
 
+function getPrimaryStorage() {
+  return window.sessionStorage;
+}
+
+function getLegacyStorage() {
+  return window.localStorage;
+}
+
 function isValidSession(value: unknown): value is AuthSession {
   if (!value || typeof value !== "object") {
     return false;
@@ -21,22 +29,40 @@ export function readAuthSession(): AuthSession | null {
     return null;
   }
 
+  const storage = getPrimaryStorage();
+  const legacyStorage = getLegacyStorage();
+
   try {
-    const raw = window.localStorage.getItem(AUTH_STORAGE_KEY);
+    const raw = storage.getItem(AUTH_STORAGE_KEY) ?? legacyStorage.getItem(AUTH_STORAGE_KEY);
     if (!raw) {
       return null;
     }
 
     const parsed = JSON.parse(raw) as unknown;
     if (!isValidSession(parsed)) {
+      storage.removeItem(AUTH_STORAGE_KEY);
+      legacyStorage.removeItem(AUTH_STORAGE_KEY);
       return null;
     }
 
-    return {
+    const session = {
       ...parsed,
       issuedAt: typeof parsed.issuedAt === "number" ? parsed.issuedAt : Date.now(),
     };
+
+    if (session.issuedAt + session.expiresIn <= Date.now()) {
+      storage.removeItem(AUTH_STORAGE_KEY);
+      legacyStorage.removeItem(AUTH_STORAGE_KEY);
+      return null;
+    }
+
+    storage.setItem(AUTH_STORAGE_KEY, JSON.stringify(session));
+    legacyStorage.removeItem(AUTH_STORAGE_KEY);
+
+    return session;
   } catch {
+    storage.removeItem(AUTH_STORAGE_KEY);
+    legacyStorage.removeItem(AUTH_STORAGE_KEY);
     return null;
   }
 }
@@ -51,7 +77,8 @@ export function saveAuthSession(session: AuthSession) {
     issuedAt: session.issuedAt ?? Date.now(),
   };
 
-  window.localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(nextSession));
+  getPrimaryStorage().setItem(AUTH_STORAGE_KEY, JSON.stringify(nextSession));
+  getLegacyStorage().removeItem(AUTH_STORAGE_KEY);
   window.dispatchEvent(new Event(AUTH_CHANGE_EVENT));
 }
 
@@ -60,7 +87,8 @@ export function clearAuthSession() {
     return;
   }
 
-  window.localStorage.removeItem(AUTH_STORAGE_KEY);
+  getPrimaryStorage().removeItem(AUTH_STORAGE_KEY);
+  getLegacyStorage().removeItem(AUTH_STORAGE_KEY);
   window.dispatchEvent(new Event(AUTH_CHANGE_EVENT));
 }
 
@@ -69,7 +97,13 @@ export function subscribeToAuthChanges(callback: () => void) {
     return () => undefined;
   }
 
-  const handleStorage = () => callback();
+  const handleStorage = (event: StorageEvent) => {
+    if (event.key && event.key !== AUTH_STORAGE_KEY) {
+      return;
+    }
+
+    callback();
+  };
   const handleCustomEvent = () => callback();
 
   window.addEventListener("storage", handleStorage);

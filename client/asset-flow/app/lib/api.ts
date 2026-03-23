@@ -1,4 +1,4 @@
-import { readAuthSession } from "./session";
+import { clearAuthSession, readAuthSession } from "./session";
 
 type Primitive = string | number | boolean;
 
@@ -90,6 +90,10 @@ export async function apiRequest<T>(path: string, options: ApiRequestOptions = {
   });
 
   if (!response.ok) {
+    if (auth && (response.status === 401 || response.status === 403)) {
+      clearAuthSession();
+    }
+
     throw await buildApiError(response);
   }
 
