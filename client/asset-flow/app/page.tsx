@@ -21,7 +21,7 @@ const Home = () => {
             <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center">
               <Link
                 href="/user/register"
-                className="inline-flex h-12 items-center justify-center rounded-xl bg-brand-600 px-5 text-base font-semibold text-black shadow-lg shadow-brand-200 transition hover:bg-brand-700"
+                className="inline-flex h-12 items-center justify-center rounded-xl bg-indigo-600 px-5 text-base font-semibold text-white shadow-lg shadow-indigo-200 transition hover:bg-indigo-700"
               >
                 Create account
               </Link>
@@ -46,7 +46,7 @@ const Home = () => {
           </div>
 
           <div className="relative">
-            <div className="absolute -inset-6 -z-10 rounded-[2.5rem] bg-gradient-to-br from-brand-200/60 via-white to-emerald-200/50 blur-2xl" />
+            <div className="absolute -inset-6 -z-10 rounded-[2.5rem] bg-gradient-to-br from-indigo-200/60 via-white to-emerald-200/50 blur-2xl" />
             <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-xl">
               <div className="border-b border-slate-100 bg-slate-50 px-6 py-4">
                 <p className="text-sm font-semibold text-slate-900">Asset overview</p>

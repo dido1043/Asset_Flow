@@ -96,7 +96,7 @@ const LoginForm = () => {
                     </div>
                 </div>
 
-                <Button type="submit" className="w-full" size="lg" disabled={loading} style={{ color: "#000000ff" }}>
+                <Button type="submit" className="w-full" size="lg" disabled={loading}>
                     {loading ? "Signing in…" : "Sign in"}
                 </Button>
             </form>

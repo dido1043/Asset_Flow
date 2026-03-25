@@ -216,7 +216,7 @@ const RegisterForm = () => {
                             name="role"
                             value={formData.role}
                             onChange={handleRoleChange}
-                            className="mt-2 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm text-slate-900 shadow-sm outline-none transition placeholder:text-slate-400 focus:border-brand-500 focus:bg-white focus:ring-2 focus:ring-brand-200"
+                            className="mt-2 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm text-slate-900 shadow-sm outline-none transition placeholder:text-slate-400 focus:border-indigo-500 focus:bg-white focus:ring-2 focus:ring-indigo-200"
                             required
                         >
                             <option value="">Select role</option>
@@ -251,7 +251,7 @@ const RegisterForm = () => {
                                                 organizationId: event.target.value,
                                             }))
                                         }
-                                        className="mt-2 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm text-slate-900 shadow-sm outline-none transition placeholder:text-slate-400 focus:border-brand-500 focus:bg-white focus:ring-2 focus:ring-brand-200"
+                                        className="mt-2 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm text-slate-900 shadow-sm outline-none transition placeholder:text-slate-400 focus:border-indigo-500 focus:bg-white focus:ring-2 focus:ring-indigo-200"
                                     >
                                         <option value="">Select your company</option>
                                         {organizations.map((organization) => (
@@ -307,10 +307,9 @@ const RegisterForm = () => {
 
                 <Button
                     type="submit"
-                    className="w-full bg-white text-black"
+                    className="w-full"
                     size="lg"
                     disabled={loading}
-                    style={{ color: "#000", opacity: 1 }}
                 >
                     {loading ? "Creating account…" : "Create account"}
                 </Button>

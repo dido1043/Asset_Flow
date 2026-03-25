@@ -51,7 +51,7 @@ function OAuthCallbackCard({
               <Link
                 href="/"
                 className={cn(
-                  "inline-flex h-11 w-full items-center justify-center rounded-xl bg-brand-600 px-4 text-sm font-semibold text-white shadow-lg shadow-brand-200 transition hover:bg-brand-700 sm:w-auto",
+                  "inline-flex h-11 w-full items-center justify-center rounded-xl bg-indigo-600 px-4 text-sm font-semibold text-white shadow-lg shadow-indigo-200 transition hover:bg-indigo-700 sm:w-auto",
                 )}
               >
                 Go home
@@ -61,7 +61,7 @@ function OAuthCallbackCard({
 
           {!missingCode && !error && loading && (
             <div className="mt-2 flex items-center gap-3 text-sm text-slate-600">
-              <span className="inline-flex h-2.5 w-2.5 animate-pulse rounded-full bg-brand-500" />
+              <span className="inline-flex h-2.5 w-2.5 animate-pulse rounded-full bg-indigo-600" />
               Completing OAuth exchange...
             </div>
           )}

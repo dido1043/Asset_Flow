@@ -4,6 +4,7 @@ import Link from "next/link";
 
 import { clearAuthSession, readAuthSession, subscribeToAuthChanges } from "@/app/lib/session";
 import type { AuthSession } from "@/app/lib/types";
+import { formatRoleLabel } from "@/app/components/Pages/User/account/utils";
 import { Button } from "../ui/Button";
 
 const Navigation = () => {
@@ -39,7 +40,7 @@ const Navigation = () => {
                     </div>
                 </Link>
 
-                <nav className="flex items-center gap-2">
+                <nav className="flex flex-wrap items-center justify-end gap-2">
                     <Link
                         href="/"
                         className="rounded-xl px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-100"
@@ -56,8 +57,8 @@ const Navigation = () => {
                                 Workspace
                             </Link>
                             {session?.role && (
-                                <span className="hidden rounded-full bg-brand-50 px-3 py-1 text-xs font-semibold text-brand-700 sm:inline-flex">
-                                    {session.role}
+                                <span className="hidden rounded-full bg-indigo-50 px-3 py-1 text-xs font-semibold text-indigo-600 md:inline-flex">
+                                    {formatRoleLabel(session.role)}
                                 </span>
                             )}
                             <Button variant="outline" size="sm" onClick={logout}>
@@ -73,7 +74,7 @@ const Navigation = () => {
                                 Sign in
                             </Link>
                             <Link href="/user/register" className="inline-flex">
-                                <span className="inline-flex h-9 items-center justify-center rounded-xl bg-brand-600 px-4 text-sm font-semibold text-black shadow-lg shadow-brand-200 transition hover:bg-brand-700">
+                                <span className="inline-flex h-9 items-center justify-center rounded-xl bg-indigo-600 px-4 text-sm font-semibold text-white shadow-lg shadow-indigo-200 transition hover:bg-indigo-700">
                                     Get started
                                 </span>
                             </Link>

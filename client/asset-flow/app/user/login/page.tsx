@@ -46,7 +46,7 @@ const LoginPage = () => {
 
                     <p className="mt-6 text-sm text-slate-600">
                         New to AssetFlow?{" "}
-                        <Link href="/user/register" className="font-semibold text-brand-700 hover:text-brand-800">
+                        <Link href="/user/register" className="font-semibold text-indigo-600 hover:text-indigo-700">
                             Create an account
                         </Link>
                     </p>
