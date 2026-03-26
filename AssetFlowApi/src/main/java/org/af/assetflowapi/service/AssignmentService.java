@@ -13,7 +13,6 @@ import org.af.assetflowapi.repository.UserRepository;
 import org.modelmapper.ModelMapper;
 import org.springframework.stereotype.Service;
 
-import com.fasterxml.jackson.annotation.JsonTypeInfo.As;
 
 import java.util.List;
 
@@ -34,25 +33,6 @@ public class AssignmentService {
                 .map(assignment -> modelMapper.map(assignment, AssignmentDto.class))
                 .toList();
     }
-    //For remove
-    // public AssignmentDto createAssignment(AssignmentDto dto) {
-    //     if (dto == null) throw new IllegalArgumentException("AssignmentDto cannot be null");
-
-    //     User employee =  userRepository.findById(dto.getEmployeeId())
-    //             .orElseThrow(() -> new IllegalArgumentException("User with id " + dto.getEmployeeId() + " not found"));
-    //     Product product = productRepository.findById(dto.getProductId())
-    //             .orElseThrow(() -> new IllegalArgumentException("Product with id " + dto.getProductId() + " not found"));
-
-
-    //     Assignment assignment = new Assignment();
-    //     assignment.setEmployee(employee);
-    //     assignment.setProduct(product);
-    //     assignment.setDateAssigned(dto.getDateAssigned());
-    //     assignment.setDateReturned(dto.getDateReturned());
-
-    //     Assignment saved = assignmentRepository.save(assignment);
-    //     return mapToDto(saved);
-    // }
 
     public AssignmentDto createAssignmentToUser(AssignmentDto assignmentDtoDto) {
         if (assignmentDtoDto == null) throw new IllegalArgumentException("AssignmentDto cannot be null");
@@ -141,6 +121,11 @@ public class AssignmentService {
                 .toList();
     }
 
+    public List<AssignmentDto> getAssignmentsByOrganization(Long organizationId) {
+        return assignmentRepository.findByOrganizationId(organizationId).stream()
+                .map(this::mapToDto)
+                .toList();
+    }
     private AssignmentDto mapToDto(Assignment assignment) {
         AssignmentDto dto = modelMapper.map(assignment, AssignmentDto.class);
         if (assignment.getEmployee() != null) dto.setEmployeeId(assignment.getEmployee().getId());

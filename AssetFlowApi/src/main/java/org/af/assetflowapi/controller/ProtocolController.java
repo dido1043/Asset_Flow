@@ -7,6 +7,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/protocol")
 @AllArgsConstructor
@@ -18,7 +20,11 @@ public class ProtocolController {
         ProtocolDto protocol = protocolService.getProtocolById(id);
         return ResponseEntity.ok(protocol);
     }
-    // Create a Protocol (or store a pre-generated protocol record)
+    @GetMapping("/org/{orgId}")
+    public ResponseEntity<List<ProtocolDto>> getProtocolsByOrganization(@PathVariable Long orgId) {
+        List<ProtocolDto> protocols = protocolService.getProtocolsByOrganization(orgId);
+        return ResponseEntity.ok(protocols);
+    }
     @PostMapping("/create/{organizationId}/user/{userId}")
     public ResponseEntity<ProtocolDto> createProtocol(@PathVariable Long organizationId, @PathVariable Long userId) {
         ProtocolDto created = protocolService.createProtocol(organizationId, userId);

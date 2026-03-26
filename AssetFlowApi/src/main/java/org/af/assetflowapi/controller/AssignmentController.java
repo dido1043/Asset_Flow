@@ -51,7 +51,10 @@ public class AssignmentController {
     public ResponseEntity<List<AssignmentDto>> getAssignmentsByProduct(@PathVariable Long productId) {
         return ResponseEntity.ok(assignmentService.getAssignmentsByProduct(productId));
     }
-
+    @GetMapping("/org/{orgId}")
+    public ResponseEntity<List<AssignmentDto>> getAssignmentsByOrganization(@PathVariable Long orgId) {
+        return ResponseEntity.ok(assignmentService.getAssignmentsByOrganization(orgId));
+    }
     @GetMapping("/current")
     public ResponseEntity<List<AssignmentDto>> getCurrentlyAssigned() {
         return ResponseEntity.ok(assignmentService.getCurrentlyAssigned());

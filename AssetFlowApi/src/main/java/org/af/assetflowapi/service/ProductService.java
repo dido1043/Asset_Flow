@@ -103,4 +103,13 @@ public class ProductService {
                 })
                 .toList();
     }
+    public List<ProductDto> findByOrgId(Long organizationId) {
+        return productRepository.findByOrganizationId(organizationId).stream()
+                .map(p -> {
+                    ProductDto dto = modelMapper.map(p, ProductDto.class);
+                    if (p.getOrganization() != null) dto.setOrganizationId(p.getOrganization().getId());
+                    return dto;
+                })
+                .toList();
+    }
 }

@@ -86,7 +86,21 @@ public class ProtocolService {
 
         return result;
     }
-    //Todo: Add translate to other language
+    public List<ProtocolDto> getProtocolsByOrganization(Long organizationId) {
+        return protocolRepository.findByOrganizationId(organizationId).stream()
+                .map(protocol -> {
+                    ProtocolDto dto = new ProtocolDto();
+                    dto.setId(protocol.getId());
+                    dto.setProtocolUri(protocol.getProtocolUri());
+                    dto.setOrganizationId(protocol.getOrganization() != null ? protocol.getOrganization().getId() : null);
+                    if (protocol.getEmployee() != null && protocol.getEmployee().getId() != null) {
+                        dto.setEmployeeId(protocol.getEmployee().getId());
+                    }
+                    return dto;
+                })
+                .toList();
+    }
+
     public String generateProtocolPdfUri(Organization organization, User user) {
         Path targetDir = Path.of("target", "protocols");
         try {
@@ -146,9 +160,8 @@ public class ProtocolService {
                 .collect(Collectors.joining("\n"));
     }
 
-    // Try to find/create a PdfFont that supports Unicode (IDENTITY_H). First check bundled resource, then common system paths.
+    
     private PdfFont getUnicodePdfFont() {
-        // Try classpath bundled font: src/main/resources/fonts/NotoSans-Regular.ttf
         try (InputStream is = getClass().getResourceAsStream("/fonts/NotoSans-Regular.ttf")) {
             if (is != null) {
                 byte[] bytes = is.readAllBytes();
@@ -162,7 +175,6 @@ public class ProtocolService {
         } catch (IOException ignored) {
         }
 
-        // Common font locations on macOS / Linux
         String[] candidates = new String[] {
                 "/Library/Fonts/Arial Unicode.ttf",
                 "/System/Library/Fonts/Supplemental/Arial Unicode.ttf",
@@ -180,7 +192,6 @@ public class ProtocolService {
             }
         }
 
-        // Last resort: use a standard font (may not render all languages)
         try {
             return PdfFontFactory.createFont(StandardFonts.HELVETICA);
         } catch (IOException e) {

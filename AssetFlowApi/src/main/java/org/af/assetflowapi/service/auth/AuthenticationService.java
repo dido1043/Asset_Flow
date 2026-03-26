@@ -56,7 +56,13 @@ public class AuthenticationService {
         userDto.setOrganizationId(user.getOrganization() != null? user.getOrganization().getId() : null);
         return userDto;
     }
-
+    public List<UserDto> getUsersByOrganization(Long organizationId) {
+        List<User> users = userRepository.findByOrganizationId(organizationId)
+                .orElseThrow(() -> new IllegalArgumentException("No users found for organization with id " + organizationId));
+        return users.stream()
+                .map(user -> mapper(user))
+                .toList();
+    }
     public User oAuthLogin(OAuth2AuthenticationToken oAuth2AuthenticationToken) {
         if (oAuth2AuthenticationToken == null) {
             Authentication authentication = SecurityContextHolder.getContext().getAuthentication();

@@ -44,6 +44,10 @@ public class AuthenticationController {
     public ResponseEntity<UserDto> getUser(@PathVariable Long userId) {
         return ResponseEntity.ok(authenticationService.getUser(userId));
     }
+    @GetMapping("/users/org/{orgId}")
+    public ResponseEntity<List<UserDto>> getUsersByOrganization(@PathVariable Long orgId) {
+        return ResponseEntity.ok(authenticationService.getUsersByOrganization(orgId));
+    }
     @PostMapping("/register")
     public ResponseEntity<UserDto> register(@RequestBody UserDto user) {
         return ResponseEntity.status(201).body(authenticationService.register(user));
