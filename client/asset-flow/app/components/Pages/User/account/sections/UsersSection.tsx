@@ -8,12 +8,15 @@ import { formatRoleLabel, getRoleBadgeClass } from "../utils";
 
 export function UsersSection({ workspace }: { workspace: AccountWorkspaceState }) {
   const {
+    canDeleteUsers,
     deleteUserId,
     feedbackByKey,
     getOrganizationName,
     handleDeleteUser,
     handleLoadUsers,
     handleLookupUser,
+    isAdmin,
+    isLeader,
     pendingByKey,
     selectedUser,
     setDeleteUserId,
@@ -28,10 +31,14 @@ export function UsersSection({ workspace }: { workspace: AccountWorkspaceState }
     <SectionCard
       id="users"
       title="Users"
-      description="Browse teammates, inspect account details, and remove access when needed."
+      description={
+        isLeader
+          ? "Browse teammates inside your company and inspect account details without leaving your scope."
+          : "Browse teammates, inspect account details, and remove access when needed."
+      }
       actions={
         <Button variant="outline" onClick={handleLoadUsers} disabled={Boolean(pendingByKey.users)}>
-          {pendingByKey.users ? "Loading..." : "Reload users"}
+          {pendingByKey.users ? "Loading..." : isLeader ? "Reload teammates" : "Reload users"}
         </Button>
       }
     >
@@ -52,7 +59,7 @@ export function UsersSection({ workspace }: { workspace: AccountWorkspaceState }
                     options={userOptions}
                     placeholder="Select a teammate"
                   />
-                ) : (
+                ) : isAdmin ? (
                   <>
                     <Label htmlFor="user-lookup-id">Teammate reference</Label>
                     <Input
@@ -62,6 +69,11 @@ export function UsersSection({ workspace }: { workspace: AccountWorkspaceState }
                       onChange={(event) => setUserLookupId(event.target.value)}
                     />
                   </>
+                ) : (
+                  <EmptyState
+                    title="No teammates in scope"
+                    description="Your company roster will appear here as soon as users are available for your organization."
+                  />
                 )}
               </div>
               <div className="flex items-end">
@@ -72,38 +84,40 @@ export function UsersSection({ workspace }: { workspace: AccountWorkspaceState }
             </div>
           </div>
 
-          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
-            <p className="text-sm font-semibold text-slate-900">Remove a user</p>
-            <div className="mt-4 flex flex-col gap-3 sm:flex-row">
-              <div className="flex-1">
-                {userOptions.length > 0 ? (
-                  <SelectField
-                    id="delete-user-id"
-                    label="User to remove"
-                    value={deleteUserId}
-                    onChange={setDeleteUserId}
-                    options={userOptions}
-                    placeholder="Select a teammate"
-                  />
-                ) : (
-                  <>
-                    <Label htmlFor="delete-user-id">Teammate reference</Label>
-                    <Input
+          {canDeleteUsers ? (
+            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
+              <p className="text-sm font-semibold text-slate-900">Remove a user</p>
+              <div className="mt-4 flex flex-col gap-3 sm:flex-row">
+                <div className="flex-1">
+                  {userOptions.length > 0 ? (
+                    <SelectField
                       id="delete-user-id"
-                      type="number"
+                      label="User to remove"
                       value={deleteUserId}
-                      onChange={(event) => setDeleteUserId(event.target.value)}
+                      onChange={setDeleteUserId}
+                      options={userOptions}
+                      placeholder="Select a teammate"
                     />
-                  </>
-                )}
-              </div>
-              <div className="flex items-end">
-                <Button variant="danger" onClick={handleDeleteUser} disabled={Boolean(pendingByKey.users)}>
-                  Delete user
-                </Button>
+                  ) : (
+                    <>
+                      <Label htmlFor="delete-user-id">Teammate reference</Label>
+                      <Input
+                        id="delete-user-id"
+                        type="number"
+                        value={deleteUserId}
+                        onChange={(event) => setDeleteUserId(event.target.value)}
+                      />
+                    </>
+                  )}
+                </div>
+                <div className="flex items-end">
+                  <Button variant="danger" onClick={handleDeleteUser} disabled={Boolean(pendingByKey.users)}>
+                    Delete user
+                  </Button>
+                </div>
               </div>
             </div>
-          </div>
+          ) : null}
 
           {selectedUser ? (
             <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
@@ -183,7 +197,11 @@ export function UsersSection({ workspace }: { workspace: AccountWorkspaceState }
           ) : (
             <EmptyState
               title="No users loaded"
-              description="Use the reload button or the workspace refresh action to fetch the user list."
+              description={
+                isLeader
+                  ? "Use the reload button or the workspace refresh action to fetch teammates from your company."
+                  : "Use the reload button or the workspace refresh action to fetch the user list."
+              }
             />
           )}
         </div>

@@ -11,7 +11,7 @@ import { ProtocolsSection } from "./account/sections/ProtocolsSection";
 import { UsersSection } from "./account/sections/UsersSection";
 import { FeedbackMessage, StatCard } from "./account/shared";
 import { useAccountWorkspace } from "./account/useAccountWorkspace";
-import { formatRoleLabel, workspaceSections } from "./account/utils";
+import { formatRoleLabel } from "./account/utils";
 
 const AccountPage = () => {
   const workspace = useAccountWorkspace();
@@ -31,8 +31,14 @@ const AccountPage = () => {
     session,
     sessionChecked,
     users,
+    visibleSections,
+    workspaceScopeLabel,
     workspaceSectionBadges,
   } = workspace;
+
+  const showUsersSection = visibleSections.some((section) => section.href === "#users");
+  const showOrganizationsSection = visibleSections.some((section) => section.href === "#organizations");
+  const showProtocolsSection = visibleSections.some((section) => section.href === "#protocols");
 
   if (!sessionChecked) {
     return (
@@ -69,11 +75,12 @@ const AccountPage = () => {
             </h1>
             <p className="mt-4 max-w-2xl text-sm text-slate-300 sm:text-base">
               Manage your profile, teammates, companies, inventory, assignments, protocols, and AI assistance from
-              one cleaner workspace without exposing backend route details on screen.
+              one cleaner workspace without exposing backend route details on screen. Your current access is limited to{" "}
+              {workspaceScopeLabel.toLowerCase()}.
             </p>
 
             <div className="mt-6 flex flex-wrap gap-3 lg:hidden">
-              {workspaceSections.map((link) => (
+              {visibleSections.map((link) => (
                 <a
                   key={link.href}
                   href={link.href}
@@ -123,7 +130,7 @@ const AccountPage = () => {
             <p className="mt-2 text-sm text-slate-600">Jump to any workspace tool from this sidebar.</p>
 
             <nav className="mt-5 space-y-2">
-              {workspaceSections.map((section) => {
+              {visibleSections.map((section) => {
                 const sectionKey = section.href.replace("#", "");
 
                 return (
@@ -189,6 +196,10 @@ const AccountPage = () => {
                 <span className="font-semibold text-slate-900">{allOrganizations.length}</span>
               </div>
               <div className="flex items-center justify-between gap-4">
+                <span>Access scope</span>
+                <span className="text-right font-semibold text-slate-900">{workspaceScopeLabel}</span>
+              </div>
+              <div className="flex items-center justify-between gap-4">
                 <span>Session storage</span>
                 <span className="text-right font-semibold text-slate-900">Current tab only</span>
               </div>
@@ -201,15 +212,19 @@ const AccountPage = () => {
           {feedbackByKey.workspace ? <FeedbackMessage feedback={feedbackByKey.workspace} /> : null}
 
           <ProfileSection workspace={workspace} />
-          <UsersSection workspace={workspace} />
-          <OrganizationsSection workspace={workspace} />
+          {showUsersSection ? <UsersSection workspace={workspace} /> : null}
+          {showOrganizationsSection ? <OrganizationsSection workspace={workspace} /> : null}
           <ProductsSection workspace={workspace} />
           <AssignmentsSection workspace={workspace} />
 
-          <div className="grid gap-6 lg:grid-cols-2">
-            <ProtocolsSection workspace={workspace} />
+          {showProtocolsSection ? (
+            <div className="grid gap-6 lg:grid-cols-2">
+              <ProtocolsSection workspace={workspace} />
+              <AiSection workspace={workspace} />
+            </div>
+          ) : (
             <AiSection workspace={workspace} />
-          </div>
+          )}
         </div>
       </div>
     </div>

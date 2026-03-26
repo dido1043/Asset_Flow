@@ -1,16 +1,16 @@
-import type { Role } from "@/app/lib/types";
 import { Button } from "@/app/components/shared/ui/Button";
 import { Input } from "@/app/components/shared/ui/Input";
 import { Label } from "@/app/components/shared/ui/Label";
 
 import { EmptyState, FeedbackMessage, SectionCard } from "../shared";
 import type { AccountWorkspaceState } from "../useAccountWorkspace";
-import { formatRoleLabel, getRoleBadgeClass, roleOptions, selectClassName } from "../utils";
+import { formatRoleLabel, getRoleBadgeClass } from "../utils";
 
 export function ProfileSection({ workspace }: { workspace: AccountWorkspaceState }) {
   const { bootstrapping, currentUser, feedbackByKey, getOrganizationName, handleProfileUpdate, handleSignOut } =
     workspace;
-  const { pendingByKey, profileForm, session, setProfileForm, handleWorkspaceRefresh } = workspace;
+  const { pendingByKey, profileForm, session, setProfileForm, handleWorkspaceRefresh, workspaceScopeLabel } =
+    workspace;
 
   return (
     <SectionCard
@@ -61,23 +61,13 @@ export function ProfileSection({ workspace }: { workspace: AccountWorkspaceState
 
             <div>
               <Label htmlFor="profile-role">Role</Label>
-              <select
+              <div
                 id="profile-role"
-                className={selectClassName}
-                value={profileForm.role}
-                onChange={(event) =>
-                  setProfileForm((previous) => ({
-                    ...previous,
-                    role: event.target.value as Role,
-                  }))
-                }
+                className="mt-2 inline-flex min-h-11 items-center rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm font-semibold text-slate-900"
               >
-                {roleOptions.map((role) => (
-                  <option key={role} value={role}>
-                    {formatRoleLabel(role)}
-                  </option>
-                ))}
-              </select>
+                {formatRoleLabel(currentUser?.role || session?.role)}
+              </div>
+              <p className="mt-2 text-xs text-slate-500">Role changes are locked here for security.</p>
             </div>
 
             <div>
@@ -163,6 +153,7 @@ export function ProfileSection({ workspace }: { workspace: AccountWorkspaceState
               <li>Expired or invalid sessions are cleared automatically.</li>
               <li>Names are shown instead of internal references wherever records are available.</li>
               <li>Backend route details stay hidden from the workspace UI.</li>
+              <li>Your current visibility scope is {workspaceScopeLabel.toLowerCase()}.</li>
             </ul>
           </div>
         </div>

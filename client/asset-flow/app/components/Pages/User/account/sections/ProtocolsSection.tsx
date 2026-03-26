@@ -12,10 +12,14 @@ export function ProtocolsSection({ workspace }: { workspace: AccountWorkspaceSta
     getUserName,
     handleCreateProtocol,
     handleLookupProtocol,
+    isAdmin,
+    isLeader,
     organizationOptions,
     pendingByKey,
     protocolCreateForm,
     protocolLookupId,
+    protocolOptions,
+    protocols,
     protocolUserOptions,
     selectedProtocol,
     selectedProtocolOrganizationId,
@@ -27,7 +31,11 @@ export function ProtocolsSection({ workspace }: { workspace: AccountWorkspaceSta
     <SectionCard
       id="protocols"
       title="Protocols"
-      description="Create and open handover protocols for teammates and companies."
+      description={
+        isLeader
+          ? "Create and open handover protocols for teammates inside your company."
+          : "Create and open handover protocols for teammates and companies."
+      }
     >
       <div className="space-y-5">
         <FeedbackMessage feedback={feedbackByKey.protocols} />
@@ -108,21 +116,67 @@ export function ProtocolsSection({ workspace }: { workspace: AccountWorkspaceSta
           <p className="text-sm font-semibold text-slate-900">Open a saved protocol</p>
           <div className="mt-4 flex flex-col gap-3 sm:flex-row">
             <div className="flex-1">
-              <Label htmlFor="protocol-lookup-id">Protocol reference</Label>
-              <Input
-                id="protocol-lookup-id"
-                type="number"
-                value={protocolLookupId}
-                onChange={(event) => setProtocolLookupId(event.target.value)}
-              />
+              {protocolOptions.length > 0 ? (
+                <SelectField
+                  id="protocol-lookup-id"
+                  label="Protocol"
+                  value={protocolLookupId}
+                  onChange={setProtocolLookupId}
+                  options={protocolOptions}
+                  placeholder="Select a protocol"
+                />
+              ) : isAdmin ? (
+                <>
+                  <Label htmlFor="protocol-lookup-id">Protocol reference</Label>
+                  <Input
+                    id="protocol-lookup-id"
+                    type="number"
+                    value={protocolLookupId}
+                    onChange={(event) => setProtocolLookupId(event.target.value)}
+                  />
+                </>
+              ) : (
+                <p className="text-sm text-slate-600">
+                  Saved protocols from your company will appear here as soon as one is available.
+                </p>
+              )}
             </div>
             <div className="flex items-end">
-              <Button onClick={handleLookupProtocol} disabled={Boolean(pendingByKey.protocols)}>
+              <Button
+                onClick={handleLookupProtocol}
+                disabled={Boolean(pendingByKey.protocols || (!isAdmin && protocolOptions.length === 0))}
+              >
                 Load protocol
               </Button>
             </div>
           </div>
         </div>
+
+        {protocols.length > 0 ? (
+          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+            <p className="text-sm font-semibold text-slate-900">{isLeader ? "Company protocols" : "Visible protocols"}</p>
+            <div className="mt-4 grid gap-3">
+              {protocols.map((protocol) => (
+                <div key={protocol.id} className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                  <p className="font-semibold text-slate-900">Protocol #{protocol.id}</p>
+                  <p className="mt-1 text-sm text-slate-600">
+                    {getUserName(protocol.employeeId)} • {getOrganizationName(protocol.organizationId)}
+                  </p>
+                  <div className="mt-3">
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        setProtocolLookupId(protocol.id?.toString() ?? "");
+                      }}
+                    >
+                      Use in panel
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : null}
 
         {selectedProtocol ? (
           <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">

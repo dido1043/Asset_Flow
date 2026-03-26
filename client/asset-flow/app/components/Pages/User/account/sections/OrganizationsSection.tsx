@@ -9,6 +9,8 @@ export function OrganizationsSection({ workspace }: { workspace: AccountWorkspac
   const {
     allOrganizations,
     becomeLeaderForm,
+    canCreateOrganizations,
+    canManageOrganizationMembers,
     feedbackByKey,
     handleBecomeLeader,
     handleCreateOrganization,
@@ -16,6 +18,7 @@ export function OrganizationsSection({ workspace }: { workspace: AccountWorkspac
     handleLoadOrganizationInventory,
     handleLookupOrganization,
     inventoryOrgId,
+    isLeader,
     joinOrganizationForm,
     leaderOptions,
     leaderOrganization,
@@ -38,17 +41,27 @@ export function OrganizationsSection({ workspace }: { workspace: AccountWorkspac
     <SectionCard
       id="organizations"
       title="Organizations"
-      description="Work with leader lookup, organization creation, member joins, leadership transfer, and inventory."
+      description={
+        isLeader
+          ? "Review your company and its inventory without leaving your own organization scope."
+          : "Work with leader lookup, organization creation, member joins, leadership transfer, and inventory."
+      }
     >
       <div className="grid gap-6 lg:grid-cols-2">
         <div className="space-y-5">
           <FeedbackMessage feedback={feedbackByKey.organizations} />
 
           <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
-            <p className="text-sm font-semibold text-slate-900">Find a company by leader</p>
+            <p className="text-sm font-semibold text-slate-900">
+              {isLeader ? "Load your company" : "Find a company by leader"}
+            </p>
             <div className="mt-4 flex flex-col gap-3 sm:flex-row">
               <div className="flex-1">
-                {leaderOptions.length > 0 ? (
+                {isLeader ? (
+                  <p className="text-sm text-slate-600">
+                    Your organization view is locked to the company linked to your account.
+                  </p>
+                ) : leaderOptions.length > 0 ? (
                   <SelectField
                     id="organization-leader-id"
                     label="Leader"
@@ -71,207 +84,213 @@ export function OrganizationsSection({ workspace }: { workspace: AccountWorkspac
               </div>
               <div className="flex items-end">
                 <Button onClick={handleLookupOrganization} disabled={Boolean(pendingByKey.organizations)}>
-                  Load organization
+                  {isLeader ? "Load my company" : "Load organization"}
                 </Button>
               </div>
             </div>
           </div>
 
-          <form onSubmit={handleCreateOrganization} className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
-            <p className="text-sm font-semibold text-slate-900">Create organization</p>
-            <div className="mt-4 grid gap-4 sm:grid-cols-2">
-              {leaderOptions.length > 0 ? (
-                <SelectField
-                  id="create-organization-leader-id"
-                  label="Leader"
-                  value={organizationCreateForm.leaderId}
-                  onChange={(value) =>
-                    setOrganizationCreateForm((previous) => ({
-                      ...previous,
-                      leaderId: value,
-                    }))
-                  }
-                  options={leaderOptions}
-                  placeholder="Select who leads this company"
-                />
-              ) : (
-                <div>
-                  <Label htmlFor="create-organization-leader-id">Leader reference</Label>
-                  <Input
+          {canCreateOrganizations ? (
+            <form onSubmit={handleCreateOrganization} className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
+              <p className="text-sm font-semibold text-slate-900">Create organization</p>
+              <div className="mt-4 grid gap-4 sm:grid-cols-2">
+                {leaderOptions.length > 0 ? (
+                  <SelectField
                     id="create-organization-leader-id"
-                    type="number"
+                    label="Leader"
                     value={organizationCreateForm.leaderId}
+                    onChange={(value) =>
+                      setOrganizationCreateForm((previous) => ({
+                        ...previous,
+                        leaderId: value,
+                      }))
+                    }
+                    options={leaderOptions}
+                    placeholder="Select who leads this company"
+                  />
+                ) : (
+                  <div>
+                    <Label htmlFor="create-organization-leader-id">Leader reference</Label>
+                    <Input
+                      id="create-organization-leader-id"
+                      type="number"
+                      value={organizationCreateForm.leaderId}
+                      onChange={(event) =>
+                        setOrganizationCreateForm((previous) => ({
+                          ...previous,
+                          leaderId: event.target.value,
+                        }))
+                      }
+                    />
+                  </div>
+                )}
+                <div>
+                  <Label htmlFor="create-organization-name">Company name</Label>
+                  <Input
+                    id="create-organization-name"
+                    value={organizationCreateForm.organizationName}
                     onChange={(event) =>
                       setOrganizationCreateForm((previous) => ({
                         ...previous,
-                        leaderId: event.target.value,
+                        organizationName: event.target.value,
                       }))
                     }
                   />
                 </div>
-              )}
-              <div>
-                <Label htmlFor="create-organization-name">Company name</Label>
-                <Input
-                  id="create-organization-name"
-                  value={organizationCreateForm.organizationName}
-                  onChange={(event) =>
-                    setOrganizationCreateForm((previous) => ({
-                      ...previous,
-                      organizationName: event.target.value,
-                    }))
-                  }
-                />
               </div>
-            </div>
-            <div className="mt-4">
-              <Button type="submit" disabled={Boolean(pendingByKey.organizations)}>
-                Create organization
-              </Button>
-            </div>
-          </form>
+              <div className="mt-4">
+                <Button type="submit" disabled={Boolean(pendingByKey.organizations)}>
+                  Create organization
+                </Button>
+              </div>
+            </form>
+          ) : null}
 
-          <form onSubmit={handleJoinOrganization} className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
-            <p className="text-sm font-semibold text-slate-900">Join organization</p>
-            <div className="mt-4 grid gap-4 sm:grid-cols-2">
-              {userOptions.length > 0 ? (
-                <SelectField
-                  id="join-user-id"
-                  label="Teammate"
-                  value={joinOrganizationForm.userId}
-                  onChange={(value) =>
-                    setJoinOrganizationForm((previous) => ({
-                      ...previous,
-                      userId: value,
-                    }))
-                  }
-                  options={userOptions}
-                  placeholder="Select a teammate"
-                />
-              ) : (
-                <div>
-                  <Label htmlFor="join-user-id">Teammate reference</Label>
-                  <Input
+          {canManageOrganizationMembers ? (
+            <form onSubmit={handleJoinOrganization} className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
+              <p className="text-sm font-semibold text-slate-900">Join organization</p>
+              <div className="mt-4 grid gap-4 sm:grid-cols-2">
+                {userOptions.length > 0 ? (
+                  <SelectField
                     id="join-user-id"
-                    type="number"
+                    label="Teammate"
                     value={joinOrganizationForm.userId}
-                    onChange={(event) =>
+                    onChange={(value) =>
                       setJoinOrganizationForm((previous) => ({
                         ...previous,
-                        userId: event.target.value,
+                        userId: value,
                       }))
                     }
+                    options={userOptions}
+                    placeholder="Select a teammate"
                   />
-                </div>
-              )}
-              {organizationOptions.length > 0 ? (
-                <SelectField
-                  id="join-organization-id"
-                  label="Company"
-                  value={joinOrganizationForm.organizationId}
-                  onChange={(value) =>
-                    setJoinOrganizationForm((previous) => ({
-                      ...previous,
-                      organizationId: value,
-                    }))
-                  }
-                  options={organizationOptions}
-                  placeholder="Select a company"
-                />
-              ) : (
-                <div>
-                  <Label htmlFor="join-organization-id">Company reference</Label>
-                  <Input
+                ) : (
+                  <div>
+                    <Label htmlFor="join-user-id">Teammate reference</Label>
+                    <Input
+                      id="join-user-id"
+                      type="number"
+                      value={joinOrganizationForm.userId}
+                      onChange={(event) =>
+                        setJoinOrganizationForm((previous) => ({
+                          ...previous,
+                          userId: event.target.value,
+                        }))
+                      }
+                    />
+                  </div>
+                )}
+                {organizationOptions.length > 0 ? (
+                  <SelectField
                     id="join-organization-id"
-                    type="number"
+                    label="Company"
                     value={joinOrganizationForm.organizationId}
-                    onChange={(event) =>
+                    onChange={(value) =>
                       setJoinOrganizationForm((previous) => ({
                         ...previous,
-                        organizationId: event.target.value,
+                        organizationId: value,
                       }))
                     }
+                    options={organizationOptions}
+                    placeholder="Select a company"
                   />
-                </div>
-              )}
-            </div>
-            <div className="mt-4">
-              <Button type="submit" disabled={Boolean(pendingByKey.organizations)}>
-                Join organization
-              </Button>
-            </div>
-          </form>
+                ) : (
+                  <div>
+                    <Label htmlFor="join-organization-id">Company reference</Label>
+                    <Input
+                      id="join-organization-id"
+                      type="number"
+                      value={joinOrganizationForm.organizationId}
+                      onChange={(event) =>
+                        setJoinOrganizationForm((previous) => ({
+                          ...previous,
+                          organizationId: event.target.value,
+                        }))
+                      }
+                    />
+                  </div>
+                )}
+              </div>
+              <div className="mt-4">
+                <Button type="submit" disabled={Boolean(pendingByKey.organizations)}>
+                  Join organization
+                </Button>
+              </div>
+            </form>
+          ) : null}
 
-          <form onSubmit={handleBecomeLeader} className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
-            <p className="text-sm font-semibold text-slate-900">Become leader</p>
-            <div className="mt-4 grid gap-4 sm:grid-cols-2">
-              {userOptions.length > 0 ? (
-                <SelectField
-                  id="leader-user-id"
-                  label="New leader"
-                  value={becomeLeaderForm.userId}
-                  onChange={(value) =>
-                    setBecomeLeaderForm((previous) => ({
-                      ...previous,
-                      userId: value,
-                    }))
-                  }
-                  options={userOptions}
-                  placeholder="Select who becomes leader"
-                />
-              ) : (
-                <div>
-                  <Label htmlFor="leader-user-id">Teammate reference</Label>
-                  <Input
+          {canManageOrganizationMembers ? (
+            <form onSubmit={handleBecomeLeader} className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
+              <p className="text-sm font-semibold text-slate-900">Become leader</p>
+              <div className="mt-4 grid gap-4 sm:grid-cols-2">
+                {userOptions.length > 0 ? (
+                  <SelectField
                     id="leader-user-id"
-                    type="number"
+                    label="New leader"
                     value={becomeLeaderForm.userId}
-                    onChange={(event) =>
+                    onChange={(value) =>
                       setBecomeLeaderForm((previous) => ({
                         ...previous,
-                        userId: event.target.value,
+                        userId: value,
                       }))
                     }
+                    options={userOptions}
+                    placeholder="Select who becomes leader"
                   />
-                </div>
-              )}
-              {organizationOptions.length > 0 ? (
-                <SelectField
-                  id="leader-organization-id"
-                  label="Company"
-                  value={becomeLeaderForm.organizationId}
-                  onChange={(value) =>
-                    setBecomeLeaderForm((previous) => ({
-                      ...previous,
-                      organizationId: value,
-                    }))
-                  }
-                  options={organizationOptions}
-                  placeholder="Select a company"
-                />
-              ) : (
-                <div>
-                  <Label htmlFor="leader-organization-id">Company reference</Label>
-                  <Input
+                ) : (
+                  <div>
+                    <Label htmlFor="leader-user-id">Teammate reference</Label>
+                    <Input
+                      id="leader-user-id"
+                      type="number"
+                      value={becomeLeaderForm.userId}
+                      onChange={(event) =>
+                        setBecomeLeaderForm((previous) => ({
+                          ...previous,
+                          userId: event.target.value,
+                        }))
+                      }
+                    />
+                  </div>
+                )}
+                {organizationOptions.length > 0 ? (
+                  <SelectField
                     id="leader-organization-id"
-                    type="number"
+                    label="Company"
                     value={becomeLeaderForm.organizationId}
-                    onChange={(event) =>
+                    onChange={(value) =>
                       setBecomeLeaderForm((previous) => ({
                         ...previous,
-                        organizationId: event.target.value,
+                        organizationId: value,
                       }))
                     }
+                    options={organizationOptions}
+                    placeholder="Select a company"
                   />
-                </div>
-              )}
-            </div>
-            <div className="mt-4">
-              <Button type="submit" disabled={Boolean(pendingByKey.organizations)}>
-                Promote to leader
-              </Button>
-            </div>
-          </form>
+                ) : (
+                  <div>
+                    <Label htmlFor="leader-organization-id">Company reference</Label>
+                    <Input
+                      id="leader-organization-id"
+                      type="number"
+                      value={becomeLeaderForm.organizationId}
+                      onChange={(event) =>
+                        setBecomeLeaderForm((previous) => ({
+                          ...previous,
+                          organizationId: event.target.value,
+                        }))
+                      }
+                    />
+                  </div>
+                )}
+              </div>
+              <div className="mt-4">
+                <Button type="submit" disabled={Boolean(pendingByKey.organizations)}>
+                  Promote to leader
+                </Button>
+              </div>
+            </form>
+          ) : null}
         </div>
 
         <div className="space-y-5">

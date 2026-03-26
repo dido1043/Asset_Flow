@@ -13,6 +13,7 @@ export function AssignmentsSection({ workspace }: { workspace: AccountWorkspaceS
     assignmentOptions,
     assignmentProductId,
     assignmentUserId,
+    canManageAssignments,
     currentAssignments,
     employeeOptions,
     feedbackByKey,
@@ -26,6 +27,8 @@ export function AssignmentsSection({ workspace }: { workspace: AccountWorkspaceS
     handleLoadCurrentAssignments,
     handleLookupAssignment,
     handleUpdateAssignment,
+    isEmployee,
+    isLeader,
     pendingByKey,
     populateAssignmentForm,
     productAssignments,
@@ -43,10 +46,16 @@ export function AssignmentsSection({ workspace }: { workspace: AccountWorkspaceS
     <SectionCard
       id="assignments"
       title="Assignments"
-      description="Track issued equipment, update returns, and review assignment history."
+      description={
+        canManageAssignments
+          ? isLeader
+            ? "Track issued equipment inside your company, update returns, and review assignment history."
+            : "Track issued equipment, update returns, and review assignment history."
+          : "Review assignment history and currently issued assets that belong to your account."
+      }
       actions={
         <Button variant="outline" onClick={handleLoadAllAssignments} disabled={Boolean(pendingByKey.assignments)}>
-          {pendingByKey.assignments ? "Loading..." : "Reload assignments"}
+          {pendingByKey.assignments ? "Loading..." : isEmployee ? "Refresh my assignments" : "Reload assignments"}
         </Button>
       }
     >
@@ -54,132 +63,139 @@ export function AssignmentsSection({ workspace }: { workspace: AccountWorkspaceS
         <div className="space-y-5">
           <FeedbackMessage feedback={feedbackByKey.assignments} />
 
-          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
-            <p className="text-sm font-semibold text-slate-900">Create or update assignment</p>
-            <FieldHint>Choose a teammate and asset by name whenever those records are already loaded.</FieldHint>
-            <div className="mt-4 grid gap-4 sm:grid-cols-2">
-              {assignmentOptions.length > 0 ? (
-                <SelectField
-                  id="assignment-id"
-                  label="Assignment for update"
-                  value={assignmentForm.id}
-                  onChange={(value) =>
-                    setAssignmentForm((previous) => ({ ...previous, id: value }))
-                  }
-                  options={assignmentOptions}
-                  placeholder="Select an assignment"
-                />
-              ) : (
-                <div>
-                  <Label htmlFor="assignment-id">Assignment reference for update</Label>
-                  <Input
+          {canManageAssignments ? (
+            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
+              <p className="text-sm font-semibold text-slate-900">Create or update assignment</p>
+              <FieldHint>Choose a teammate and asset by name whenever those records are already loaded.</FieldHint>
+              <div className="mt-4 grid gap-4 sm:grid-cols-2">
+                {assignmentOptions.length > 0 ? (
+                  <SelectField
                     id="assignment-id"
-                    type="number"
+                    label="Assignment for update"
                     value={assignmentForm.id}
-                    onChange={(event) =>
-                      setAssignmentForm((previous) => ({ ...previous, id: event.target.value }))
+                    onChange={(value) =>
+                      setAssignmentForm((previous) => ({ ...previous, id: value }))
                     }
+                    options={assignmentOptions}
+                    placeholder="Select an assignment"
                   />
-                </div>
-              )}
-              {employeeOptions.length > 0 ? (
-                <SelectField
-                  id="assignment-employee-id"
-                  label="Teammate"
-                  value={assignmentForm.employeeId}
-                  onChange={(value) =>
-                    setAssignmentForm((previous) => ({
-                      ...previous,
-                      employeeId: value,
-                    }))
-                  }
-                  options={employeeOptions}
-                  placeholder="Select a teammate"
-                />
-              ) : (
-                <div>
-                  <Label htmlFor="assignment-employee-id">Teammate reference</Label>
-                  <Input
+                ) : (
+                  <div>
+                    <Label htmlFor="assignment-id">Assignment reference for update</Label>
+                    <Input
+                      id="assignment-id"
+                      type="number"
+                      value={assignmentForm.id}
+                      onChange={(event) =>
+                        setAssignmentForm((previous) => ({ ...previous, id: event.target.value }))
+                      }
+                    />
+                  </div>
+                )}
+                {employeeOptions.length > 0 ? (
+                  <SelectField
                     id="assignment-employee-id"
-                    type="number"
+                    label="Teammate"
                     value={assignmentForm.employeeId}
-                    onChange={(event) =>
+                    onChange={(value) =>
                       setAssignmentForm((previous) => ({
                         ...previous,
-                        employeeId: event.target.value,
+                        employeeId: value,
                       }))
                     }
+                    options={employeeOptions}
+                    placeholder="Select a teammate"
                   />
-                </div>
-              )}
-              {productOptions.length > 0 ? (
-                <SelectField
-                  id="assignment-product-id"
-                  label="Asset"
-                  value={assignmentForm.productId}
-                  onChange={(value) =>
-                    setAssignmentForm((previous) => ({
-                      ...previous,
-                      productId: value,
-                    }))
-                  }
-                  options={productOptions}
-                  placeholder="Select an asset"
-                />
-              ) : (
-                <div>
-                  <Label htmlFor="assignment-product-id">Asset reference</Label>
-                  <Input
+                ) : (
+                  <div>
+                    <Label htmlFor="assignment-employee-id">Teammate reference</Label>
+                    <Input
+                      id="assignment-employee-id"
+                      type="number"
+                      value={assignmentForm.employeeId}
+                      onChange={(event) =>
+                        setAssignmentForm((previous) => ({
+                          ...previous,
+                          employeeId: event.target.value,
+                        }))
+                      }
+                    />
+                  </div>
+                )}
+                {productOptions.length > 0 ? (
+                  <SelectField
                     id="assignment-product-id"
-                    type="number"
+                    label="Asset"
                     value={assignmentForm.productId}
+                    onChange={(value) =>
+                      setAssignmentForm((previous) => ({
+                        ...previous,
+                        productId: value,
+                      }))
+                    }
+                    options={productOptions}
+                    placeholder="Select an asset"
+                  />
+                ) : (
+                  <div>
+                    <Label htmlFor="assignment-product-id">Asset reference</Label>
+                    <Input
+                      id="assignment-product-id"
+                      type="number"
+                      value={assignmentForm.productId}
+                      onChange={(event) =>
+                        setAssignmentForm((previous) => ({
+                          ...previous,
+                          productId: event.target.value,
+                        }))
+                      }
+                    />
+                  </div>
+                )}
+                <div>
+                  <Label htmlFor="assignment-date-assigned">Date assigned</Label>
+                  <Input
+                    id="assignment-date-assigned"
+                    type="datetime-local"
+                    value={assignmentForm.dateAssigned}
                     onChange={(event) =>
                       setAssignmentForm((previous) => ({
                         ...previous,
-                        productId: event.target.value,
+                        dateAssigned: event.target.value,
                       }))
                     }
                   />
                 </div>
-              )}
-              <div>
-                <Label htmlFor="assignment-date-assigned">Date assigned</Label>
-                <Input
-                  id="assignment-date-assigned"
-                  type="datetime-local"
-                  value={assignmentForm.dateAssigned}
-                  onChange={(event) =>
-                    setAssignmentForm((previous) => ({
-                      ...previous,
-                      dateAssigned: event.target.value,
-                    }))
-                  }
-                />
+                <div className="sm:col-span-2">
+                  <Label htmlFor="assignment-date-returned">Date returned</Label>
+                  <Input
+                    id="assignment-date-returned"
+                    type="datetime-local"
+                    value={assignmentForm.dateReturned}
+                    onChange={(event) =>
+                      setAssignmentForm((previous) => ({
+                        ...previous,
+                        dateReturned: event.target.value,
+                      }))
+                    }
+                  />
+                </div>
               </div>
-              <div className="sm:col-span-2">
-                <Label htmlFor="assignment-date-returned">Date returned</Label>
-                <Input
-                  id="assignment-date-returned"
-                  type="datetime-local"
-                  value={assignmentForm.dateReturned}
-                  onChange={(event) =>
-                    setAssignmentForm((previous) => ({
-                      ...previous,
-                      dateReturned: event.target.value,
-                    }))
-                  }
-                />
+              <div className="mt-5 flex flex-wrap gap-3">
+                <Button onClick={handleCreateAssignment} disabled={Boolean(pendingByKey.assignments)}>
+                  Create assignment
+                </Button>
+                <Button variant="secondary" onClick={handleUpdateAssignment} disabled={Boolean(pendingByKey.assignments)}>
+                  Update assignment
+                </Button>
               </div>
             </div>
-            <div className="mt-5 flex flex-wrap gap-3">
-              <Button onClick={handleCreateAssignment} disabled={Boolean(pendingByKey.assignments)}>
-                Create assignment
-              </Button>
-              <Button variant="secondary" onClick={handleUpdateAssignment} disabled={Boolean(pendingByKey.assignments)}>
-                Update assignment
-              </Button>
-            </div>
-          </div>
+          ) : (
+            <EmptyState
+              title="Read-only assignment view"
+              description="Your role can review assignment history here, but assignment changes stay with company leaders and admins."
+            />
+          )}
 
           <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
             <p className="text-sm font-semibold text-slate-900">Read, filter, and delete</p>
@@ -271,9 +287,11 @@ export function AssignmentsSection({ workspace }: { workspace: AccountWorkspaceS
               >
                 Load current
               </Button>
-              <Button variant="danger" onClick={handleDeleteAssignment} disabled={Boolean(pendingByKey.assignments)}>
-                Delete assignment
-              </Button>
+              {canManageAssignments ? (
+                <Button variant="danger" onClick={handleDeleteAssignment} disabled={Boolean(pendingByKey.assignments)}>
+                  Delete assignment
+                </Button>
+              ) : null}
             </div>
           </div>
         </div>
@@ -317,7 +335,7 @@ export function AssignmentsSection({ workspace }: { workspace: AccountWorkspaceS
 
           {userAssignments.length > 0 ? (
             <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-              <p className="text-sm font-semibold text-slate-900">Assignments by user</p>
+              <p className="text-sm font-semibold text-slate-900">{isEmployee ? "My assignment history" : "Assignments by user"}</p>
               <div className="mt-4 grid gap-3">
                 {userAssignments.map((assignment) => (
                   <div key={assignment.id} className="rounded-2xl border border-slate-200 bg-slate-50 p-4">

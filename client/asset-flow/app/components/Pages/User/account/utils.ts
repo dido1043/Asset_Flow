@@ -17,6 +17,16 @@ export const workspaceSections: WorkspaceSection[] = [
   { href: "#ai-tools", label: "AI", helper: "Prompt tools" },
 ];
 
+export function getWorkspaceSections(role?: string | null) {
+  if (role === "EMPLOYEE") {
+    return workspaceSections.filter(
+      (section) => !["#users", "#organizations", "#protocols"].includes(section.href),
+    );
+  }
+
+  return workspaceSections;
+}
+
 export function parseOptionalNumber(value: string) {
   const trimmed = value.trim();
   if (!trimmed) {
