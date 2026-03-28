@@ -5,7 +5,7 @@ import type { WorkspaceSection } from "./types";
 export const roleOptions: Role[] = ["LEADER", "EMPLOYEE"];
 
 export const selectClassName =
-  "mt-2 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm text-slate-900 shadow-sm outline-none transition focus:border-indigo-500 focus:bg-white focus:ring-2 focus:ring-indigo-200";
+  "mt-2 min-h-11 w-full rounded-2xl border border-slate-200/90 bg-white/75 px-4 py-2.5 text-sm text-slate-900 shadow-sm outline-none transition duration-200 hover:border-slate-300 focus:border-indigo-500 focus:bg-white focus:ring-2 focus:ring-indigo-200";
 
 export const workspaceSections: WorkspaceSection[] = [
   { href: "#overview", path: "/user/account", label: "workspace.sections.overview.label", helper: "workspace.sections.overview.helper" },

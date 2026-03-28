@@ -43,7 +43,7 @@ function WorkspaceShellInner({ children }: { children: React.ReactNode }) {
 
   if (!sessionChecked) {
     return (
-      <div className="rounded-3xl border border-slate-200 bg-white shadow-sm">
+      <div className="rounded-[2rem] border border-white/80 bg-white/90 shadow-[0_20px_60px_rgba(15,23,42,0.08)]">
         <div className="px-6 py-10 text-center sm:px-8">
           <p className="text-base font-semibold text-slate-900">{t("workspace.shell.checkingTitle")}</p>
           <p className="mt-2 text-sm text-slate-500">{t("workspace.shell.checkingDescription")}</p>
@@ -54,7 +54,7 @@ function WorkspaceShellInner({ children }: { children: React.ReactNode }) {
 
   if (!session) {
     return (
-      <div className="rounded-3xl border border-slate-200 bg-white shadow-sm">
+      <div className="rounded-[2rem] border border-white/80 bg-white/90 shadow-[0_20px_60px_rgba(15,23,42,0.08)]">
         <div className="px-6 py-10 text-center sm:px-8">
           <p className="text-base font-semibold text-slate-900">{t("workspace.shell.redirectTitle")}</p>
           <p className="mt-2 text-sm text-slate-500">{t("workspace.shell.redirectDescription")}</p>
@@ -65,12 +65,22 @@ function WorkspaceShellInner({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="space-y-6">
-      <section className="overflow-hidden rounded-[2rem] bg-slate-900 text-white shadow-xl">
-        <div className="grid gap-8 px-6 py-8 sm:px-8 lg:grid-cols-[1.25fr_0.85fr] lg:px-10">
+      <section className="relative overflow-hidden rounded-[2rem] bg-slate-950 text-white shadow-[0_28px_80px_rgba(15,23,42,0.18)]">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(99,102,241,0.34),transparent_28%),radial-gradient(circle_at_bottom_left,rgba(16,185,129,0.18),transparent_32%)]" />
+        <div className="relative grid gap-8 px-6 py-8 sm:px-8 lg:grid-cols-[1.18fr_0.82fr] lg:px-10">
           <div>
-            <p className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-semibold uppercase tracking-[0.25em] text-slate-300">
-              {t("workspace.shell.heroBadge")}
-            </p>
+            <div className="flex flex-wrap gap-2">
+              <span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.25em] text-slate-200">
+                {t("workspace.shell.heroBadge")}
+              </span>
+              <span className="inline-flex rounded-full border border-white/10 bg-white/10 px-3 py-1 text-xs font-semibold text-slate-100">
+                {workspaceScopeLabel}
+              </span>
+              <span className="inline-flex rounded-full border border-white/10 bg-white/10 px-3 py-1 text-xs font-semibold text-slate-100">
+                {visibleSections.length}
+              </span>
+            </div>
+
             <h1 className="mt-5 text-3xl font-semibold tracking-tight sm:text-4xl">
               {t("workspace.shell.heroTitle", { page: currentSectionLabel })}
             </h1>
@@ -86,10 +96,10 @@ function WorkspaceShellInner({ children }: { children: React.ReactNode }) {
                   <Link
                     key={section.path}
                     href={section.path}
-                    className={`inline-flex h-10 items-center justify-center rounded-full border px-4 text-sm font-semibold transition ${
+                    className={`inline-flex min-h-10 items-center justify-center rounded-full border px-4 text-sm font-semibold transition ${
                       active
-                        ? "border-white/20 bg-white text-slate-900"
-                        : "border-white/10 bg-white/5 text-white hover:bg-white/10"
+                        ? "border-white/20 bg-white text-slate-950"
+                        : "border-white/10 bg-white/10 text-white hover:bg-white/20"
                     }`}
                   >
                     {t(section.label)}
@@ -99,9 +109,11 @@ function WorkspaceShellInner({ children }: { children: React.ReactNode }) {
             </div>
 
             <div className="mt-6 grid gap-3 sm:grid-cols-2">
-              <div className="rounded-2xl border border-white/10 bg-white/5 p-4 text-sm text-slate-200">
-                <p className="text-xs font-semibold uppercase tracking-[0.25em] text-slate-400">{t("workspace.shell.signedIn")}</p>
-                <p className="mt-2 break-words font-semibold leading-tight text-white">
+              <div className="rounded-3xl border border-white/10 bg-white/10 p-5 backdrop-blur">
+                <p className="text-xs font-semibold uppercase tracking-[0.25em] text-slate-400">
+                  {t("workspace.shell.signedIn")}
+                </p>
+                <p className="mt-3 break-words text-lg font-semibold text-white">
                   {currentUser?.fullName || t("common.activeTeammate")}
                 </p>
                 <div className="mt-3 flex flex-wrap items-center gap-2">
@@ -113,27 +125,44 @@ function WorkspaceShellInner({ children }: { children: React.ReactNode }) {
                   </span>
                 </div>
               </div>
-              <div className="rounded-2xl border border-white/10 bg-white/5 p-4 text-sm text-slate-200">
-                <p className="text-xs font-semibold uppercase tracking-[0.25em] text-slate-400">{t("workspace.shell.currentPage")}</p>
-                <p className="mt-2 font-semibold text-white">{currentSectionLabel}</p>
-                <p className="mt-1">{currentSectionHelper}</p>
+
+              <div className="rounded-3xl border border-white/10 bg-white/10 p-5 backdrop-blur">
+                <p className="text-xs font-semibold uppercase tracking-[0.25em] text-slate-400">
+                  {t("workspace.shell.currentPage")}
+                </p>
+                <p className="mt-3 text-lg font-semibold text-white">{currentSectionLabel}</p>
+                <p className="mt-2 text-sm text-slate-300">{currentSectionHelper}</p>
               </div>
             </div>
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2">
             <StatCard label={t("common.users")} value={users.length} hint={t("workspace.shell.statsUsersHint")} />
-            <StatCard label={t("common.products")} value={products.length} hint={t("workspace.shell.statsProductsHint")} />
-            <StatCard label={t("common.assignments")} value={assignments.length} hint={t("workspace.shell.statsAssignmentsHint")} />
-            <StatCard label={t("workspace.overview.myAssignments")} value={myAssignmentsCount} hint={t("workspace.shell.statsMyAssignmentsHint")} />
+            <StatCard
+              label={t("common.products")}
+              value={products.length}
+              hint={t("workspace.shell.statsProductsHint")}
+            />
+            <StatCard
+              label={t("common.assignments")}
+              value={assignments.length}
+              hint={t("workspace.shell.statsAssignmentsHint")}
+            />
+            <StatCard
+              label={t("workspace.overview.myAssignments")}
+              value={myAssignmentsCount}
+              hint={t("workspace.shell.statsMyAssignmentsHint")}
+            />
           </div>
         </div>
       </section>
 
-      <div className="grid gap-6 lg:grid-cols-[18rem_minmax(0,1fr)] xl:grid-cols-[19rem_minmax(0,1fr)]">
+      <div className="grid gap-6 lg:grid-cols-[19rem_minmax(0,1fr)] xl:grid-cols-[20rem_minmax(0,1fr)]">
         <aside className="space-y-5 lg:sticky lg:top-24 lg:self-start">
-          <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-            <p className="text-xs font-semibold uppercase tracking-[0.25em] text-slate-500">{t("workspace.shell.workspacePages")}</p>
+          <div className="rounded-[2rem] border border-white/80 bg-white/90 p-5 shadow-[0_20px_60px_rgba(15,23,42,0.08)] backdrop-blur">
+            <p className="text-xs font-semibold uppercase tracking-[0.25em] text-slate-500">
+              {t("workspace.shell.workspacePages")}
+            </p>
             <p className="mt-2 text-sm text-slate-600">{t("workspace.shell.workspacePagesDescription")}</p>
 
             <nav className="mt-5 space-y-2">
@@ -145,17 +174,25 @@ function WorkspaceShellInner({ children }: { children: React.ReactNode }) {
                   <Link
                     key={section.path}
                     href={section.path}
-                    className={`flex items-center justify-between rounded-2xl border px-4 py-3 text-sm transition ${
+                    className={`flex items-center justify-between rounded-3xl border px-4 py-3 text-sm transition ${
                       active
-                        ? "border-indigo-200 bg-indigo-50"
-                        : "border-slate-200 bg-slate-50 hover:border-indigo-300 hover:bg-indigo-50"
+                        ? "border-slate-900 bg-slate-900 text-white shadow-lg shadow-slate-900/10"
+                        : "border-slate-200 bg-slate-50/80 hover:border-slate-300 hover:bg-white"
                     }`}
                   >
                     <span>
-                      <span className="block font-semibold text-slate-900">{t(section.label)}</span>
-                      <span className="block text-xs text-slate-500">{t(section.helper)}</span>
+                      <span className={`block font-semibold ${active ? "text-white" : "text-slate-900"}`}>
+                        {t(section.label)}
+                      </span>
+                      <span className={`block text-xs ${active ? "text-slate-300" : "text-slate-500"}`}>
+                        {t(section.helper)}
+                      </span>
                     </span>
-                    <span className="rounded-full bg-white px-2.5 py-1 text-xs font-semibold text-slate-700 shadow-sm">
+                    <span
+                      className={`rounded-full px-2.5 py-1 text-xs font-semibold ${
+                        active ? "bg-white/10 text-white" : "bg-white text-slate-700 shadow-sm"
+                      }`}
+                    >
                       {workspaceSectionBadges[sectionKey] ?? t("common.open")}
                     </span>
                   </Link>
@@ -164,8 +201,10 @@ function WorkspaceShellInner({ children }: { children: React.ReactNode }) {
             </nav>
           </div>
 
-          <div className="rounded-3xl bg-slate-900 p-5 text-white shadow-sm">
-            <p className="text-xs font-semibold uppercase tracking-[0.25em] text-slate-400">{t("workspace.shell.quickActions")}</p>
+          <div className="rounded-[2rem] bg-slate-950 p-5 text-white shadow-[0_20px_60px_rgba(15,23,42,0.14)]">
+            <p className="text-xs font-semibold uppercase tracking-[0.25em] text-slate-400">
+              {t("workspace.shell.quickActions")}
+            </p>
             <p className="mt-3 break-words text-lg font-semibold leading-tight">
               {currentUser?.fullName || t("common.activeTeammate")}
             </p>
@@ -178,11 +217,13 @@ function WorkspaceShellInner({ children }: { children: React.ReactNode }) {
             <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
               <Button
                 variant="outline"
-                className="w-full border-white/10 bg-white/5 text-white hover:bg-white/10 hover:text-white"
+                className="w-full border-white/10 bg-white/10 text-white hover:bg-white/20 hover:text-white"
                 onClick={handleWorkspaceRefresh}
                 disabled={Boolean(pendingByKey.workspace || bootstrapping)}
               >
-                {pendingByKey.workspace || bootstrapping ? t("common.refreshing") : t("workspace.shell.refreshWorkspace")}
+                {pendingByKey.workspace || bootstrapping
+                  ? t("common.refreshing")
+                  : t("workspace.shell.refreshWorkspace")}
               </Button>
               <Button
                 variant="ghost"
@@ -194,7 +235,7 @@ function WorkspaceShellInner({ children }: { children: React.ReactNode }) {
             </div>
           </div>
 
-          <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+          <div className="rounded-[2rem] border border-white/80 bg-white/90 p-5 shadow-[0_20px_60px_rgba(15,23,42,0.08)] backdrop-blur">
             <p className="text-sm font-semibold text-slate-900">{t("workspace.shell.quickFacts")}</p>
             <div className="mt-4 space-y-3 text-sm text-slate-600">
               <div className="flex items-center justify-between gap-4">
@@ -228,7 +269,7 @@ function WorkspaceShellInner({ children }: { children: React.ReactNode }) {
 export function WorkspaceShell({ children }: { children: React.ReactNode }) {
   return (
     <WorkspaceProvider>
-      <main className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-indigo-50 px-4 py-10 sm:px-6 lg:px-8">
+      <main className="page-enter min-h-screen px-4 py-8 sm:px-6 lg:px-8">
         <div className="mx-auto w-full max-w-7xl">
           <WorkspaceShellInner>{children}</WorkspaceShellInner>
         </div>
