@@ -1,3 +1,5 @@
+import { useDeferredValue, useMemo, useState } from "react";
+
 import { Button } from "@/app/components/shared/ui/Button";
 import { Input } from "@/app/components/shared/ui/Input";
 import { Label } from "@/app/components/shared/ui/Label";
@@ -8,6 +10,7 @@ import type { AccountWorkspaceState } from "../useAccountWorkspace";
 
 export function ProductsSection({ workspace }: { workspace: AccountWorkspaceState }) {
   const { t } = useTranslations();
+  const [productSearch, setProductSearch] = useState("");
   const {
     canManageProducts,
     feedbackByKey,
@@ -37,6 +40,32 @@ export function ProductsSection({ workspace }: { workspace: AccountWorkspaceStat
     setProductLookupId,
     setProductTypeQuery,
   } = workspace;
+  const deferredProductSearch = useDeferredValue(productSearch);
+  const filterProducts = useMemo(() => {
+    const query = deferredProductSearch.trim().toLowerCase();
+
+    if (!query) {
+      return {
+        filteredProducts: products,
+        filteredTypeResults: productTypeResults,
+      };
+    }
+
+    const matchesQuery = (value: string | null | undefined) => value?.toLowerCase().includes(query) ?? false;
+    const productMatches = (product: (typeof products)[number]) =>
+      [
+        product.productBrand,
+        product.productModel,
+        product.productType,
+        product.assetTag,
+        getOrganizationName(product.organizationId),
+      ].some(matchesQuery);
+
+    return {
+      filteredProducts: products.filter(productMatches),
+      filteredTypeResults: productTypeResults.filter(productMatches),
+    };
+  }, [deferredProductSearch, getOrganizationName, productTypeResults, products]);
 
   return (
     <SectionCard
@@ -245,6 +274,19 @@ export function ProductsSection({ workspace }: { workspace: AccountWorkspaceStat
         </div>
 
         <div className="space-y-5">
+          <div className="rounded-3xl border border-slate-200 bg-slate-50/80 p-4">
+            <Label htmlFor="product-search">{t("common.search")}</Label>
+            <Input
+              id="product-search"
+              value={productSearch}
+              onChange={(event) => setProductSearch(event.target.value)}
+              placeholder={t("products.quickFilterPlaceholder")}
+            />
+            <p className="mt-2 text-xs text-slate-500">
+              {t("products.resultsLabel", { count: filterProducts.filteredProducts.length })}
+            </p>
+          </div>
+
           {selectedProduct ? (
             <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
               <div className="flex items-center justify-between gap-3">
@@ -281,11 +323,11 @@ export function ProductsSection({ workspace }: { workspace: AccountWorkspaceStat
             />
           )}
 
-          {productTypeResults.length > 0 ? (
+          {filterProducts.filteredTypeResults.length > 0 ? (
             <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
               <p className="text-sm font-semibold text-slate-900">{t("products.typeResults")}</p>
               <div className="mt-4 grid gap-3">
-                {productTypeResults.map((product) => (
+                {filterProducts.filteredTypeResults.map((product) => (
                   <div key={product.id} className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
                     <p className="font-semibold text-slate-900">
                       {product.productBrand} {product.productModel}
@@ -310,33 +352,42 @@ export function ProductsSection({ workspace }: { workspace: AccountWorkspaceStat
           {products.length > 0 ? (
             <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
               <p className="text-sm font-semibold text-slate-900">{isEmployee ? t("products.myVisibleAssets") : t("products.allProducts")}</p>
-              <div className="mt-4 grid max-h-[30rem] gap-3 overflow-y-auto pr-1">
-                {products.map((product) => (
-                  <div key={product.id} className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                    <div className="flex items-center justify-between gap-3">
-                      <div>
-                        <p className="font-semibold text-slate-900">
-                          {product.productBrand} {product.productModel}
-                        </p>
-                        <p className="text-sm text-slate-600">
-                          {product.productType} • {product.assetTag}
-                        </p>
-                        <p className="text-sm text-slate-500">
-                          {t("products.companyPrefix", { company: getOrganizationName(product.organizationId) })}
-                        </p>
+              {filterProducts.filteredProducts.length > 0 ? (
+                <div className="mt-4 grid max-h-[30rem] gap-3 overflow-y-auto pr-1">
+                  {filterProducts.filteredProducts.map((product) => (
+                    <div key={product.id} className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                      <div className="flex items-center justify-between gap-3">
+                        <div>
+                          <p className="font-semibold text-slate-900">
+                            {product.productBrand} {product.productModel}
+                          </p>
+                          <p className="text-sm text-slate-600">
+                            {product.productType} • {product.assetTag}
+                          </p>
+                          <p className="text-sm text-slate-500">
+                            {t("products.companyPrefix", { company: getOrganizationName(product.organizationId) })}
+                          </p>
+                        </div>
+                        <span className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-slate-700">
+                          {t("common.asset")}
+                        </span>
                       </div>
-                      <span className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-slate-700">
-                        {t("common.asset")}
-                      </span>
+                      <div className="mt-3">
+                        <Button variant="outline" onClick={() => populateProductForm(product)}>
+                          {t("products.useInForm")}
+                        </Button>
+                      </div>
                     </div>
-                    <div className="mt-3">
-                      <Button variant="outline" onClick={() => populateProductForm(product)}>
-                        {t("products.useInForm")}
-                      </Button>
-                    </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="mt-4">
+                  <EmptyState
+                    title={t("products.noMatchesTitle")}
+                    description={t("products.noMatchesDescription")}
+                  />
+                </div>
+              )}
             </div>
           ) : (
             <EmptyState

@@ -1,3 +1,5 @@
+import { useDeferredValue, useMemo, useState } from "react";
+
 import { Button } from "@/app/components/shared/ui/Button";
 import { Input } from "@/app/components/shared/ui/Input";
 import { Label } from "@/app/components/shared/ui/Label";
@@ -9,6 +11,7 @@ import { getRoleBadgeClass } from "../utils";
 
 export function UsersSection({ workspace }: { workspace: AccountWorkspaceState }) {
   const { t } = useTranslations();
+  const [userSearch, setUserSearch] = useState("");
   const {
     canDeleteUsers,
     deleteUserId,
@@ -28,6 +31,25 @@ export function UsersSection({ workspace }: { workspace: AccountWorkspaceState }
     userOptions,
     users,
   } = workspace;
+  const deferredUserSearch = useDeferredValue(userSearch);
+  const filteredUsers = useMemo(() => {
+    const query = deferredUserSearch.trim().toLowerCase();
+
+    if (!query) {
+      return users;
+    }
+
+    return users.filter((user) =>
+      [
+        user.fullName,
+        user.email,
+        getOrganizationName(user.organizationId),
+        getRoleLabel(user.role, t),
+      ]
+        .filter(Boolean)
+        .some((value) => value.toLowerCase().includes(query)),
+    );
+  }, [deferredUserSearch, getOrganizationName, t, users]);
 
   return (
     <SectionCard
@@ -161,40 +183,62 @@ export function UsersSection({ workspace }: { workspace: AccountWorkspaceState }
 
         <div>
           {users.length > 0 ? (
-            <div className="grid gap-4 md:grid-cols-2">
-              {users.map((user) => (
-                <div key={user.id} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-                  <div className="flex flex-col gap-3">
-                    <div className="min-w-0">
-                      <p className="break-words text-sm font-semibold text-slate-900">{user.fullName}</p>
-                      <p className="break-all text-sm text-slate-500">{user.email}</p>
+            <div className="space-y-4">
+              <div className="rounded-3xl border border-slate-200 bg-slate-50/80 p-4">
+                <Label htmlFor="user-search">{t("common.search")}</Label>
+                <Input
+                  id="user-search"
+                  value={userSearch}
+                  onChange={(event) => setUserSearch(event.target.value)}
+                  placeholder={t("users.quickFilterPlaceholder")}
+                />
+                <p className="mt-2 text-xs text-slate-500">
+                  {t("users.resultsLabel", { count: filteredUsers.length })}
+                </p>
+              </div>
+
+              {filteredUsers.length > 0 ? (
+                <div className="grid gap-4 md:grid-cols-2">
+                  {filteredUsers.map((user) => (
+                    <div key={user.id} className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+                      <div className="flex flex-col gap-3">
+                        <div className="min-w-0">
+                          <p className="break-words text-sm font-semibold text-slate-900">{user.fullName}</p>
+                          <p className="break-all text-sm text-slate-500">{user.email}</p>
+                        </div>
+                        <span
+                          className={`inline-flex max-w-full self-start rounded-full px-3 py-1 text-xs font-semibold ${getRoleBadgeClass(
+                            user.role,
+                          )} whitespace-nowrap`}
+                        >
+                          {getRoleLabel(user.role, t)}
+                        </span>
+                      </div>
+                      <div className="mt-4 space-y-2 text-sm text-slate-600">
+                        <p>{t("users.companyPrefix", { company: getOrganizationName(user.organizationId) })}</p>
+                        <p>{t("users.assignmentsPrefix", { count: user.assignmentIds?.length ?? 0 })}</p>
+                      </div>
+                      <div className="mt-4">
+                        <Button
+                          variant="outline"
+                          onClick={() => {
+                            setSelectedUser(user);
+                            setUserLookupId(user.id?.toString() ?? "");
+                            setDeleteUserId(user.id?.toString() ?? "");
+                          }}
+                        >
+                          {t("users.useInPanel")}
+                        </Button>
+                      </div>
                     </div>
-                    <span
-                      className={`inline-flex max-w-full self-start rounded-full px-3 py-1 text-xs font-semibold ${getRoleBadgeClass(
-                        user.role,
-                      )} whitespace-nowrap`}
-                    >
-                      {getRoleLabel(user.role, t)}
-                    </span>
-                  </div>
-                  <div className="mt-4 space-y-2 text-sm text-slate-600">
-                    <p>{t("users.companyPrefix", { company: getOrganizationName(user.organizationId) })}</p>
-                    <p>{t("users.assignmentsPrefix", { count: user.assignmentIds?.length ?? 0 })}</p>
-                  </div>
-                  <div className="mt-4">
-                    <Button
-                      variant="outline"
-                      onClick={() => {
-                        setSelectedUser(user);
-                        setUserLookupId(user.id?.toString() ?? "");
-                        setDeleteUserId(user.id?.toString() ?? "");
-                      }}
-                    >
-                      {t("users.useInPanel")}
-                    </Button>
-                  </div>
+                  ))}
                 </div>
-              ))}
+              ) : (
+                <EmptyState
+                  title={t("users.noMatchesTitle")}
+                  description={t("users.noMatchesDescription")}
+                />
+              )}
             </div>
           ) : (
             <EmptyState

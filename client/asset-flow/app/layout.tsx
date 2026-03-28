@@ -13,7 +13,7 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en">
-      <body>
+      <body className="min-h-screen text-slate-900">
         <LanguageProvider>
           <Navigation />
           {children}

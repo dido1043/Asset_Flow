@@ -1,3 +1,5 @@
+import { useDeferredValue, useMemo, useState } from "react";
+
 import { Button } from "@/app/components/shared/ui/Button";
 import { Input } from "@/app/components/shared/ui/Input";
 import { Label } from "@/app/components/shared/ui/Label";
@@ -9,6 +11,7 @@ import { formatDateTime } from "../utils";
 
 export function AssignmentsSection({ workspace }: { workspace: AccountWorkspaceState }) {
   const { locale, t } = useTranslations();
+  const [assignmentSearch, setAssignmentSearch] = useState("");
   const {
     assignmentForm,
     assignmentLookupId,
@@ -43,6 +46,48 @@ export function AssignmentsSection({ workspace }: { workspace: AccountWorkspaceS
     userAssignments,
     userOptions,
   } = workspace;
+  const deferredAssignmentSearch = useDeferredValue(assignmentSearch);
+  const filteredCollections = useMemo(() => {
+    const query = deferredAssignmentSearch.trim().toLowerCase();
+
+    if (!query) {
+      return {
+        filteredCurrentAssignments: currentAssignments,
+        filteredProductAssignments: productAssignments,
+        filteredUserAssignments: userAssignments,
+      };
+    }
+
+    const matchesAssignment = (assignment: (typeof currentAssignments)[number]) =>
+      [
+        getUserName(assignment.employeeId),
+        getProductName(assignment.productId),
+        formatDateTime(assignment.dateAssigned, locale, t("common.notSet")),
+        formatDateTime(assignment.dateReturned, locale, t("common.open")),
+      ]
+        .map((value) => value.toLowerCase())
+        .some((value) => value.includes(query));
+
+    return {
+      filteredCurrentAssignments: currentAssignments.filter(matchesAssignment),
+      filteredProductAssignments: productAssignments.filter(matchesAssignment),
+      filteredUserAssignments: userAssignments.filter(matchesAssignment),
+    };
+  }, [
+    currentAssignments,
+    deferredAssignmentSearch,
+    getProductName,
+    getUserName,
+    locale,
+    productAssignments,
+    t,
+    userAssignments,
+  ]);
+  const filteredResultCount =
+    filteredCollections.filteredCurrentAssignments.length +
+    filteredCollections.filteredProductAssignments.length +
+    filteredCollections.filteredUserAssignments.length;
+  const hasAssignmentCollections = currentAssignments.length > 0 || productAssignments.length > 0 || userAssignments.length > 0;
 
   return (
     <SectionCard
@@ -299,6 +344,19 @@ export function AssignmentsSection({ workspace }: { workspace: AccountWorkspaceS
         </div>
 
         <div className="space-y-5">
+          <div className="rounded-3xl border border-slate-200 bg-slate-50/80 p-4">
+            <Label htmlFor="assignment-search">{t("common.search")}</Label>
+            <Input
+              id="assignment-search"
+              value={assignmentSearch}
+              onChange={(event) => setAssignmentSearch(event.target.value)}
+              placeholder={t("assignments.quickFilterPlaceholder")}
+            />
+            <p className="mt-2 text-xs text-slate-500">
+              {t("assignments.resultsLabel", { count: filteredResultCount })}
+            </p>
+          </div>
+
           {selectedAssignment ? (
             <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
               <div className="flex items-center justify-between gap-3">
@@ -335,11 +393,18 @@ export function AssignmentsSection({ workspace }: { workspace: AccountWorkspaceS
             />
           )}
 
-          {userAssignments.length > 0 ? (
+          {assignmentSearch.trim() && hasAssignmentCollections && filteredResultCount === 0 ? (
+            <EmptyState
+              title={t("assignments.noMatchesTitle")}
+              description={t("assignments.noMatchesDescription")}
+            />
+          ) : null}
+
+          {filteredCollections.filteredUserAssignments.length > 0 ? (
             <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
               <p className="text-sm font-semibold text-slate-900">{isEmployee ? t("assignments.myHistory") : t("assignments.byUser")}</p>
               <div className="mt-4 grid gap-3">
-                {userAssignments.map((assignment) => (
+                {filteredCollections.filteredUserAssignments.map((assignment) => (
                   <div key={assignment.id} className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
                     <p className="font-semibold text-slate-900">
                       {t("assignments.assignmentLabel", { id: assignment.id ?? "" })} • {getProductName(assignment.productId)}
@@ -358,11 +423,11 @@ export function AssignmentsSection({ workspace }: { workspace: AccountWorkspaceS
             </div>
           ) : null}
 
-          {productAssignments.length > 0 ? (
+          {filteredCollections.filteredProductAssignments.length > 0 ? (
             <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
               <p className="text-sm font-semibold text-slate-900">{t("assignments.byProduct")}</p>
               <div className="mt-4 grid gap-3">
-                {productAssignments.map((assignment) => (
+                {filteredCollections.filteredProductAssignments.map((assignment) => (
                   <div key={assignment.id} className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
                     <p className="font-semibold text-slate-900">
                       {t("assignments.assignmentLabel", { id: assignment.id ?? "" })} • {getUserName(assignment.employeeId)}
@@ -384,23 +449,33 @@ export function AssignmentsSection({ workspace }: { workspace: AccountWorkspaceS
           {currentAssignments.length > 0 ? (
             <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
               <p className="text-sm font-semibold text-slate-900">{t("assignments.currentlyAssigned")}</p>
-              <div className="mt-4 grid max-h-[24rem] gap-3 overflow-y-auto pr-1">
-                {currentAssignments.map((assignment) => (
-                  <div key={assignment.id} className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                    <p className="font-semibold text-slate-900">
-                      {t("assignments.assignmentLabel", { id: assignment.id ?? "" })} • {getProductName(assignment.productId)}
-                    </p>
-                    <p className="mt-1 text-sm text-slate-600">
-                      {getUserName(assignment.employeeId)} • {formatDateTime(assignment.dateAssigned, locale, t("common.notSet"))}
-                    </p>
-                    <div className="mt-3">
-                      <Button variant="outline" onClick={() => populateAssignmentForm(assignment)}>
-                        {t("assignments.useInForm")}
-                      </Button>
+              {filteredCollections.filteredCurrentAssignments.length > 0 ? (
+                <div className="mt-4 grid max-h-[24rem] gap-3 overflow-y-auto pr-1">
+                  {filteredCollections.filteredCurrentAssignments.map((assignment) => (
+                    <div key={assignment.id} className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                      <p className="font-semibold text-slate-900">
+                        {t("assignments.assignmentLabel", { id: assignment.id ?? "" })} • {getProductName(assignment.productId)}
+                      </p>
+                      <p className="mt-1 text-sm text-slate-600">
+                        {getUserName(assignment.employeeId)} •{" "}
+                        {formatDateTime(assignment.dateAssigned, locale, t("common.notSet"))}
+                      </p>
+                      <div className="mt-3">
+                        <Button variant="outline" onClick={() => populateAssignmentForm(assignment)}>
+                          {t("assignments.useInForm")}
+                        </Button>
+                      </div>
                     </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="mt-4">
+                  <EmptyState
+                    title={t("assignments.noMatchesTitle")}
+                    description={t("assignments.noMatchesDescription")}
+                  />
+                </div>
+              )}
             </div>
           ) : (
             <EmptyState
