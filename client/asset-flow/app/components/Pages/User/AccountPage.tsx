@@ -1,232 +1,135 @@
 "use client";
 
+import Link from "next/link";
+
 import { Button } from "@/app/components/shared/ui/Button";
 
-import { AiSection } from "./account/sections/AiSection";
-import { AssignmentsSection } from "./account/sections/AssignmentsSection";
-import { OrganizationsSection } from "./account/sections/OrganizationsSection";
-import { ProductsSection } from "./account/sections/ProductsSection";
-import { ProfileSection } from "./account/sections/ProfileSection";
-import { ProtocolsSection } from "./account/sections/ProtocolsSection";
-import { UsersSection } from "./account/sections/UsersSection";
-import { FeedbackMessage, StatCard } from "./account/shared";
-import { useAccountWorkspace } from "./account/useAccountWorkspace";
+import { EmptyState, SectionCard } from "./account/shared";
+import { useWorkspaceContext } from "./account/WorkspaceContext";
 import { formatRoleLabel } from "./account/utils";
 
 const AccountPage = () => {
-  const workspace = useAccountWorkspace();
   const {
     allOrganizations,
     assignments,
-    bootstrapError,
-    bootstrapping,
     currentUser,
-    feedbackByKey,
     getOrganizationName,
-    handleSignOut,
     handleWorkspaceRefresh,
     myAssignmentsCount,
     pendingByKey,
     products,
-    session,
-    sessionChecked,
     users,
     visibleSections,
     workspaceScopeLabel,
-    workspaceSectionBadges,
-  } = workspace;
+  } = useWorkspaceContext();
 
-  const showUsersSection = visibleSections.some((section) => section.href === "#users");
-  const showOrganizationsSection = visibleSections.some((section) => section.href === "#organizations");
-  const showProtocolsSection = visibleSections.some((section) => section.href === "#protocols");
-
-  if (!sessionChecked) {
-    return (
-      <div className="rounded-3xl border border-slate-200 bg-white shadow-sm">
-        <div className="px-6 py-10 text-center sm:px-8">
-          <p className="text-base font-semibold text-slate-900">Checking your session...</p>
-          <p className="mt-2 text-sm text-slate-500">Preparing a safer workspace view.</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (!session) {
-    return (
-      <div className="rounded-3xl border border-slate-200 bg-white shadow-sm">
-        <div className="px-6 py-10 text-center sm:px-8">
-          <p className="text-base font-semibold text-slate-900">Redirecting to sign in...</p>
-          <p className="mt-2 text-sm text-slate-500">This workspace requires an active browser session.</p>
-        </div>
-      </div>
-    );
-  }
+  const destinationSections = visibleSections.filter((section) => section.href !== "#overview");
 
   return (
     <div className="space-y-6">
-      <section className="overflow-hidden rounded-[2rem] bg-slate-900 text-white shadow-xl">
-        <div className="grid gap-8 px-6 py-8 sm:px-8 lg:grid-cols-[1.25fr_0.85fr] lg:px-10">
-          <div>
-            <p className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-semibold uppercase tracking-[0.25em] text-slate-300">
-              Secure workspace
-            </p>
-            <h1 className="mt-5 text-3xl font-semibold tracking-tight sm:text-4xl">
-              AssetFlow tools for secure day-to-day work.
-            </h1>
-            <p className="mt-4 max-w-2xl text-sm text-slate-300 sm:text-base">
-              Manage your profile, teammates, companies, inventory, assignments, protocols, and AI assistance from
-              one cleaner workspace without exposing backend route details on screen. Your current access is limited to{" "}
-              {workspaceScopeLabel.toLowerCase()}.
-            </p>
+      <SectionCard
+        id="overview"
+        title="Workspace Overview"
+        description="Start from a cleaner home page, then open the exact tool you need."
+        actions={
+          <Button variant="outline" onClick={handleWorkspaceRefresh} disabled={Boolean(pendingByKey.workspace)}>
+            {pendingByKey.workspace ? "Refreshing..." : "Refresh overview"}
+          </Button>
+        }
+      >
+        <div className="grid gap-6 lg:grid-cols-[1.15fr_0.85fr]">
+          <div className="space-y-5">
+            <div className="rounded-3xl border border-slate-200 bg-gradient-to-br from-white via-slate-50 to-indigo-50 p-6">
+              <p className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">Welcome back</p>
+              <h2 className="mt-3 text-3xl font-semibold tracking-tight text-slate-900">
+                {currentUser?.fullName || "Active teammate"}
+              </h2>
+              <p className="mt-3 max-w-2xl text-sm text-slate-600 sm:text-base">
+                Your workspace is now split into simpler pages. Pick a destination below to move faster without scrolling
+                through one giant dashboard.
+              </p>
 
-            <div className="mt-6 flex flex-wrap gap-3 lg:hidden">
-              {visibleSections.map((link) => (
-                <a
-                  key={link.href}
-                  href={link.href}
-                  className="inline-flex h-10 items-center justify-center rounded-full border border-white/10 bg-white/5 px-4 text-sm font-semibold text-white transition hover:bg-white/10"
-                >
-                  {link.label}
-                </a>
-              ))}
-            </div>
-
-            <div className="mt-6 grid gap-3 sm:grid-cols-2">
-              <div className="rounded-2xl border border-white/10 bg-white/5 p-4 text-sm text-slate-200">
-                <p className="text-xs font-semibold uppercase tracking-[0.25em] text-slate-400">Signed in</p>
-                <p className="mt-2 break-words font-semibold leading-tight text-white">
-                  {currentUser?.fullName || "Active teammate"}
-                </p>
-                <div className="mt-3 flex flex-wrap items-center gap-2">
-                  <span className="rounded-full bg-white/10 px-3 py-1 text-xs font-semibold text-white">
-                    {formatRoleLabel(currentUser?.role || session.role)}
-                  </span>
-                  <span className="text-sm text-slate-300">
-                    {getOrganizationName(currentUser?.organizationId ?? null)}
-                  </span>
-                </div>
-              </div>
-              <div className="rounded-2xl border border-white/10 bg-white/5 p-4 text-sm text-slate-200">
-                <p className="text-xs font-semibold uppercase tracking-[0.25em] text-slate-400">Privacy</p>
-                <p className="mt-2 font-semibold text-white">Session-protected access</p>
-                <p className="mt-1">Expired sessions are cleared automatically, and sign-in stays in this browser tab.</p>
-              </div>
-            </div>
-          </div>
-
-          <div className="grid gap-4 sm:grid-cols-2">
-            <StatCard label="Users" value={users.length} hint="Teammates available in your workspace" />
-            <StatCard label="Products" value={products.length} hint="Inventory records ready to manage" />
-            <StatCard label="Assignments" value={assignments.length} hint="Equipment history currently loaded" />
-            <StatCard label="My Assignments" value={myAssignmentsCount} hint="Assets currently linked to your account" />
-          </div>
-        </div>
-      </section>
-
-      <div className="grid gap-6 lg:grid-cols-[18rem_minmax(0,1fr)] xl:grid-cols-[19rem_minmax(0,1fr)]">
-        <aside className="space-y-5 lg:sticky lg:top-24 lg:self-start">
-          <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-            <p className="text-xs font-semibold uppercase tracking-[0.25em] text-slate-500">Workspace Nav</p>
-            <p className="mt-2 text-sm text-slate-600">Jump to any workspace tool from this sidebar.</p>
-
-            <nav className="mt-5 space-y-2">
-              {visibleSections.map((section) => {
-                const sectionKey = section.href.replace("#", "");
-
-                return (
-                  <a
-                    key={section.href}
-                    href={section.href}
-                    className="flex items-center justify-between rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm transition hover:border-indigo-300 hover:bg-indigo-50"
-                  >
-                    <span>
-                      <span className="block font-semibold text-slate-900">{section.label}</span>
-                      <span className="block text-xs text-slate-500">{section.helper}</span>
-                    </span>
-                    <span className="rounded-full bg-white px-2.5 py-1 text-xs font-semibold text-slate-700 shadow-sm">
-                      {workspaceSectionBadges[sectionKey] ?? "Open"}
-                    </span>
-                  </a>
-                );
-              })}
-            </nav>
-          </div>
-
-          <div className="rounded-3xl bg-slate-900 p-5 text-white shadow-sm">
-            <p className="text-xs font-semibold uppercase tracking-[0.25em] text-slate-400">Workspace</p>
-            <p className="mt-3 break-words text-lg font-semibold leading-tight">
-              {currentUser?.fullName || "Active teammate"}
-            </p>
-            <div className="mt-3 flex flex-wrap items-center gap-2 text-sm">
-              <span className="rounded-full bg-white/10 px-3 py-1 text-xs font-semibold text-white">
-                {formatRoleLabel(currentUser?.role || session.role)}
-              </span>
-              <span className="text-slate-300">{getOrganizationName(currentUser?.organizationId ?? null)}</span>
-            </div>
-            <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
-              <Button
-                variant="outline"
-                className="w-full border-white/10 bg-white/5 text-white hover:bg-white/10 hover:text-white"
-                onClick={handleWorkspaceRefresh}
-                disabled={Boolean(pendingByKey.workspace || bootstrapping)}
-              >
-                {pendingByKey.workspace || bootstrapping ? "Refreshing..." : "Refresh workspace"}
-              </Button>
-              <Button
-                variant="ghost"
-                className="w-full text-slate-200 hover:bg-white/10 hover:text-white"
-                onClick={handleSignOut}
-              >
-                Sign out
-              </Button>
-            </div>
-          </div>
-
-          <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-            <p className="text-sm font-semibold text-slate-900">Quick facts</p>
-            <div className="mt-4 space-y-3 text-sm text-slate-600">
-              <div className="flex items-center justify-between gap-4">
-                <span>Role</span>
-                <span className="text-right font-semibold text-slate-900">
-                  {formatRoleLabel(currentUser?.role || session.role)}
+              <div className="mt-5 flex flex-wrap gap-2">
+                <span className="rounded-full bg-slate-900 px-3 py-1 text-xs font-semibold text-white">
+                  {formatRoleLabel(currentUser?.role)}
+                </span>
+                <span className="rounded-full bg-indigo-50 px-3 py-1 text-xs font-semibold text-indigo-700">
+                  {workspaceScopeLabel}
+                </span>
+                <span className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-slate-700 shadow-sm">
+                  {getOrganizationName(currentUser?.organizationId ?? null)}
                 </span>
               </div>
-              <div className="flex items-center justify-between gap-4">
-                <span>Companies known</span>
-                <span className="font-semibold text-slate-900">{allOrganizations.length}</span>
+            </div>
+
+            {destinationSections.length > 0 ? (
+              <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                {destinationSections.map((section) => (
+                  <Link
+                    key={section.path}
+                    href={section.path}
+                    className="group rounded-3xl border border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-indigo-200 hover:shadow-md"
+                  >
+                    <div className="flex items-start justify-between gap-4">
+                      <div>
+                        <p className="text-lg font-semibold text-slate-900">{section.label}</p>
+                        <p className="mt-2 text-sm text-slate-600">{section.helper}</p>
+                      </div>
+                      <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700 transition group-hover:bg-indigo-50 group-hover:text-indigo-700">
+                        Open
+                      </span>
+                    </div>
+                  </Link>
+                ))}
               </div>
-              <div className="flex items-center justify-between gap-4">
-                <span>Access scope</span>
-                <span className="text-right font-semibold text-slate-900">{workspaceScopeLabel}</span>
-              </div>
-              <div className="flex items-center justify-between gap-4">
-                <span>Session storage</span>
-                <span className="text-right font-semibold text-slate-900">Current tab only</span>
-              </div>
+            ) : (
+              <EmptyState
+                title="No extra pages available"
+                description="Your current role only exposes the pages needed for your own work."
+              />
+            )}
+          </div>
+
+          <div className="space-y-4">
+            <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+              <p className="text-sm font-semibold text-slate-900">Snapshot</p>
+              <dl className="mt-4 grid gap-3 text-sm text-slate-600">
+                <div className="flex items-center justify-between gap-4">
+                  <dt>Visible users</dt>
+                  <dd className="font-semibold text-slate-900">{users.length}</dd>
+                </div>
+                <div className="flex items-center justify-between gap-4">
+                  <dt>Visible products</dt>
+                  <dd className="font-semibold text-slate-900">{products.length}</dd>
+                </div>
+                <div className="flex items-center justify-between gap-4">
+                  <dt>Visible assignments</dt>
+                  <dd className="font-semibold text-slate-900">{assignments.length}</dd>
+                </div>
+                <div className="flex items-center justify-between gap-4">
+                  <dt>My assignments</dt>
+                  <dd className="font-semibold text-slate-900">{myAssignmentsCount}</dd>
+                </div>
+                <div className="flex items-center justify-between gap-4">
+                  <dt>Known companies</dt>
+                  <dd className="font-semibold text-slate-900">{allOrganizations.length}</dd>
+                </div>
+              </dl>
+            </div>
+
+            <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+              <p className="text-sm font-semibold text-slate-900">Next best step</p>
+              <p className="mt-3 text-sm text-slate-600">
+                {currentUser?.role === "ADMIN"
+                  ? "Review users or organizations first when you need full-platform changes."
+                  : currentUser?.role === "LEADER"
+                    ? "Start from users, products, or assignments to manage your company day to day."
+                    : "Start from products or assignments to review the assets connected to your account."}
+              </p>
             </div>
           </div>
-        </aside>
-
-        <div className="space-y-6">
-          {bootstrapError ? <FeedbackMessage feedback={{ tone: "error", message: bootstrapError }} /> : null}
-          {feedbackByKey.workspace ? <FeedbackMessage feedback={feedbackByKey.workspace} /> : null}
-
-          <ProfileSection workspace={workspace} />
-          {showUsersSection ? <UsersSection workspace={workspace} /> : null}
-          {showOrganizationsSection ? <OrganizationsSection workspace={workspace} /> : null}
-          <ProductsSection workspace={workspace} />
-          <AssignmentsSection workspace={workspace} />
-
-          {showProtocolsSection ? (
-            <div className="grid gap-6 lg:grid-cols-2">
-              <ProtocolsSection workspace={workspace} />
-              <AiSection workspace={workspace} />
-            </div>
-          ) : (
-            <AiSection workspace={workspace} />
-          )}
         </div>
-      </div>
+      </SectionCard>
     </div>
   );
 };

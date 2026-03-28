@@ -18,6 +18,7 @@ export type SelectOption = {
 
 export type WorkspaceSection = {
   href: string;
+  path: string;
   label: string;
   helper: string;
 };

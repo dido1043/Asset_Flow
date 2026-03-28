@@ -8,13 +8,14 @@ export const selectClassName =
   "mt-2 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm text-slate-900 shadow-sm outline-none transition focus:border-indigo-500 focus:bg-white focus:ring-2 focus:ring-indigo-200";
 
 export const workspaceSections: WorkspaceSection[] = [
-  { href: "#profile", label: "Profile", helper: "Account and session" },
-  { href: "#users", label: "Users", helper: "Teammates and roles" },
-  { href: "#organizations", label: "Organizations", helper: "Companies and leaders" },
-  { href: "#products", label: "Products", helper: "Inventory and assets" },
-  { href: "#assignments", label: "Assignments", helper: "Issued equipment" },
-  { href: "#protocols", label: "Protocols", helper: "PDF generation" },
-  { href: "#ai-tools", label: "AI", helper: "Prompt tools" },
+  { href: "#overview", path: "/user/account", label: "Overview", helper: "Start page" },
+  { href: "#profile", path: "/user/account/profile", label: "Profile", helper: "Account and session" },
+  { href: "#users", path: "/user/account/users", label: "Users", helper: "Teammates and roles" },
+  { href: "#organizations", path: "/user/account/organizations", label: "Organizations", helper: "Companies and leaders" },
+  { href: "#products", path: "/user/account/products", label: "Products", helper: "Inventory and assets" },
+  { href: "#assignments", path: "/user/account/assignments", label: "Assignments", helper: "Issued equipment" },
+  { href: "#protocols", path: "/user/account/protocols", label: "Protocols", helper: "PDF generation" },
+  { href: "#ai-tools", path: "/user/account/ai", label: "AI", helper: "Prompt tools" },
 ];
 
 export function getWorkspaceSections(role?: string | null) {
