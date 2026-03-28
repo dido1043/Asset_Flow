@@ -1,11 +1,13 @@
 import { Button } from "@/app/components/shared/ui/Button";
 import { Input } from "@/app/components/shared/ui/Input";
 import { Label } from "@/app/components/shared/ui/Label";
+import { useTranslations } from "@/app/lib/i18n";
 
 import { EmptyState, FeedbackMessage, FieldHint, SectionCard, SelectField } from "../shared";
 import type { AccountWorkspaceState } from "../useAccountWorkspace";
 
 export function ProtocolsSection({ workspace }: { workspace: AccountWorkspaceState }) {
+  const { t } = useTranslations();
   const {
     feedbackByKey,
     getOrganizationName,
@@ -30,24 +32,24 @@ export function ProtocolsSection({ workspace }: { workspace: AccountWorkspaceSta
   return (
     <SectionCard
       id="protocols"
-      title="Protocols"
+      title={t("protocols.title")}
       description={
         isLeader
-          ? "Create and open handover protocols for teammates inside your company."
-          : "Create and open handover protocols for teammates and companies."
+          ? t("protocols.descriptionLeader")
+          : t("protocols.descriptionAdmin")
       }
     >
       <div className="space-y-5">
         <FeedbackMessage feedback={feedbackByKey.protocols} />
 
         <form onSubmit={handleCreateProtocol} className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
-          <p className="text-sm font-semibold text-slate-900">Create protocol</p>
-          <FieldHint>Pick the company and teammate by name whenever those records are available.</FieldHint>
+          <p className="text-sm font-semibold text-slate-900">{t("protocols.createProtocol")}</p>
+          <FieldHint>{t("protocols.hint")}</FieldHint>
           <div className="mt-4 grid gap-4 sm:grid-cols-2">
             {organizationOptions.length > 0 ? (
               <SelectField
                 id="protocol-organization-id"
-                label="Company"
+                label={t("common.company")}
                 value={protocolCreateForm.organizationId}
                 onChange={(value) =>
                   setProtocolCreateForm((previous) => ({
@@ -56,11 +58,11 @@ export function ProtocolsSection({ workspace }: { workspace: AccountWorkspaceSta
                   }))
                 }
                 options={organizationOptions}
-                placeholder="Select a company"
+                placeholder={t("registerForm.selectCompany")}
               />
             ) : (
               <div>
-                <Label htmlFor="protocol-organization-id">Company reference</Label>
+                <Label htmlFor="protocol-organization-id">{t("products.companyReference")}</Label>
                 <Input
                   id="protocol-organization-id"
                   type="number"
@@ -77,7 +79,7 @@ export function ProtocolsSection({ workspace }: { workspace: AccountWorkspaceSta
             {protocolUserOptions.length > 0 ? (
               <SelectField
                 id="protocol-user-id"
-                label={selectedProtocolOrganizationId == null ? "Teammate" : "Teammate in this company"}
+                label={selectedProtocolOrganizationId == null ? t("common.teammate") : t("protocols.teammateInCompany")}
                 value={protocolCreateForm.userId}
                 onChange={(value) =>
                   setProtocolCreateForm((previous) => ({
@@ -86,11 +88,11 @@ export function ProtocolsSection({ workspace }: { workspace: AccountWorkspaceSta
                   }))
                 }
                 options={protocolUserOptions}
-                placeholder="Select a teammate"
+                placeholder={t("users.selectTeammate")}
               />
             ) : (
               <div>
-                <Label htmlFor="protocol-user-id">Teammate reference</Label>
+                <Label htmlFor="protocol-user-id">{t("users.teammateReference")}</Label>
                 <Input
                   id="protocol-user-id"
                   type="number"
@@ -107,27 +109,27 @@ export function ProtocolsSection({ workspace }: { workspace: AccountWorkspaceSta
           </div>
           <div className="mt-4">
             <Button type="submit" disabled={Boolean(pendingByKey.protocols)}>
-              Create protocol
+              {t("protocols.createButton")}
             </Button>
           </div>
         </form>
 
         <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
-          <p className="text-sm font-semibold text-slate-900">Open a saved protocol</p>
+          <p className="text-sm font-semibold text-slate-900">{t("protocols.openSaved")}</p>
           <div className="mt-4 flex flex-col gap-3 sm:flex-row">
             <div className="flex-1">
               {protocolOptions.length > 0 ? (
                 <SelectField
                   id="protocol-lookup-id"
-                  label="Protocol"
+                  label={t("common.protocol")}
                   value={protocolLookupId}
                   onChange={setProtocolLookupId}
                   options={protocolOptions}
-                  placeholder="Select a protocol"
+                  placeholder={t("protocols.selectProtocol")}
                 />
               ) : isAdmin ? (
                 <>
-                  <Label htmlFor="protocol-lookup-id">Protocol reference</Label>
+                  <Label htmlFor="protocol-lookup-id">{t("protocols.protocolReference")}</Label>
                   <Input
                     id="protocol-lookup-id"
                     type="number"
@@ -137,7 +139,7 @@ export function ProtocolsSection({ workspace }: { workspace: AccountWorkspaceSta
                 </>
               ) : (
                 <p className="text-sm text-slate-600">
-                  Saved protocols from your company will appear here as soon as one is available.
+                  {t("protocols.noSavedProtocols")}
                 </p>
               )}
             </div>
@@ -146,7 +148,7 @@ export function ProtocolsSection({ workspace }: { workspace: AccountWorkspaceSta
                 onClick={handleLookupProtocol}
                 disabled={Boolean(pendingByKey.protocols || (!isAdmin && protocolOptions.length === 0))}
               >
-                Load protocol
+                {t("protocols.loadProtocol")}
               </Button>
             </div>
           </div>
@@ -154,11 +156,11 @@ export function ProtocolsSection({ workspace }: { workspace: AccountWorkspaceSta
 
         {protocols.length > 0 ? (
           <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-            <p className="text-sm font-semibold text-slate-900">{isLeader ? "Company protocols" : "Visible protocols"}</p>
+            <p className="text-sm font-semibold text-slate-900">{isLeader ? t("protocols.companyProtocols") : t("protocols.visibleProtocols")}</p>
             <div className="mt-4 grid gap-3">
               {protocols.map((protocol) => (
                 <div key={protocol.id} className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                  <p className="font-semibold text-slate-900">Protocol #{protocol.id}</p>
+                  <p className="font-semibold text-slate-900">{t("protocols.protocolLabel", { id: protocol.id ?? "" })}</p>
                   <p className="mt-1 text-sm text-slate-600">
                     {getUserName(protocol.employeeId)} • {getOrganizationName(protocol.organizationId)}
                   </p>
@@ -169,7 +171,7 @@ export function ProtocolsSection({ workspace }: { workspace: AccountWorkspaceSta
                         setProtocolLookupId(protocol.id?.toString() ?? "");
                       }}
                     >
-                      Use in panel
+                      {t("protocols.useInPanel")}
                     </Button>
                   </div>
                 </div>
@@ -180,22 +182,22 @@ export function ProtocolsSection({ workspace }: { workspace: AccountWorkspaceSta
 
         {selectedProtocol ? (
           <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-            <p className="text-sm font-semibold text-slate-900">Generated protocol</p>
+            <p className="text-sm font-semibold text-slate-900">{t("protocols.generatedProtocol")}</p>
             <dl className="mt-4 grid gap-3 text-sm text-slate-600">
               <div className="flex justify-between gap-4">
-                <dt>Teammate</dt>
+                <dt>{t("common.teammate")}</dt>
                 <dd className="font-semibold text-slate-900">{getUserName(selectedProtocol.employeeId)}</dd>
               </div>
               <div className="flex justify-between gap-4">
-                <dt>Company</dt>
+                <dt>{t("common.company")}</dt>
                 <dd className="font-semibold text-slate-900">
                   {getOrganizationName(selectedProtocol.organizationId)}
                 </dd>
               </div>
             </dl>
             <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600">
-              <p className="font-semibold text-slate-900">Protocol file</p>
-              <p className="mt-2">The direct file address is hidden here for safety.</p>
+              <p className="font-semibold text-slate-900">{t("protocols.protocolFile")}</p>
+              <p className="mt-2">{t("protocols.protocolFileDescription")}</p>
               <div className="mt-4">
                 <a
                   href={selectedProtocol.protocolUri}
@@ -203,15 +205,15 @@ export function ProtocolsSection({ workspace }: { workspace: AccountWorkspaceSta
                   rel="noreferrer"
                   className="inline-flex h-10 items-center justify-center rounded-xl bg-indigo-600 px-4 text-sm font-semibold text-white transition hover:bg-indigo-700"
                 >
-                  Open protocol
+                  {t("protocols.openProtocol")}
                 </a>
               </div>
             </div>
           </div>
         ) : (
           <EmptyState
-            title="No protocol selected"
-            description="Create a protocol or load a saved one to open it from this panel."
+            title={t("protocols.noSelectedTitle")}
+            description={t("protocols.noSelectedDescription")}
           />
         )}
       </div>

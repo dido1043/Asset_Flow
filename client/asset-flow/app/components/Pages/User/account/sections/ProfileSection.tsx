@@ -1,12 +1,14 @@
 import { Button } from "@/app/components/shared/ui/Button";
 import { Input } from "@/app/components/shared/ui/Input";
 import { Label } from "@/app/components/shared/ui/Label";
+import { getRoleLabel, useTranslations } from "@/app/lib/i18n";
 
 import { EmptyState, FeedbackMessage, SectionCard } from "../shared";
 import type { AccountWorkspaceState } from "../useAccountWorkspace";
-import { formatRoleLabel, getRoleBadgeClass } from "../utils";
+import { getRoleBadgeClass } from "../utils";
 
 export function ProfileSection({ workspace }: { workspace: AccountWorkspaceState }) {
+  const { t } = useTranslations();
   const { bootstrapping, currentUser, feedbackByKey, getOrganizationName, handleProfileUpdate, handleSignOut } =
     workspace;
   const { pendingByKey, profileForm, session, setProfileForm, handleWorkspaceRefresh, workspaceScopeLabel } =
@@ -15,8 +17,8 @@ export function ProfileSection({ workspace }: { workspace: AccountWorkspaceState
   return (
     <SectionCard
       id="profile"
-      title="Profile"
-      description="Manage your account details and keep your active session under control."
+      title={t("profile.title")}
+      description={t("profile.description")}
       actions={
         <>
           <Button
@@ -24,10 +26,10 @@ export function ProfileSection({ workspace }: { workspace: AccountWorkspaceState
             onClick={handleWorkspaceRefresh}
             disabled={Boolean(pendingByKey.workspace || bootstrapping)}
           >
-            {pendingByKey.workspace || bootstrapping ? "Refreshing..." : "Refresh workspace"}
+            {pendingByKey.workspace || bootstrapping ? t("common.refreshing") : t("workspace.shell.refreshWorkspace")}
           </Button>
           <Button variant="ghost" onClick={handleSignOut}>
-            Sign out
+            {t("common.signOut")}
           </Button>
         </>
       }
@@ -37,7 +39,7 @@ export function ProfileSection({ workspace }: { workspace: AccountWorkspaceState
           <FeedbackMessage feedback={feedbackByKey.profile} />
           <form onSubmit={handleProfileUpdate} className="grid gap-5 sm:grid-cols-2">
             <div className="sm:col-span-2">
-              <Label htmlFor="profile-full-name">Full name</Label>
+              <Label htmlFor="profile-full-name">{t("profile.fullName")}</Label>
               <Input
                 id="profile-full-name"
                 value={profileForm.fullName}
@@ -48,7 +50,7 @@ export function ProfileSection({ workspace }: { workspace: AccountWorkspaceState
             </div>
 
             <div className="sm:col-span-2">
-              <Label htmlFor="profile-email">Email</Label>
+              <Label htmlFor="profile-email">{t("profile.email")}</Label>
               <Input
                 id="profile-email"
                 type="email"
@@ -60,18 +62,18 @@ export function ProfileSection({ workspace }: { workspace: AccountWorkspaceState
             </div>
 
             <div>
-              <Label htmlFor="profile-role">Role</Label>
+              <Label htmlFor="profile-role">{t("profile.role")}</Label>
               <div
                 id="profile-role"
                 className="mt-2 inline-flex min-h-11 items-center rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm font-semibold text-slate-900"
               >
-                {formatRoleLabel(currentUser?.role || session?.role)}
+                {getRoleLabel(currentUser?.role || session?.role, t)}
               </div>
-              <p className="mt-2 text-xs text-slate-500">Role changes are locked here for security.</p>
+              <p className="mt-2 text-xs text-slate-500">{t("profile.roleLocked")}</p>
             </div>
 
             <div>
-              <Label htmlFor="profile-age">Age</Label>
+              <Label htmlFor="profile-age">{t("profile.age")}</Label>
               <Input
                 id="profile-age"
                 type="number"
@@ -84,12 +86,12 @@ export function ProfileSection({ workspace }: { workspace: AccountWorkspaceState
             </div>
 
             <div className="sm:col-span-2">
-              <Label htmlFor="profile-password">New password</Label>
+              <Label htmlFor="profile-password">{t("profile.newPassword")}</Label>
               <Input
                 id="profile-password"
                 type="password"
                 value={profileForm.password}
-                placeholder="Leave blank to keep the current password"
+                placeholder={t("profile.passwordPlaceholder")}
                 onChange={(event) =>
                   setProfileForm((previous) => ({ ...previous, password: event.target.value }))
                 }
@@ -98,7 +100,7 @@ export function ProfileSection({ workspace }: { workspace: AccountWorkspaceState
 
             <div className="sm:col-span-2">
               <Button type="submit" disabled={Boolean(pendingByKey.profile)}>
-                {pendingByKey.profile ? "Saving..." : "Save profile"}
+                {pendingByKey.profile ? t("common.saving") : t("profile.save")}
               </Button>
             </div>
           </form>
@@ -108,52 +110,52 @@ export function ProfileSection({ workspace }: { workspace: AccountWorkspaceState
           <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
             <div className="flex items-center justify-between gap-3">
               <div>
-                <p className="text-sm font-semibold text-slate-900">Current account</p>
-                <p className="text-sm text-slate-500">Live workspace details for the signed-in teammate.</p>
+                <p className="text-sm font-semibold text-slate-900">{t("profile.currentAccount")}</p>
+                <p className="text-sm text-slate-500">{t("profile.currentAccountDescription")}</p>
               </div>
               <span
                 className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${getRoleBadgeClass(
                   currentUser?.role,
                 )}`}
               >
-                {formatRoleLabel(currentUser?.role || session?.role)}
+                {getRoleLabel(currentUser?.role || session?.role, t)}
               </span>
             </div>
             {currentUser ? (
               <dl className="mt-5 grid gap-3 text-sm text-slate-600">
                 <div className="flex justify-between gap-4">
-                  <dt>Full name</dt>
+                  <dt>{t("profile.fullName")}</dt>
                   <dd className="break-words text-right font-semibold text-slate-900">{currentUser.fullName}</dd>
                 </div>
                 <div className="flex justify-between gap-4">
-                  <dt>Email</dt>
+                  <dt>{t("profile.email")}</dt>
                   <dd className="font-semibold text-slate-900">{currentUser.email}</dd>
                 </div>
                 <div className="flex justify-between gap-4">
-                  <dt>Company</dt>
+                  <dt>{t("profile.company")}</dt>
                   <dd className="font-semibold text-slate-900">{getOrganizationName(currentUser.organizationId)}</dd>
                 </div>
                 <div className="flex justify-between gap-4">
-                  <dt>Assignments</dt>
+                  <dt>{t("profile.assignments")}</dt>
                   <dd className="font-semibold text-slate-900">{currentUser.assignmentIds?.length ?? 0}</dd>
                 </div>
               </dl>
             ) : (
               <EmptyState
-                title="Loading account"
-                description="Your current profile will appear here after the workspace finishes loading."
+                title={t("profile.loadingTitle")}
+                description={t("profile.loadingDescription")}
               />
             )}
           </div>
 
           <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-            <p className="text-sm font-semibold text-slate-900">Workspace safety</p>
+            <p className="text-sm font-semibold text-slate-900">{t("profile.safetyTitle")}</p>
             <ul className="mt-3 space-y-2 text-sm text-slate-600">
-              <li>Signed-in access is required before the workspace loads.</li>
-              <li>Expired or invalid sessions are cleared automatically.</li>
-              <li>Names are shown instead of internal references wherever records are available.</li>
-              <li>Backend route details stay hidden from the workspace UI.</li>
-              <li>Your current visibility scope is {workspaceScopeLabel.toLowerCase()}.</li>
+              <li>{t("profile.safetyPointOne")}</li>
+              <li>{t("profile.safetyPointTwo")}</li>
+              <li>{t("profile.safetyPointThree")}</li>
+              <li>{t("profile.safetyPointFour")}</li>
+              <li>{t("profile.safetyPointFive", { scope: workspaceScopeLabel })}</li>
             </ul>
           </div>
         </div>

@@ -4,12 +4,13 @@ import Link from "next/link";
 
 import { clearAuthSession, readAuthSession, subscribeToAuthChanges } from "@/app/lib/session";
 import type { AuthSession } from "@/app/lib/types";
-import { formatRoleLabel } from "@/app/components/Pages/User/account/utils";
+import { getRoleLabel, useTranslations } from "@/app/lib/i18n";
 import { Button } from "../ui/Button";
 
 const Navigation = () => {
     const [mounted, setMounted] = React.useState(false);
     const [session, setSession] = React.useState<AuthSession | null>(null);
+    const { language, setLanguage, t } = useTranslations();
 
     React.useEffect(() => {
         setMounted(true);
@@ -35,17 +36,39 @@ const Navigation = () => {
                         AF
                     </span>
                     <div className="leading-tight">
-                        <p className="text-sm font-semibold text-slate-900">AssetFlow</p>
-                        <p className="text-xs text-slate-500">Asset management</p>
+                        <p className="text-sm font-semibold text-slate-900">{t("common.appName")}</p>
+                        <p className="text-xs text-slate-500">{t("home.overviewTitle")}</p>
                     </div>
                 </Link>
 
                 <nav className="flex flex-wrap items-center justify-end gap-2">
+                    <div className="mr-1 inline-flex items-center rounded-xl border border-slate-200 bg-white p-1 shadow-sm">
+                        <button
+                            type="button"
+                            className={`rounded-lg px-2.5 py-1 text-xs font-semibold transition ${
+                                language === "en" ? "bg-slate-900 text-white" : "text-slate-600 hover:bg-slate-100"
+                            }`}
+                            onClick={() => setLanguage("en")}
+                            aria-label={t("common.language")}
+                        >
+                            {t("common.languageEnglish")}
+                        </button>
+                        <button
+                            type="button"
+                            className={`rounded-lg px-2.5 py-1 text-xs font-semibold transition ${
+                                language === "bg" ? "bg-slate-900 text-white" : "text-slate-600 hover:bg-slate-100"
+                            }`}
+                            onClick={() => setLanguage("bg")}
+                            aria-label={t("common.language")}
+                        >
+                            {t("common.languageBulgarian")}
+                        </button>
+                    </div>
                     <Link
                         href="/"
                         className="rounded-xl px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-100"
                     >
-                        Home
+                        {t("common.home")}
                     </Link>
 
                     {mounted && isAuthed ? (
@@ -54,15 +77,15 @@ const Navigation = () => {
                                 href="/user/account"
                                 className="rounded-xl px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-100"
                             >
-                                Workspace
+                                {t("common.workspace")}
                             </Link>
                             {session?.role && (
                                 <span className="hidden rounded-full bg-indigo-50 px-3 py-1 text-xs font-semibold text-indigo-600 md:inline-flex">
-                                    {formatRoleLabel(session.role)}
+                                    {getRoleLabel(session.role, t)}
                                 </span>
                             )}
                             <Button variant="outline" size="sm" onClick={logout}>
-                                Logout
+                                {t("nav.logout")}
                             </Button>
                         </>
                     ) : (
@@ -71,11 +94,11 @@ const Navigation = () => {
                                 href="/user/login"
                                 className="rounded-xl px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-100"
                             >
-                                Sign in
+                                {t("common.signIn")}
                             </Link>
                             <Link href="/user/register" className="inline-flex">
                                 <span className="inline-flex h-9 items-center justify-center rounded-xl bg-indigo-600 px-4 text-sm font-semibold text-white shadow-lg shadow-indigo-200 transition hover:bg-indigo-700">
-                                    Get started
+                                    {t("common.getStarted")}
                                 </span>
                             </Link>
                         </>

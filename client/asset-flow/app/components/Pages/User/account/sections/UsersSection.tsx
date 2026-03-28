@@ -1,12 +1,14 @@
 import { Button } from "@/app/components/shared/ui/Button";
 import { Input } from "@/app/components/shared/ui/Input";
 import { Label } from "@/app/components/shared/ui/Label";
+import { getRoleLabel, useTranslations } from "@/app/lib/i18n";
 
 import { EmptyState, FeedbackMessage, SectionCard, SelectField } from "../shared";
 import type { AccountWorkspaceState } from "../useAccountWorkspace";
-import { formatRoleLabel, getRoleBadgeClass } from "../utils";
+import { getRoleBadgeClass } from "../utils";
 
 export function UsersSection({ workspace }: { workspace: AccountWorkspaceState }) {
+  const { t } = useTranslations();
   const {
     canDeleteUsers,
     deleteUserId,
@@ -30,15 +32,15 @@ export function UsersSection({ workspace }: { workspace: AccountWorkspaceState }
   return (
     <SectionCard
       id="users"
-      title="Users"
+      title={t("users.title")}
       description={
         isLeader
-          ? "Browse teammates inside your company and inspect account details without leaving your scope."
-          : "Browse teammates, inspect account details, and remove access when needed."
+          ? t("users.descriptionLeader")
+          : t("users.descriptionAdmin")
       }
       actions={
         <Button variant="outline" onClick={handleLoadUsers} disabled={Boolean(pendingByKey.users)}>
-          {pendingByKey.users ? "Loading..." : isLeader ? "Reload teammates" : "Reload users"}
+          {pendingByKey.users ? t("common.loading") : isLeader ? t("users.reloadTeammates") : t("users.reloadUsers")}
         </Button>
       }
     >
@@ -47,21 +49,21 @@ export function UsersSection({ workspace }: { workspace: AccountWorkspaceState }
           <FeedbackMessage feedback={feedbackByKey.users} />
 
           <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
-            <p className="text-sm font-semibold text-slate-900">Choose a teammate</p>
+            <p className="text-sm font-semibold text-slate-900">{t("users.chooseTeammate")}</p>
             <div className="mt-4 flex flex-col gap-3 sm:flex-row">
               <div className="flex-1">
                 {userOptions.length > 0 ? (
                   <SelectField
                     id="user-lookup-id"
-                    label="User"
+                    label={t("common.user")}
                     value={userLookupId}
                     onChange={setUserLookupId}
                     options={userOptions}
-                    placeholder="Select a teammate"
+                    placeholder={t("users.selectTeammate")}
                   />
                 ) : isAdmin ? (
                   <>
-                    <Label htmlFor="user-lookup-id">Teammate reference</Label>
+                    <Label htmlFor="user-lookup-id">{t("users.teammateReference")}</Label>
                     <Input
                       id="user-lookup-id"
                       type="number"
@@ -71,14 +73,14 @@ export function UsersSection({ workspace }: { workspace: AccountWorkspaceState }
                   </>
                 ) : (
                   <EmptyState
-                    title="No teammates in scope"
-                    description="Your company roster will appear here as soon as users are available for your organization."
+                    title={t("users.noTeammatesTitle")}
+                    description={t("users.noTeammatesDescription")}
                   />
                 )}
               </div>
               <div className="flex items-end">
                 <Button className="whitespace-nowrap" onClick={handleLookupUser} disabled={Boolean(pendingByKey.users)}>
-                  Load user
+                  {t("users.loadUser")}
                 </Button>
               </div>
             </div>
@@ -86,21 +88,21 @@ export function UsersSection({ workspace }: { workspace: AccountWorkspaceState }
 
           {canDeleteUsers ? (
             <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
-              <p className="text-sm font-semibold text-slate-900">Remove a user</p>
+              <p className="text-sm font-semibold text-slate-900">{t("users.removeUser")}</p>
               <div className="mt-4 flex flex-col gap-3 sm:flex-row">
                 <div className="flex-1">
                   {userOptions.length > 0 ? (
                     <SelectField
                       id="delete-user-id"
-                      label="User to remove"
+                      label={t("users.userToRemove")}
                       value={deleteUserId}
                       onChange={setDeleteUserId}
                       options={userOptions}
-                      placeholder="Select a teammate"
+                      placeholder={t("users.selectTeammate")}
                     />
                   ) : (
                     <>
-                      <Label htmlFor="delete-user-id">Teammate reference</Label>
+                      <Label htmlFor="delete-user-id">{t("users.teammateReference")}</Label>
                       <Input
                         id="delete-user-id"
                         type="number"
@@ -112,7 +114,7 @@ export function UsersSection({ workspace }: { workspace: AccountWorkspaceState }
                 </div>
                 <div className="flex items-end">
                   <Button variant="danger" onClick={handleDeleteUser} disabled={Boolean(pendingByKey.users)}>
-                    Delete user
+                    {t("users.deleteUser")}
                   </Button>
                 </div>
               </div>
@@ -131,28 +133,28 @@ export function UsersSection({ workspace }: { workspace: AccountWorkspaceState }
                     selectedUser.role,
                   )} shrink-0 self-start whitespace-nowrap`}
                 >
-                  {formatRoleLabel(selectedUser.role)}
+                  {getRoleLabel(selectedUser.role, t)}
                 </span>
               </div>
               <dl className="mt-4 grid gap-3 text-sm text-slate-600">
                 <div className="flex justify-between gap-4">
-                  <dt>Age</dt>
-                  <dd className="font-semibold text-slate-900">{selectedUser.age ?? "Not set"}</dd>
+                  <dt>{t("common.age")}</dt>
+                  <dd className="font-semibold text-slate-900">{selectedUser.age ?? t("common.notSet")}</dd>
                 </div>
                 <div className="flex justify-between gap-4">
-                  <dt>Company</dt>
+                  <dt>{t("common.company")}</dt>
                   <dd className="font-semibold text-slate-900">{getOrganizationName(selectedUser.organizationId)}</dd>
                 </div>
                 <div className="flex justify-between gap-4">
-                  <dt>Assignments</dt>
+                  <dt>{t("common.assignments")}</dt>
                   <dd className="font-semibold text-slate-900">{selectedUser.assignmentIds?.length ?? 0}</dd>
                 </div>
               </dl>
             </div>
           ) : (
             <EmptyState
-              title="No user selected"
-              description="Choose a teammate from the selector to inspect their details here."
+              title={t("users.noUserSelectedTitle")}
+              description={t("users.noUserSelectedDescription")}
             />
           )}
         </div>
@@ -172,12 +174,12 @@ export function UsersSection({ workspace }: { workspace: AccountWorkspaceState }
                         user.role,
                       )} whitespace-nowrap`}
                     >
-                      {formatRoleLabel(user.role)}
+                      {getRoleLabel(user.role, t)}
                     </span>
                   </div>
                   <div className="mt-4 space-y-2 text-sm text-slate-600">
-                    <p>Company: {getOrganizationName(user.organizationId)}</p>
-                    <p>Assignments: {user.assignmentIds?.length ?? 0}</p>
+                    <p>{t("users.companyPrefix", { company: getOrganizationName(user.organizationId) })}</p>
+                    <p>{t("users.assignmentsPrefix", { count: user.assignmentIds?.length ?? 0 })}</p>
                   </div>
                   <div className="mt-4">
                     <Button
@@ -188,7 +190,7 @@ export function UsersSection({ workspace }: { workspace: AccountWorkspaceState }
                         setDeleteUserId(user.id?.toString() ?? "");
                       }}
                     >
-                      Use in panel
+                      {t("users.useInPanel")}
                     </Button>
                   </div>
                 </div>
@@ -196,11 +198,11 @@ export function UsersSection({ workspace }: { workspace: AccountWorkspaceState }
             </div>
           ) : (
             <EmptyState
-              title="No users loaded"
+              title={t("users.noUsersLoadedTitle")}
               description={
                 isLeader
-                  ? "Use the reload button or the workspace refresh action to fetch teammates from your company."
-                  : "Use the reload button or the workspace refresh action to fetch the user list."
+                  ? t("users.noUsersLoadedDescriptionLeader")
+                  : t("users.noUsersLoadedDescriptionAdmin")
               }
             />
           )}

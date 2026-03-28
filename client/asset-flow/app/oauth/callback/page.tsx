@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 
 import { cn } from "@/app/components/shared/utils/cn";
 import { apiRequest } from "@/app/lib/api";
+import { useTranslations } from "@/app/lib/i18n";
 import { saveAuthSession } from "@/app/lib/session";
 import type { LoginResponse } from "@/app/lib/types";
 
@@ -18,19 +19,21 @@ function OAuthCallbackCard({
   missingCode: boolean;
   loading: boolean;
 }) {
+  const { t } = useTranslations();
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-indigo-50 px-4 py-10 sm:px-6 lg:px-8">
       <div className="mx-auto w-full max-w-xl overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl">
         <div className="border-b border-slate-100 bg-slate-50 px-6 py-5 sm:px-10">
-          <p className="text-xs font-semibold uppercase tracking-[0.25em] text-slate-500">AssetFlow</p>
-          <h2 className="mt-2 text-2xl font-semibold text-slate-900">Signing you in...</h2>
-          <p className="mt-1 text-sm text-slate-500">This will only take a moment.</p>
+          <p className="text-xs font-semibold uppercase tracking-[0.25em] text-slate-500">{t("common.appName")}</p>
+          <h2 className="mt-2 text-2xl font-semibold text-slate-900">{t("oauth.heading")}</h2>
+          <p className="mt-1 text-sm text-slate-500">{t("oauth.subheading")}</p>
         </div>
 
         <div className="px-6 py-8 sm:px-10">
           {missingCode && (
             <p className="rounded-xl border border-red-100 bg-red-50 px-4 py-2 text-sm text-red-700">
-              Missing OAuth code. Please try again.
+              {t("oauth.missingCode")}
             </p>
           )}
 
@@ -46,7 +49,7 @@ function OAuthCallbackCard({
                   "inline-flex h-11 w-full items-center justify-center rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-slate-50 sm:w-auto",
                 )}
               >
-                Back to sign in
+                {t("oauth.backToSignIn")}
               </Link>
               <Link
                 href="/"
@@ -54,7 +57,7 @@ function OAuthCallbackCard({
                   "inline-flex h-11 w-full items-center justify-center rounded-xl bg-indigo-600 px-4 text-sm font-semibold text-white shadow-lg shadow-indigo-200 transition hover:bg-indigo-700 sm:w-auto",
                 )}
               >
-                Go home
+                {t("oauth.goHome")}
               </Link>
             </div>
           )}
@@ -62,7 +65,7 @@ function OAuthCallbackCard({
           {!missingCode && !error && loading && (
             <div className="mt-2 flex items-center gap-3 text-sm text-slate-600">
               <span className="inline-flex h-2.5 w-2.5 animate-pulse rounded-full bg-indigo-600" />
-              Completing OAuth exchange...
+              {t("oauth.completing")}
             </div>
           )}
         </div>
@@ -74,6 +77,7 @@ function OAuthCallbackCard({
 function OAuthCallbackContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { t } = useTranslations();
   const code = searchParams.get("code");
   const [error, setError] = useState<string | null>(null);
   const missingCode = !code;
@@ -99,7 +103,7 @@ function OAuthCallbackContent() {
         router.replace("/user/account");
       } catch (err) {
         if ((err as DOMException).name !== "AbortError") {
-          setError("Unable to complete OAuth sign-in. Please try again.");
+          setError(t("oauth.errorFallback"));
           setLoading(false);
         }
       }
@@ -108,7 +112,7 @@ function OAuthCallbackContent() {
     void exchangeCode();
 
     return () => controller.abort();
-  }, [router, code]);
+  }, [router, code, t]);
 
   return <OAuthCallbackCard error={error} missingCode={missingCode} loading={loading} />;
 }

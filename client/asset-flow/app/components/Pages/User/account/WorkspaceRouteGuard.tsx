@@ -1,5 +1,7 @@
 "use client";
 
+import { useTranslations } from "@/app/lib/i18n";
+
 import { EmptyState } from "./shared";
 import { useWorkspaceContext } from "./WorkspaceContext";
 
@@ -10,6 +12,7 @@ export function WorkspaceRouteGuard({
   sectionHref: string;
   children: React.ReactNode;
 }) {
+  const { t } = useTranslations();
   const { visibleSections, workspaceScopeLabel } = useWorkspaceContext();
   const allowed = visibleSections.some((section) => section.href === sectionHref);
 
@@ -20,8 +23,8 @@ export function WorkspaceRouteGuard({
   return (
     <div className="rounded-3xl border border-slate-200 bg-white p-8 shadow-sm">
       <EmptyState
-        title="This page is not available for your role"
-        description={`Your current workspace is limited to ${workspaceScopeLabel.toLowerCase()}, so this tool stays hidden here.`}
+        title={t("workspace.guard.title")}
+        description={t("workspace.guard.description", { scope: workspaceScopeLabel })}
       />
     </div>
   );

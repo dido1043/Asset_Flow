@@ -3,6 +3,7 @@ import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { apiRequest, buildApiUrl, getErrorMessage } from "@/app/lib/api";
+import { useTranslations } from "@/app/lib/i18n";
 import type { OrganizationDto, Role, UserDto } from "@/app/lib/types";
 import { Button } from "../../ui/Button";
 import { Input } from "../../ui/Input";
@@ -26,6 +27,7 @@ interface RegisterFormData {
 
 const RegisterForm = () => {
     const router = useRouter();
+    const { t } = useTranslations();
     const [formData, setFormData] = useState<RegisterFormData>({
         fullName: "",
         email: "",
@@ -152,7 +154,7 @@ const RegisterForm = () => {
                 router.push("/user/login");
             }, 1200);
         } catch (error: unknown) {
-            const message = getErrorMessage(error) || "Registration failed";
+            const message = getErrorMessage(error) || t("registerForm.errorFallback");
             setError(message);
         } finally {
             setLoading(false);
@@ -182,7 +184,7 @@ const RegisterForm = () => {
             <form onSubmit={handleSubmit} className="mt-8 space-y-5">
                 <div className="grid gap-5 sm:grid-cols-2">
                     <div className="sm:col-span-2">
-                        <Label htmlFor="fullName">Full Name</Label>
+                        <Label htmlFor="fullName">{t("registerForm.fullName")}</Label>
                         <Input
                             id="fullName"
                             name="fullName"
@@ -193,12 +195,12 @@ const RegisterForm = () => {
                     </div>
 
                     <div>
-                        <Label htmlFor="email">Work Email</Label>
+                        <Label htmlFor="email">{t("registerForm.email")}</Label>
                         <Input id="email" name="email" type="email" value={formData.email} onChange={handleChange} required />
                     </div>
 
                     <div>
-                        <Label htmlFor="password">Password</Label>
+                        <Label htmlFor="password">{t("registerForm.password")}</Label>
                         <Input
                             id="password"
                             name="password"
@@ -210,7 +212,7 @@ const RegisterForm = () => {
                     </div>
 
                     <div>
-                        <Label htmlFor="role">Role</Label>
+                        <Label htmlFor="role">{t("registerForm.role")}</Label>
                         <select
                             id="role"
                             name="role"
@@ -219,14 +221,14 @@ const RegisterForm = () => {
                             className="mt-2 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm text-slate-900 shadow-sm outline-none transition placeholder:text-slate-400 focus:border-indigo-500 focus:bg-white focus:ring-2 focus:ring-indigo-200"
                             required
                         >
-                            <option value="">Select role</option>
-                            <option value="EMPLOYEE">Employee</option>
-                            <option value="LEADER">Leader</option>
+                            <option value="">{t("registerForm.selectRole")}</option>
+                            <option value="EMPLOYEE">{t("registerForm.employee")}</option>
+                            <option value="LEADER">{t("registerForm.leader")}</option>
                         </select>
                     </div>
 
                     <div>
-                        <Label htmlFor="age">Age</Label>
+                        <Label htmlFor="age">{t("registerForm.age")}</Label>
                         <Input
                             id="age"
                             name="age"
@@ -238,7 +240,7 @@ const RegisterForm = () => {
                     </div>
                     {formData.role === "EMPLOYEE" ? (
                         <div>
-                            <Label htmlFor="organizationId">Company</Label>
+                            <Label htmlFor="organizationId">{t("registerForm.company")}</Label>
                             {organizations.length > 0 ? (
                                 <>
                                     <select
@@ -253,7 +255,7 @@ const RegisterForm = () => {
                                         }
                                         className="mt-2 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm text-slate-900 shadow-sm outline-none transition placeholder:text-slate-400 focus:border-indigo-500 focus:bg-white focus:ring-2 focus:ring-indigo-200"
                                     >
-                                        <option value="">Select your company</option>
+                                        <option value="">{t("registerForm.selectCompany")}</option>
                                         {organizations.map((organization) => (
                                             <option key={organization.id} value={organization.id}>
                                                 {organization.organizationName}
@@ -262,7 +264,7 @@ const RegisterForm = () => {
                                         ))}
                                     </select>
                                     <p className="mt-2 text-xs text-slate-500">
-                                        Company names are shown here. The matching organization ID is submitted to the backend.
+                                        {t("registerForm.companyHint")}
                                     </p>
                                 </>
                             ) : (
@@ -273,7 +275,7 @@ const RegisterForm = () => {
                                     value={formData.organizationId}
                                     onChange={handleChange}
                                     min={0}
-                                    placeholder="Enter the company ID if the company list is unavailable"
+                                    placeholder={t("registerForm.companyFallbackPlaceholder")}
                                 />
                             )}
                         </div>
@@ -287,7 +289,7 @@ const RegisterForm = () => {
                 {
                     formData.role === "EMPLOYEE" ? (
                         <div>
-                    <Label htmlFor="assignmentIds">Existing assignment IDs (optional)</Label>
+                    <Label htmlFor="assignmentIds">{t("registerForm.assignmentIds")}</Label>
                     <div className="mt-2 flex flex-col gap-2 sm:flex-row sm:items-center">
                         <Input
                             id="assignmentIds"
@@ -295,10 +297,10 @@ const RegisterForm = () => {
                             type="text"
                             value={formData.assignmentIds}
                             onChange={handleChange}
-                            placeholder="Usually leave empty for new employees"
+                            placeholder={t("registerForm.assignmentPlaceholder")}
                             className="mt-0 flex-1"
                         />
-                        <span className="text-xs text-slate-500">Separate IDs with commas if you really need to prefill them</span>
+                        <span className="text-xs text-slate-500">{t("registerForm.assignmentHint")}</span>
                     </div>
                 </div>
                     ) : null
@@ -311,22 +313,22 @@ const RegisterForm = () => {
                     size="lg"
                     disabled={loading}
                 >
-                    {loading ? "Creating account…" : "Create account"}
+                    {loading ? t("registerForm.submitting") : t("registerForm.submit")}
                 </Button>
             </form>
 
             <div className="mt-6 flex flex-col gap-3">
-                <p className="text-xs text-slate-500">Or continue with</p>
+                <p className="text-xs text-slate-500">{t("registerForm.orContinue")}</p>
                 <Button type="button" variant="outline" size="lg" className="w-full" onClick={handleGoogleRegister}>
                     <span className="inline-flex h-2.5 w-2.5 rounded-full bg-red-500" />
-                    Register with Google
+                    {t("registerForm.google")}
                 </Button>
             </div>
 
             {error && <p className="mt-4 rounded-xl border border-red-100 bg-red-50 px-4 py-2 text-sm text-red-700">{error}</p>}
             {success && (
                 <p className="mt-4 rounded-xl border border-emerald-100 bg-emerald-50 px-4 py-2 text-sm text-emerald-700">
-                    Registered successfully. Redirecting you to sign in...
+                    {t("registerForm.success")}
                 </p>
             )}
         </div>

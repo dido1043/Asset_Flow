@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import React from "react";
 
 import { apiRequest, getErrorMessage } from "@/app/lib/api";
+import { getRoleLabel, useTranslations } from "@/app/lib/i18n";
 import {
   clearAuthSession,
   readAuthSession,
@@ -22,7 +23,6 @@ import type {
 
 import type { Feedback, KnownOrganization, SelectOption } from "./types";
 import {
-  formatRoleLabel,
   getWorkspaceSections,
   parseOptionalNumber,
   parseRequiredNumber,
@@ -91,6 +91,7 @@ function buildOrganizationPlaceholder(
 
 export function useAccountWorkspace() {
   const router = useRouter();
+  const { t } = useTranslations();
   const seededIdsRef = React.useRef(false);
 
   const [session, setSession] = React.useState<AuthSession | null>(null);
@@ -194,7 +195,16 @@ export function useAccountWorkspace() {
   const canManageOrganizationMembers = isAdmin;
   const canCreateOrganizations = isAdmin;
 
-  const workspaceScopeLabel = isAdmin ? "All company data" : isLeader ? "Your company only" : "Your records only";
+  const workspaceScopeLabel = isAdmin
+    ? t("workspace.scope.allCompanyData")
+    : isLeader
+      ? t("workspace.scope.yourCompanyOnly")
+      : t("workspace.scope.yourRecordsOnly");
+  const workspaceVisibilityLabel = isAdmin
+    ? t("workspace.scope.allowedAdminData")
+    : isLeader
+      ? t("workspace.scope.yourCompany")
+      : t("workspace.scope.yourOwnRecords");
   const visibleSections = getWorkspaceSections(activeRole);
 
   const myAssignmentsCount =
@@ -222,6 +232,11 @@ export function useAccountWorkspace() {
       [key]: value,
     }));
   }, []);
+
+  const requiredFieldMessage = React.useCallback(
+    (fieldKey: string) => t("feedback.fieldRequired", { field: t(fieldKey) }),
+    [t],
+  );
 
   const runAction = React.useCallback(
     async <T,>(key: string, action: () => Promise<T>, successMessage?: string) => {
@@ -296,7 +311,7 @@ export function useAccountWorkspace() {
       );
 
       if (results.some((result) => result.status === "rejected")) {
-        rememberError("products");
+        rememberError(t("feedback.products"));
       }
 
       return dedupeById(
@@ -314,7 +329,7 @@ export function useAccountWorkspace() {
       );
 
       if (results.some((result) => result.status === "rejected")) {
-        rememberError("protocols");
+        rememberError(t("feedback.protocols"));
       }
 
       return dedupeById(
@@ -323,7 +338,7 @@ export function useAccountWorkspace() {
     };
 
     const nextCurrentUser = await loadOrFallback(
-      "current user",
+      t("feedback.currentUser"),
       () => apiRequest<UserDto>(`/auth/user/${activeSession.userId}`),
       null as UserDto | null,
     );
@@ -349,13 +364,13 @@ export function useAccountWorkspace() {
     const nextUsers =
       nextCurrentUser.role === "ADMIN"
         ? ensureUserIncluded(
-            await loadOrFallback("users", () => apiRequest<UserDto[]>("/auth/users"), []),
+            await loadOrFallback(t("feedback.users"), () => apiRequest<UserDto[]>("/auth/users"), []),
             nextCurrentUser,
           )
         : nextCurrentUser.role === "LEADER" && nextOrganizationId != null
           ? ensureUserIncluded(
               await loadOrFallback(
-                "users",
+                t("feedback.users"),
                 () => apiRequest<UserDto[]>(`/auth/users/org/${nextOrganizationId}`),
                 [],
               ),
@@ -365,16 +380,16 @@ export function useAccountWorkspace() {
 
     const nextAssignments =
       nextCurrentUser.role === "ADMIN"
-        ? await loadOrFallback("assignments", () => apiRequest<AssignmentDto[]>("/assignment/all"), [])
+        ? await loadOrFallback(t("feedback.assignments"), () => apiRequest<AssignmentDto[]>("/assignment/all"), [])
         : nextCurrentUser.role === "LEADER" && nextOrganizationId != null
           ? await loadOrFallback(
-              "assignments",
+              t("feedback.assignments"),
               () => apiRequest<AssignmentDto[]>(`/assignment/org/${nextOrganizationId}`),
               [],
             )
           : nextUserId != null
             ? await loadOrFallback(
-                "assignments",
+                t("feedback.assignments"),
                 () => apiRequest<AssignmentDto[]>(`/assignment/user/${nextUserId}`),
                 [],
               )
@@ -382,15 +397,15 @@ export function useAccountWorkspace() {
 
     const nextCurrentAssignments =
       nextCurrentUser.role === "ADMIN"
-        ? await loadOrFallback("current assignments", () => apiRequest<AssignmentDto[]>("/assignment/current"), [])
+        ? await loadOrFallback(t("feedback.currentAssignments"), () => apiRequest<AssignmentDto[]>("/assignment/current"), [])
         : nextAssignments.filter((assignment) => !assignment.dateReturned);
 
     const nextProducts =
       nextCurrentUser.role === "ADMIN"
-        ? await loadOrFallback("products", () => apiRequest<ProductDto[]>("/product/all"), [])
+        ? await loadOrFallback(t("feedback.products"), () => apiRequest<ProductDto[]>("/product/all"), [])
         : nextCurrentUser.role === "LEADER" && nextOrganizationId != null
           ? await loadOrFallback(
-              "products",
+              t("feedback.products"),
               () => apiRequest<ProductDto[]>(`/product/org/${nextOrganizationId}`),
               [],
             )
@@ -407,7 +422,7 @@ export function useAccountWorkspace() {
         );
 
         if (results.some((result) => result.status === "rejected")) {
-          rememberError("organizations");
+          rememberError(t("feedback.organizations"));
         }
 
         return dedupeById(
@@ -437,7 +452,7 @@ export function useAccountWorkspace() {
       if (nextCurrentUser.role === "LEADER") {
         if (typeof nextCurrentUser.id === "number") {
           const organization = await loadOrFallback(
-            "organizations",
+            t("feedback.organizations"),
             () => apiRequest<OrganizationDto>(`/org/leader/${nextCurrentUser.id}`),
             null as OrganizationDto | null,
           );
@@ -458,7 +473,7 @@ export function useAccountWorkspace() {
           return [
             buildOrganizationPlaceholder(
               nextOrganizationId,
-              "Current company",
+              t("fallback.currentCompany"),
               nextUsers.filter((user) => user.organizationId === nextOrganizationId).length,
               nextCurrentUser.id ?? null,
               nextCurrentUser.fullName ?? null,
@@ -473,7 +488,7 @@ export function useAccountWorkspace() {
         return [
           buildOrganizationPlaceholder(
             nextOrganizationId,
-            "Your company",
+            t("fallback.yourCompany"),
             1,
           ),
         ];
@@ -510,7 +525,7 @@ export function useAccountWorkspace() {
       protocols: nextProtocols,
       errors,
     };
-  }, []);
+  }, [t]);
 
   const applyWorkspaceSnapshot = React.useCallback((snapshot: WorkspaceSnapshot) => {
     if (!snapshot.currentUser) {
@@ -604,14 +619,17 @@ export function useAccountWorkspace() {
       applyWorkspaceSnapshot(snapshot);
 
       if (!snapshot.currentUser) {
-        setBootstrapError("We could not load your workspace account.");
+        setBootstrapError(t("feedback.workspaceAccountLoadError"));
         setBootstrapping(false);
         return;
       }
 
       setBootstrapError(
         snapshot.errors.length > 0
-          ? `Some workspace data could not be loaded (${snapshot.errors.join(", ")}). Your view is still limited to ${snapshot.currentUser.role === "ADMIN" ? "allowed admin data" : snapshot.currentUser.role === "LEADER" ? "your company" : "your own records"}.`
+          ? t("feedback.workspacePartialLoad", {
+              items: snapshot.errors.join(", "),
+              scope: workspaceVisibilityLabel,
+            })
           : null,
       );
       setBootstrapping(false);
@@ -622,7 +640,7 @@ export function useAccountWorkspace() {
     return () => {
       cancelled = true;
     };
-  }, [applyWorkspaceSnapshot, loadWorkspaceSnapshot, session]);
+  }, [applyWorkspaceSnapshot, loadWorkspaceSnapshot, session, t, workspaceVisibilityLabel]);
 
   React.useEffect(() => {
     if (!currentUser) {
@@ -698,18 +716,18 @@ export function useAccountWorkspace() {
 
   const getUserName = (userId?: number | null) => {
     if (userId == null) {
-      return "Not assigned";
+      return t("common.notAssigned");
     }
 
     const user = users.find((candidate) => candidate.id === userId) ?? (currentUser?.id === userId ? currentUser : null);
-    return user ? user.fullName : "Unknown teammate";
+    return user ? user.fullName : t("fallback.unknownTeammate");
   };
 
   const getUserOptionLabel = (user: UserDto) => `${user.fullName} • ${user.email}`;
 
   const getOrganizationName = (organizationId?: number | null) => {
     if (organizationId == null) {
-      return "Not assigned";
+      return t("common.notAssigned");
     }
 
     const organization = allOrganizations.find((candidate) => candidate.id === organizationId);
@@ -718,20 +736,20 @@ export function useAccountWorkspace() {
     }
 
     if (organizationId === currentUser?.organizationId) {
-      return isEmployee ? "Your company" : "Current company";
+      return isEmployee ? t("fallback.yourCompany") : t("fallback.currentCompany");
     }
 
-    return "Unknown company";
+    return t("fallback.unknownCompany");
   };
 
   const getOrganizationOptionLabel = (organization: KnownOrganization) =>
     organization.leaderName
-      ? `${organization.organizationName} • led by ${organization.leaderName}`
+      ? `${organization.organizationName} • ${t("organizations.leader")}: ${organization.leaderName}`
       : organization.organizationName;
 
   const getProductLabel = (product?: ProductDto | null) => {
     if (!product) {
-      return "Unknown asset";
+      return t("fallback.unknownAsset");
     }
 
     return `${product.productBrand} ${product.productModel} • ${product.assetTag}`;
@@ -739,11 +757,11 @@ export function useAccountWorkspace() {
 
   const getProductName = (productId?: number | null) => {
     if (productId == null) {
-      return "No asset selected";
+      return t("common.noAssetSelected");
     }
 
     const product = products.find((candidate) => candidate.id === productId);
-    return product ? getProductLabel(product) : "Unknown asset";
+    return product ? getProductLabel(product) : t("fallback.unknownAsset");
   };
 
   const leaderUsers = users.filter((user) => user.role === "LEADER" && typeof user.id === "number");
@@ -815,13 +833,13 @@ export function useAccountWorkspace() {
     }));
 
   const workspaceSectionBadges: Record<string, string> = {
-    profile: formatRoleLabel(currentUser?.role || String(session?.role || "You")),
+    profile: getRoleLabel(currentUser?.role || session?.role, t),
     users: String(users.length),
     organizations: String(allOrganizations.length),
     products: String(products.length),
     assignments: String(assignments.length),
     protocols: String(protocols.length),
-    "ai-tools": aiResult ? "Ready" : "Live",
+    "ai-tools": aiResult ? t("workspace.status.ready") : t("workspace.status.live"),
   };
 
   const refreshCurrentUserSnapshot = async () => {
@@ -859,10 +877,10 @@ export function useAccountWorkspace() {
       async () => {
         const snapshot = await refreshWorkspaceSnapshot();
         if (!snapshot?.currentUser) {
-          throw new Error("We could not refresh your workspace.");
+          throw new Error(t("feedback.workspaceRefreshError"));
         }
       },
-      "Workspace refreshed.",
+      t("feedback.workspaceRefreshed"),
     );
 
     if (refreshed === null) {
@@ -881,8 +899,8 @@ export function useAccountWorkspace() {
       "profile",
       async () => {
         const payload: UserDto = {
-          fullName: requireText(profileForm.fullName, "Full name"),
-          email: requireText(profileForm.email, "Email"),
+          fullName: requireText(profileForm.fullName, requiredFieldMessage("fields.fullName")),
+          email: requireText(profileForm.email, requiredFieldMessage("fields.email")),
           password: profileForm.password || null,
           role: currentUser?.role ?? profileForm.role,
           age: parseOptionalNumber(profileForm.age),
@@ -895,7 +913,7 @@ export function useAccountWorkspace() {
           json: payload,
         });
       },
-      "Profile updated.",
+      t("feedback.profileUpdated"),
     );
 
     if (!updatedUser) {
@@ -936,7 +954,11 @@ export function useAccountWorkspace() {
 
         return [currentUser];
       },
-      isAdmin ? "Users loaded." : isLeader ? "Your company teammates loaded." : "Your account is already in view.",
+      isAdmin
+        ? t("feedback.usersLoaded")
+        : isLeader
+          ? t("feedback.teammatesLoaded")
+          : t("feedback.accountAlreadyVisible"),
     );
 
     if (nextUsers) {
@@ -946,11 +968,11 @@ export function useAccountWorkspace() {
   };
 
   const handleLookupUser = async () => {
-    const userId = parseRequiredNumber(userLookupId, "Teammate");
+    const userId = parseRequiredNumber(userLookupId, requiredFieldMessage("fields.teammate"));
     if (!isAdmin && !accessibleUserIds.has(userId)) {
       setFeedback("users", {
         tone: "error",
-        message: "You can only open teammates that belong to your allowed workspace scope.",
+        message: t("feedback.onlyScopeTeammatesOpen"),
       });
       return;
     }
@@ -959,7 +981,7 @@ export function useAccountWorkspace() {
     const user = await runAction(
       "users",
       () => (localUser && !isAdmin ? Promise.resolve(localUser) : apiRequest<UserDto>(`/auth/user/${userId}`)),
-      "User loaded.",
+      t("feedback.userLoaded"),
     );
 
     if (user) {
@@ -969,20 +991,20 @@ export function useAccountWorkspace() {
 
   const handleDeleteUser = async () => {
     if (!canDeleteUsers) {
-      setFeedback("users", { tone: "error", message: "Only admins can remove user accounts." });
+      setFeedback("users", { tone: "error", message: t("feedback.onlyAdminsDeleteUsers") });
       return;
     }
 
-    const userId = parseRequiredNumber(deleteUserId, "Teammate");
+    const userId = parseRequiredNumber(deleteUserId, requiredFieldMessage("fields.teammate"));
 
-    if (!window.confirm(`Delete ${getUserName(userId)}? This cannot be undone.`)) {
+    if (!window.confirm(t("feedback.deleteUserConfirm", { name: getUserName(userId) }))) {
       return;
     }
 
     const deletedUser = await runAction(
       "users",
       () => apiRequest<UserDto>(`/auth/user/delete/${userId}`, { method: "DELETE" }),
-      "User deleted.",
+      t("feedback.userDeleted"),
     );
 
     if (!deletedUser) {
@@ -1002,7 +1024,7 @@ export function useAccountWorkspace() {
 
   const handleLookupOrganization = async () => {
     if (!canManageOrganizations) {
-      setFeedback("organizations", { tone: "error", message: "Your role cannot open company-wide records." });
+      setFeedback("organizations", { tone: "error", message: t("feedback.restrictedCompanyRecords") });
       return;
     }
 
@@ -1013,16 +1035,16 @@ export function useAccountWorkspace() {
           return allOrganizations.find((candidate) => candidate.id === currentUser?.organizationId) ?? leaderOrganization;
         }
 
-        const leaderId = parseRequiredNumber(organizationLookupLeaderId, "Leader");
+        const leaderId = parseRequiredNumber(organizationLookupLeaderId, requiredFieldMessage("fields.leader"));
         return apiRequest<OrganizationDto>(`/org/leader/${leaderId}`);
       },
-      "Organization loaded.",
+      t("feedback.organizationLoaded"),
     );
 
     if (organization) {
       setLeaderOrganization(organization);
       if (isAdmin) {
-        const leaderId = parseRequiredNumber(organizationLookupLeaderId, "Leader");
+        const leaderId = parseRequiredNumber(organizationLookupLeaderId, requiredFieldMessage("fields.leader"));
         upsertOrganizationSummary(organization, leaderId);
       }
     }
@@ -1032,12 +1054,15 @@ export function useAccountWorkspace() {
     event.preventDefault();
 
     if (!canCreateOrganizations) {
-      setFeedback("organizations", { tone: "error", message: "Only admins can create new companies." });
+      setFeedback("organizations", { tone: "error", message: t("feedback.onlyAdminsCreateCompanies") });
       return;
     }
 
-    const leaderId = parseRequiredNumber(organizationCreateForm.leaderId, "Leader");
-    const organizationName = requireText(organizationCreateForm.organizationName, "Organization name");
+    const leaderId = parseRequiredNumber(organizationCreateForm.leaderId, requiredFieldMessage("fields.leader"));
+    const organizationName = requireText(
+      organizationCreateForm.organizationName,
+      requiredFieldMessage("fields.organizationName"),
+    );
 
     const organization = await runAction(
       "organizations",
@@ -1046,7 +1071,7 @@ export function useAccountWorkspace() {
           method: "POST",
           json: { organizationName },
         }),
-      "Organization created.",
+      t("feedback.organizationCreated"),
     );
 
     if (!organization) {
@@ -1064,13 +1089,13 @@ export function useAccountWorkspace() {
     if (!canManageOrganizationMembers) {
       setFeedback("organizations", {
         tone: "error",
-        message: "Only admins can move teammates between companies from this workspace.",
+        message: t("feedback.onlyAdminsMoveUsers"),
       });
       return;
     }
 
-    const userId = parseRequiredNumber(joinOrganizationForm.userId, "Teammate");
-    const organizationId = parseRequiredNumber(joinOrganizationForm.organizationId, "Company");
+    const userId = parseRequiredNumber(joinOrganizationForm.userId, requiredFieldMessage("fields.teammate"));
+    const organizationId = parseRequiredNumber(joinOrganizationForm.organizationId, requiredFieldMessage("fields.company"));
 
     const organization = await runAction(
       "organizations",
@@ -1078,7 +1103,7 @@ export function useAccountWorkspace() {
         apiRequest<OrganizationDto>(`/org/join/${userId}/${organizationId}`, {
           method: "POST",
         }),
-      "User joined organization.",
+      t("feedback.organizationJoined"),
     );
 
     if (!organization) {
@@ -1096,13 +1121,13 @@ export function useAccountWorkspace() {
     if (!canManageOrganizationMembers) {
       setFeedback("organizations", {
         tone: "error",
-        message: "Only admins can assign company leadership from this workspace.",
+        message: t("feedback.onlyAdminsAssignLeaders"),
       });
       return;
     }
 
-    const userId = parseRequiredNumber(becomeLeaderForm.userId, "Teammate");
-    const organizationId = parseRequiredNumber(becomeLeaderForm.organizationId, "Company");
+    const userId = parseRequiredNumber(becomeLeaderForm.userId, requiredFieldMessage("fields.teammate"));
+    const organizationId = parseRequiredNumber(becomeLeaderForm.organizationId, requiredFieldMessage("fields.company"));
 
     const result = await runAction(
       "organizations",
@@ -1110,7 +1135,7 @@ export function useAccountWorkspace() {
         apiRequest<void>(`/org/becomeLeader/${userId}/${organizationId}`, {
           method: "POST",
         }),
-      "Leader updated.",
+      t("feedback.leaderUpdated"),
     );
 
     if (result === null) {
@@ -1137,16 +1162,16 @@ export function useAccountWorkspace() {
 
   const handleLoadOrganizationInventory = async () => {
     if (!canManageOrganizations) {
-      setFeedback("organizations", { tone: "error", message: "Your role cannot open company inventory." });
+      setFeedback("organizations", { tone: "error", message: t("feedback.restrictedInventory") });
       return;
     }
 
-    const organizationId = parseRequiredNumber(inventoryOrgId, "Company");
+    const organizationId = parseRequiredNumber(inventoryOrgId, requiredFieldMessage("fields.company"));
 
     if (!isAdmin && organizationId !== currentUser?.organizationId) {
       setFeedback("organizations", {
         tone: "error",
-        message: "Leaders can only load inventory for their own company.",
+        message: t("feedback.leadersOwnInventoryOnly"),
       });
       return;
     }
@@ -1154,7 +1179,7 @@ export function useAccountWorkspace() {
     const inventory = await runAction(
       "organizations",
       () => apiRequest<ProductDto[]>(`/org/inventory/${organizationId}`),
-      "Inventory loaded.",
+      t("feedback.inventoryLoaded"),
     );
 
     if (inventory) {
@@ -1163,16 +1188,16 @@ export function useAccountWorkspace() {
   };
 
   const buildProductPayload = () => ({
-    productType: requireText(productForm.productType, "Product type"),
-    productBrand: requireText(productForm.productBrand, "Brand"),
-    productModel: requireText(productForm.productModel, "Model"),
-    assetTag: requireText(productForm.assetTag, "Asset tag"),
+    productType: requireText(productForm.productType, requiredFieldMessage("fields.productType")),
+    productBrand: requireText(productForm.productBrand, requiredFieldMessage("fields.brand")),
+    productModel: requireText(productForm.productModel, requiredFieldMessage("fields.model")),
+    assetTag: requireText(productForm.assetTag, requiredFieldMessage("fields.assetTag")),
     organizationId: isLeader ? currentUser?.organizationId ?? null : parseOptionalNumber(productForm.organizationId),
   });
 
   const handleCreateProduct = async (legacy = false) => {
     if (!canManageProducts) {
-      setFeedback("products", { tone: "error", message: "Your role can only view assets assigned to you." });
+      setFeedback("products", { tone: "error", message: t("feedback.restrictedAssetView") });
       return;
     }
 
@@ -1185,7 +1210,7 @@ export function useAccountWorkspace() {
           method: "POST",
           json: buildProductPayload(),
         }),
-      legacy ? "Product created in compatibility mode." : "Product created.",
+      legacy ? t("feedback.productCreatedCompatibility") : t("feedback.productCreated"),
     );
 
     if (!product) {
@@ -1198,14 +1223,14 @@ export function useAccountWorkspace() {
 
   const handleUpdateProduct = async () => {
     if (!canManageProducts) {
-      setFeedback("products", { tone: "error", message: "Only admins and leaders can edit asset records." });
+      setFeedback("products", { tone: "error", message: t("feedback.onlyAdminsLeadersEditProducts") });
       return;
     }
 
-    const productId = parseRequiredNumber(productForm.id, "Asset");
+    const productId = parseRequiredNumber(productForm.id, requiredFieldMessage("fields.asset"));
 
     if (!isAdmin && !accessibleProductIds.has(productId)) {
-      setFeedback("products", { tone: "error", message: "You can only update assets inside your company scope." });
+      setFeedback("products", { tone: "error", message: t("feedback.onlyCompanyAssetsUpdate") });
       return;
     }
 
@@ -1224,7 +1249,7 @@ export function useAccountWorkspace() {
           method: "PUT",
           json: payload,
         }),
-      "Product updated.",
+      t("feedback.productUpdated"),
     );
 
     if (!product) {
@@ -1253,7 +1278,11 @@ export function useAccountWorkspace() {
 
         return products;
       },
-      isAdmin ? "Products loaded." : isLeader ? "Company assets loaded." : "Your assigned assets are already in view.",
+      isAdmin
+        ? t("feedback.productsLoaded")
+        : isLeader
+          ? t("feedback.companyAssetsLoaded")
+          : t("feedback.assignedAssetsAlreadyVisible"),
     );
 
     if (nextProducts) {
@@ -1262,12 +1291,12 @@ export function useAccountWorkspace() {
   };
 
   const handleLookupProduct = async () => {
-    const productId = parseRequiredNumber(productLookupId, "Asset");
+    const productId = parseRequiredNumber(productLookupId, requiredFieldMessage("fields.asset"));
 
     if (!isAdmin && !accessibleProductIds.has(productId)) {
       setFeedback("products", {
         tone: "error",
-        message: "You can only open assets that are already in your allowed workspace scope.",
+        message: t("feedback.onlyVisibleAssetsOpen"),
       });
       return;
     }
@@ -1276,7 +1305,7 @@ export function useAccountWorkspace() {
     const product = await runAction(
       "products",
       () => (localProduct && !isAdmin ? Promise.resolve(localProduct) : apiRequest<ProductDto>(`/product/${productId}`)),
-      "Product loaded.",
+      t("feedback.productLoaded"),
     );
 
     if (product) {
@@ -1285,7 +1314,7 @@ export function useAccountWorkspace() {
   };
 
   const handleSearchProductByAssetTag = async () => {
-    const assetTag = requireText(productAssetTag, "Asset tag");
+    const assetTag = requireText(productAssetTag, requiredFieldMessage("fields.assetTag"));
     const product = await runAction("products", async () => {
       if (isAdmin) {
         return apiRequest<ProductDto>(`/product/asset/${encodeURIComponent(assetTag)}`);
@@ -1293,11 +1322,11 @@ export function useAccountWorkspace() {
 
       const match = products.find((candidate) => candidate.assetTag.toLowerCase() === assetTag.toLowerCase());
       if (!match) {
-        throw new Error("No asset with that tag is visible in your current workspace scope.");
+        throw new Error(t("feedback.noVisibleAssetWithTag"));
       }
 
       return match;
-    }, "Asset tag search complete.");
+    }, t("feedback.productAssetSearchComplete"));
 
     if (product) {
       setSelectedProduct(product);
@@ -1305,14 +1334,14 @@ export function useAccountWorkspace() {
   };
 
   const handleSearchProductByType = async () => {
-    const productType = requireText(productTypeQuery, "Product type");
+    const productType = requireText(productTypeQuery, requiredFieldMessage("fields.productType"));
     const result = await runAction("products", async () => {
       if (isAdmin) {
         return apiRequest<ProductDto[]>(`/product/search/type/${encodeURIComponent(productType)}`);
       }
 
       return products.filter((product) => product.productType.toLowerCase().includes(productType.toLowerCase()));
-    }, "Type search complete.");
+    }, t("feedback.productTypeSearchComplete"));
 
     if (result) {
       setProductTypeResults(result);
@@ -1321,18 +1350,18 @@ export function useAccountWorkspace() {
 
   const handleDeleteProduct = async () => {
     if (!canManageProducts) {
-      setFeedback("products", { tone: "error", message: "Only admins and leaders can delete asset records." });
+      setFeedback("products", { tone: "error", message: t("feedback.onlyAdminsLeadersDeleteProducts") });
       return;
     }
 
-    const productId = parseRequiredNumber(productLookupId || productForm.id, "Asset");
+    const productId = parseRequiredNumber(productLookupId || productForm.id, requiredFieldMessage("fields.asset"));
 
     if (!isAdmin && !accessibleProductIds.has(productId)) {
-      setFeedback("products", { tone: "error", message: "You can only delete assets from your company scope." });
+      setFeedback("products", { tone: "error", message: t("feedback.onlyCompanyAssetsDelete") });
       return;
     }
 
-    if (!window.confirm(`Delete ${getProductName(productId)}?`)) {
+    if (!window.confirm(t("feedback.deleteProductConfirm", { name: getProductName(productId) }))) {
       return;
     }
 
@@ -1342,7 +1371,7 @@ export function useAccountWorkspace() {
         apiRequest<void>(`/product/${productId}`, {
           method: "DELETE",
         }),
-      "Product deleted.",
+      t("feedback.productDeleted"),
     );
 
     if (result === null) {
@@ -1356,8 +1385,8 @@ export function useAccountWorkspace() {
   };
 
   const buildAssignmentPayload = () => ({
-    employeeId: parseRequiredNumber(assignmentForm.employeeId, "Teammate"),
-    productId: parseRequiredNumber(assignmentForm.productId, "Asset"),
+    employeeId: parseRequiredNumber(assignmentForm.employeeId, requiredFieldMessage("fields.teammate")),
+    productId: parseRequiredNumber(assignmentForm.productId, requiredFieldMessage("fields.asset")),
     dateAssigned: toIsoDateTime(assignmentForm.dateAssigned),
     dateReturned: toIsoDateTime(assignmentForm.dateReturned),
   });
@@ -1366,7 +1395,7 @@ export function useAccountWorkspace() {
     if (!canManageAssignments) {
       setFeedback("assignments", {
         tone: "error",
-        message: "Your role can only review assignments already linked to your account.",
+        message: t("feedback.restrictedAssignmentReview"),
       });
       return;
     }
@@ -1376,13 +1405,13 @@ export function useAccountWorkspace() {
     if (!isAdmin && (!accessibleUserIds.has(payload.employeeId) || !accessibleProductIds.has(payload.productId))) {
       setFeedback("assignments", {
         tone: "error",
-        message: "Leaders can only assign assets to teammates and products inside their company scope.",
+        message: t("feedback.leadersAssignWithinScope"),
       });
       return;
     }
 
     if (!payload.dateAssigned) {
-      setFeedback("assignments", { tone: "error", message: "Assigned date is required." });
+      setFeedback("assignments", { tone: "error", message: t("feedback.assignedDateRequired") });
       return;
     }
 
@@ -1393,7 +1422,7 @@ export function useAccountWorkspace() {
           method: "POST",
           json: payload,
         }),
-      "Assignment created.",
+      t("feedback.assignmentCreated"),
     );
 
     if (!assignment) {
@@ -1409,16 +1438,16 @@ export function useAccountWorkspace() {
 
   const handleUpdateAssignment = async () => {
     if (!canManageAssignments) {
-      setFeedback("assignments", { tone: "error", message: "Only admins and leaders can edit assignments." });
+      setFeedback("assignments", { tone: "error", message: t("feedback.onlyAdminsLeadersEditAssignments") });
       return;
     }
 
-    const assignmentId = parseRequiredNumber(assignmentForm.id, "Assignment");
+    const assignmentId = parseRequiredNumber(assignmentForm.id, requiredFieldMessage("fields.assignment"));
 
     if (!isAdmin && !accessibleAssignmentIds.has(assignmentId)) {
       setFeedback("assignments", {
         tone: "error",
-        message: "You can only update assignments that belong to your company scope.",
+        message: t("feedback.onlyCompanyAssignmentsUpdate"),
       });
       return;
     }
@@ -1435,7 +1464,7 @@ export function useAccountWorkspace() {
             dateReturned: assignmentForm.dateReturned ? toIsoDateTime(assignmentForm.dateReturned) : null,
           },
         }),
-      "Assignment updated.",
+      t("feedback.assignmentUpdated"),
     );
 
     if (!assignment) {
@@ -1450,12 +1479,12 @@ export function useAccountWorkspace() {
   };
 
   const handleLookupAssignment = async () => {
-    const assignmentId = parseRequiredNumber(assignmentLookupId, "Assignment");
+    const assignmentId = parseRequiredNumber(assignmentLookupId, requiredFieldMessage("fields.assignment"));
 
     if (!isAdmin && !accessibleAssignmentIds.has(assignmentId)) {
       setFeedback("assignments", {
         tone: "error",
-        message: "You can only open assignments that are already in your allowed workspace scope.",
+        message: t("feedback.onlyVisibleAssignmentsOpen"),
       });
       return;
     }
@@ -1467,7 +1496,7 @@ export function useAccountWorkspace() {
         localAssignment && !isAdmin
           ? Promise.resolve(localAssignment)
           : apiRequest<AssignmentDto>(`/assignment/get/${assignmentId}`),
-      "Assignment loaded.",
+      t("feedback.assignmentLoaded"),
     );
 
     if (assignment) {
@@ -1497,7 +1526,7 @@ export function useAccountWorkspace() {
 
         return [];
       },
-      isAdmin ? "Assignments loaded." : isLeader ? "Company assignments loaded." : "Your assignments loaded.",
+      isAdmin ? t("feedback.assignmentsLoaded") : isLeader ? t("feedback.companyAssignmentsLoaded") : t("feedback.yourAssignmentsLoaded"),
     );
 
     if (nextAssignments) {
@@ -1509,12 +1538,15 @@ export function useAccountWorkspace() {
   };
 
   const handleLoadAssignmentsByUser = async () => {
-    const userId = isEmployee && currentUser?.id != null ? currentUser.id : parseRequiredNumber(assignmentUserId, "Teammate");
+    const userId =
+      isEmployee && currentUser?.id != null
+        ? currentUser.id
+        : parseRequiredNumber(assignmentUserId, requiredFieldMessage("fields.teammate"));
 
     if (!isAdmin && !accessibleUserIds.has(userId)) {
       setFeedback("assignments", {
         tone: "error",
-        message: "You can only review assignment history for teammates inside your allowed scope.",
+        message: t("feedback.onlyScopeTeammateHistory"),
       });
       return;
     }
@@ -1525,7 +1557,7 @@ export function useAccountWorkspace() {
         isAdmin
           ? apiRequest<AssignmentDto[]>(`/assignment/user/${userId}`)
           : Promise.resolve(assignments.filter((assignment) => assignment.employeeId === userId)),
-      "User assignments loaded.",
+      t("feedback.userAssignmentsLoaded"),
     );
 
     if (result) {
@@ -1534,12 +1566,12 @@ export function useAccountWorkspace() {
   };
 
   const handleLoadAssignmentsByProduct = async () => {
-    const productId = parseRequiredNumber(assignmentProductId, "Asset");
+    const productId = parseRequiredNumber(assignmentProductId, requiredFieldMessage("fields.asset"));
 
     if (!isAdmin && !accessibleProductIds.has(productId)) {
       setFeedback("assignments", {
         tone: "error",
-        message: "You can only review assignment history for assets inside your allowed scope.",
+        message: t("feedback.onlyScopeAssetHistory"),
       });
       return;
     }
@@ -1550,7 +1582,7 @@ export function useAccountWorkspace() {
         isAdmin
           ? apiRequest<AssignmentDto[]>(`/assignment/product/${productId}`)
           : Promise.resolve(assignments.filter((assignment) => assignment.productId === productId)),
-      "Product assignments loaded.",
+      t("feedback.productAssignmentsLoaded"),
     );
 
     if (result) {
@@ -1563,7 +1595,7 @@ export function useAccountWorkspace() {
       "assignments",
       () =>
         isAdmin ? apiRequest<AssignmentDto[]>("/assignment/current") : Promise.resolve(assignments.filter((assignment) => !assignment.dateReturned)),
-      "Current assignments loaded.",
+      t("feedback.currentAssignmentsLoaded"),
     );
 
     if (result) {
@@ -1573,21 +1605,24 @@ export function useAccountWorkspace() {
 
   const handleDeleteAssignment = async () => {
     if (!canManageAssignments) {
-      setFeedback("assignments", { tone: "error", message: "Only admins and leaders can delete assignments." });
+      setFeedback("assignments", { tone: "error", message: t("feedback.onlyAdminsLeadersDeleteAssignments") });
       return;
     }
 
-    const assignmentId = parseRequiredNumber(assignmentLookupId || assignmentForm.id, "Assignment");
+    const assignmentId = parseRequiredNumber(
+      assignmentLookupId || assignmentForm.id,
+      requiredFieldMessage("fields.assignment"),
+    );
 
     if (!isAdmin && !accessibleAssignmentIds.has(assignmentId)) {
       setFeedback("assignments", {
         tone: "error",
-        message: "You can only delete assignments from your company scope.",
+        message: t("feedback.onlyCompanyAssignmentsDelete"),
       });
       return;
     }
 
-    if (!window.confirm(`Delete assignment #${assignmentId}?`)) {
+    if (!window.confirm(t("feedback.deleteAssignmentConfirm", { id: assignmentId }))) {
       return;
     }
 
@@ -1597,7 +1632,7 @@ export function useAccountWorkspace() {
         apiRequest<void>(`/assignment/delete/${assignmentId}`, {
           method: "DELETE",
         }),
-      "Assignment deleted.",
+      t("feedback.assignmentDeleted"),
     );
 
     if (result === null) {
@@ -1616,17 +1651,17 @@ export function useAccountWorkspace() {
     if (!canManageProtocols) {
       setFeedback("protocols", {
         tone: "error",
-        message: "Protocol access is reserved for admins and leaders.",
+        message: t("feedback.protocolsAdminsLeadersOnly"),
       });
       return;
     }
 
-    const protocolId = parseRequiredNumber(protocolLookupId, "Protocol");
+    const protocolId = parseRequiredNumber(protocolLookupId, requiredFieldMessage("fields.protocol"));
 
     if (!isAdmin && !accessibleProtocolIds.has(protocolId)) {
       setFeedback("protocols", {
         tone: "error",
-        message: "You can only open protocols that belong to your allowed company scope.",
+        message: t("feedback.onlyScopeProtocolsOpen"),
       });
       return;
     }
@@ -1638,7 +1673,7 @@ export function useAccountWorkspace() {
         localProtocol && !isAdmin
           ? Promise.resolve(localProtocol)
           : apiRequest<ProtocolDto>(`/protocol/${protocolId}`),
-      "Protocol loaded.",
+      t("feedback.protocolLoaded"),
     );
 
     if (protocol) {
@@ -1652,20 +1687,20 @@ export function useAccountWorkspace() {
     if (!canManageProtocols) {
       setFeedback("protocols", {
         tone: "error",
-        message: "Protocol creation is reserved for admins and leaders.",
+        message: t("feedback.protocolCreationAdminsLeadersOnly"),
       });
       return;
     }
 
     const organizationId = isLeader
-      ? currentUser?.organizationId ?? parseRequiredNumber(protocolCreateForm.organizationId, "Company")
-      : parseRequiredNumber(protocolCreateForm.organizationId, "Company");
-    const userId = parseRequiredNumber(protocolCreateForm.userId, "Teammate");
+      ? currentUser?.organizationId ?? parseRequiredNumber(protocolCreateForm.organizationId, requiredFieldMessage("fields.company"))
+      : parseRequiredNumber(protocolCreateForm.organizationId, requiredFieldMessage("fields.company"));
+    const userId = parseRequiredNumber(protocolCreateForm.userId, requiredFieldMessage("fields.teammate"));
 
     if (!isAdmin && organizationId !== currentUser?.organizationId) {
       setFeedback("protocols", {
         tone: "error",
-        message: "Leaders can only create protocols for their own company.",
+        message: t("feedback.leadersOwnProtocolsOnly"),
       });
       return;
     }
@@ -1673,7 +1708,7 @@ export function useAccountWorkspace() {
     if (!isAdmin && !accessibleUserIds.has(userId)) {
       setFeedback("protocols", {
         tone: "error",
-        message: "You can only create protocols for teammates inside your company scope.",
+        message: t("feedback.onlyScopeTeammateProtocols"),
       });
       return;
     }
@@ -1684,7 +1719,7 @@ export function useAccountWorkspace() {
         apiRequest<ProtocolDto>(`/protocol/create/${organizationId}/user/${userId}`, {
           method: "POST",
         }),
-      "Protocol created.",
+      t("feedback.protocolCreated"),
     );
 
     if (protocol) {
@@ -1696,7 +1731,7 @@ export function useAccountWorkspace() {
   const handleGenerateAiResponse = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
-    const prompt = requireText(aiPrompt, "Prompt");
+    const prompt = requireText(aiPrompt, requiredFieldMessage("fields.prompt"));
     const response = await runAction(
       "ai",
       () =>
@@ -1704,7 +1739,7 @@ export function useAccountWorkspace() {
           method: "POST",
           searchParams: { prompt },
         }),
-      "AI response generated.",
+      t("ai.generated"),
     );
 
     if (response) {
