@@ -4,13 +4,14 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 import { Button } from "@/app/components/shared/ui/Button";
+import { getRoleLabel, useTranslations } from "@/app/lib/i18n";
 
 import { FeedbackMessage, StatCard } from "./shared";
 import { WorkspaceProvider, useWorkspaceContext } from "./WorkspaceContext";
-import { formatRoleLabel } from "./utils";
 
 function WorkspaceShellInner({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const { t } = useTranslations();
   const workspace = useWorkspaceContext();
   const {
     allOrganizations,
@@ -37,13 +38,15 @@ function WorkspaceShellInner({ children }: { children: React.ReactNode }) {
     visibleSections.find((section) => section.path === pathname) ??
     visibleSections.find((section) => section.path === "/user/account") ??
     null;
+  const currentSectionLabel = currentSection ? t(currentSection.label) : t("workspace.shell.overviewFallback");
+  const currentSectionHelper = currentSection ? t(currentSection.helper) : t("workspace.shell.currentPageFallback");
 
   if (!sessionChecked) {
     return (
       <div className="rounded-3xl border border-slate-200 bg-white shadow-sm">
         <div className="px-6 py-10 text-center sm:px-8">
-          <p className="text-base font-semibold text-slate-900">Checking your session...</p>
-          <p className="mt-2 text-sm text-slate-500">Preparing your workspace pages.</p>
+          <p className="text-base font-semibold text-slate-900">{t("workspace.shell.checkingTitle")}</p>
+          <p className="mt-2 text-sm text-slate-500">{t("workspace.shell.checkingDescription")}</p>
         </div>
       </div>
     );
@@ -53,8 +56,8 @@ function WorkspaceShellInner({ children }: { children: React.ReactNode }) {
     return (
       <div className="rounded-3xl border border-slate-200 bg-white shadow-sm">
         <div className="px-6 py-10 text-center sm:px-8">
-          <p className="text-base font-semibold text-slate-900">Redirecting to sign in...</p>
-          <p className="mt-2 text-sm text-slate-500">This workspace requires an active browser session.</p>
+          <p className="text-base font-semibold text-slate-900">{t("workspace.shell.redirectTitle")}</p>
+          <p className="mt-2 text-sm text-slate-500">{t("workspace.shell.redirectDescription")}</p>
         </div>
       </div>
     );
@@ -66,14 +69,13 @@ function WorkspaceShellInner({ children }: { children: React.ReactNode }) {
         <div className="grid gap-8 px-6 py-8 sm:px-8 lg:grid-cols-[1.25fr_0.85fr] lg:px-10">
           <div>
             <p className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-semibold uppercase tracking-[0.25em] text-slate-300">
-              Multi-page workspace
+              {t("workspace.shell.heroBadge")}
             </p>
             <h1 className="mt-5 text-3xl font-semibold tracking-tight sm:text-4xl">
-              {currentSection?.label || "Workspace"} built for faster daily work.
+              {t("workspace.shell.heroTitle", { page: currentSectionLabel })}
             </h1>
             <p className="mt-4 max-w-2xl text-sm text-slate-300 sm:text-base">
-              Move through dedicated pages instead of one long dashboard. Your current access stays limited to{" "}
-              {workspaceScopeLabel.toLowerCase()}.
+              {t("workspace.shell.heroDescription", { scope: workspaceScopeLabel })}
             </p>
 
             <div className="mt-6 flex flex-wrap gap-3 lg:hidden">
@@ -90,7 +92,7 @@ function WorkspaceShellInner({ children }: { children: React.ReactNode }) {
                         : "border-white/10 bg-white/5 text-white hover:bg-white/10"
                     }`}
                   >
-                    {section.label}
+                    {t(section.label)}
                   </Link>
                 );
               })}
@@ -98,13 +100,13 @@ function WorkspaceShellInner({ children }: { children: React.ReactNode }) {
 
             <div className="mt-6 grid gap-3 sm:grid-cols-2">
               <div className="rounded-2xl border border-white/10 bg-white/5 p-4 text-sm text-slate-200">
-                <p className="text-xs font-semibold uppercase tracking-[0.25em] text-slate-400">Signed in</p>
+                <p className="text-xs font-semibold uppercase tracking-[0.25em] text-slate-400">{t("workspace.shell.signedIn")}</p>
                 <p className="mt-2 break-words font-semibold leading-tight text-white">
-                  {currentUser?.fullName || "Active teammate"}
+                  {currentUser?.fullName || t("common.activeTeammate")}
                 </p>
                 <div className="mt-3 flex flex-wrap items-center gap-2">
                   <span className="rounded-full bg-white/10 px-3 py-1 text-xs font-semibold text-white">
-                    {formatRoleLabel(currentUser?.role || session.role)}
+                    {getRoleLabel(currentUser?.role || session.role, t)}
                   </span>
                   <span className="text-sm text-slate-300">
                     {getOrganizationName(currentUser?.organizationId ?? null)}
@@ -112,18 +114,18 @@ function WorkspaceShellInner({ children }: { children: React.ReactNode }) {
                 </div>
               </div>
               <div className="rounded-2xl border border-white/10 bg-white/5 p-4 text-sm text-slate-200">
-                <p className="text-xs font-semibold uppercase tracking-[0.25em] text-slate-400">Current page</p>
-                <p className="mt-2 font-semibold text-white">{currentSection?.label || "Workspace overview"}</p>
-                <p className="mt-1">{currentSection?.helper || "Choose a page from the left navigation."}</p>
+                <p className="text-xs font-semibold uppercase tracking-[0.25em] text-slate-400">{t("workspace.shell.currentPage")}</p>
+                <p className="mt-2 font-semibold text-white">{currentSectionLabel}</p>
+                <p className="mt-1">{currentSectionHelper}</p>
               </div>
             </div>
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2">
-            <StatCard label="Users" value={users.length} hint="Visible teammates in your current scope" />
-            <StatCard label="Products" value={products.length} hint="Assets available on your current pages" />
-            <StatCard label="Assignments" value={assignments.length} hint="Assignment records currently loaded" />
-            <StatCard label="My Assignments" value={myAssignmentsCount} hint="Assets linked to your own account" />
+            <StatCard label={t("common.users")} value={users.length} hint={t("workspace.shell.statsUsersHint")} />
+            <StatCard label={t("common.products")} value={products.length} hint={t("workspace.shell.statsProductsHint")} />
+            <StatCard label={t("common.assignments")} value={assignments.length} hint={t("workspace.shell.statsAssignmentsHint")} />
+            <StatCard label={t("workspace.overview.myAssignments")} value={myAssignmentsCount} hint={t("workspace.shell.statsMyAssignmentsHint")} />
           </div>
         </div>
       </section>
@@ -131,8 +133,8 @@ function WorkspaceShellInner({ children }: { children: React.ReactNode }) {
       <div className="grid gap-6 lg:grid-cols-[18rem_minmax(0,1fr)] xl:grid-cols-[19rem_minmax(0,1fr)]">
         <aside className="space-y-5 lg:sticky lg:top-24 lg:self-start">
           <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-            <p className="text-xs font-semibold uppercase tracking-[0.25em] text-slate-500">Workspace Pages</p>
-            <p className="mt-2 text-sm text-slate-600">Jump directly to the tool you need.</p>
+            <p className="text-xs font-semibold uppercase tracking-[0.25em] text-slate-500">{t("workspace.shell.workspacePages")}</p>
+            <p className="mt-2 text-sm text-slate-600">{t("workspace.shell.workspacePagesDescription")}</p>
 
             <nav className="mt-5 space-y-2">
               {visibleSections.map((section) => {
@@ -150,11 +152,11 @@ function WorkspaceShellInner({ children }: { children: React.ReactNode }) {
                     }`}
                   >
                     <span>
-                      <span className="block font-semibold text-slate-900">{section.label}</span>
-                      <span className="block text-xs text-slate-500">{section.helper}</span>
+                      <span className="block font-semibold text-slate-900">{t(section.label)}</span>
+                      <span className="block text-xs text-slate-500">{t(section.helper)}</span>
                     </span>
                     <span className="rounded-full bg-white px-2.5 py-1 text-xs font-semibold text-slate-700 shadow-sm">
-                      {workspaceSectionBadges[sectionKey] ?? "Open"}
+                      {workspaceSectionBadges[sectionKey] ?? t("common.open")}
                     </span>
                   </Link>
                 );
@@ -163,13 +165,13 @@ function WorkspaceShellInner({ children }: { children: React.ReactNode }) {
           </div>
 
           <div className="rounded-3xl bg-slate-900 p-5 text-white shadow-sm">
-            <p className="text-xs font-semibold uppercase tracking-[0.25em] text-slate-400">Quick actions</p>
+            <p className="text-xs font-semibold uppercase tracking-[0.25em] text-slate-400">{t("workspace.shell.quickActions")}</p>
             <p className="mt-3 break-words text-lg font-semibold leading-tight">
-              {currentUser?.fullName || "Active teammate"}
+              {currentUser?.fullName || t("common.activeTeammate")}
             </p>
             <div className="mt-3 flex flex-wrap items-center gap-2 text-sm">
               <span className="rounded-full bg-white/10 px-3 py-1 text-xs font-semibold text-white">
-                {formatRoleLabel(currentUser?.role || session.role)}
+                {getRoleLabel(currentUser?.role || session.role, t)}
               </span>
               <span className="text-slate-300">{workspaceScopeLabel}</span>
             </div>
@@ -180,34 +182,34 @@ function WorkspaceShellInner({ children }: { children: React.ReactNode }) {
                 onClick={handleWorkspaceRefresh}
                 disabled={Boolean(pendingByKey.workspace || bootstrapping)}
               >
-                {pendingByKey.workspace || bootstrapping ? "Refreshing..." : "Refresh workspace"}
+                {pendingByKey.workspace || bootstrapping ? t("common.refreshing") : t("workspace.shell.refreshWorkspace")}
               </Button>
               <Button
                 variant="ghost"
                 className="w-full text-slate-200 hover:bg-white/10 hover:text-white"
                 onClick={handleSignOut}
               >
-                Sign out
+                {t("common.signOut")}
               </Button>
             </div>
           </div>
 
           <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-            <p className="text-sm font-semibold text-slate-900">Quick facts</p>
+            <p className="text-sm font-semibold text-slate-900">{t("workspace.shell.quickFacts")}</p>
             <div className="mt-4 space-y-3 text-sm text-slate-600">
               <div className="flex items-center justify-between gap-4">
-                <span>Role</span>
+                <span>{t("common.role")}</span>
                 <span className="text-right font-semibold text-slate-900">
-                  {formatRoleLabel(currentUser?.role || session.role)}
+                  {getRoleLabel(currentUser?.role || session.role, t)}
                 </span>
               </div>
               <div className="flex items-center justify-between gap-4">
-                <span>Companies known</span>
+                <span>{t("workspace.shell.companiesKnown")}</span>
                 <span className="font-semibold text-slate-900">{allOrganizations.length}</span>
               </div>
               <div className="flex items-center justify-between gap-4">
-                <span>Session storage</span>
-                <span className="text-right font-semibold text-slate-900">Current tab only</span>
+                <span>{t("workspace.shell.sessionStorage")}</span>
+                <span className="text-right font-semibold text-slate-900">{t("common.currentTabOnly")}</span>
               </div>
             </div>
           </div>

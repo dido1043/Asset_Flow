@@ -8,14 +8,14 @@ export const selectClassName =
   "mt-2 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm text-slate-900 shadow-sm outline-none transition focus:border-indigo-500 focus:bg-white focus:ring-2 focus:ring-indigo-200";
 
 export const workspaceSections: WorkspaceSection[] = [
-  { href: "#overview", path: "/user/account", label: "Overview", helper: "Start page" },
-  { href: "#profile", path: "/user/account/profile", label: "Profile", helper: "Account and session" },
-  { href: "#users", path: "/user/account/users", label: "Users", helper: "Teammates and roles" },
-  { href: "#organizations", path: "/user/account/organizations", label: "Organizations", helper: "Companies and leaders" },
-  { href: "#products", path: "/user/account/products", label: "Products", helper: "Inventory and assets" },
-  { href: "#assignments", path: "/user/account/assignments", label: "Assignments", helper: "Issued equipment" },
-  { href: "#protocols", path: "/user/account/protocols", label: "Protocols", helper: "PDF generation" },
-  { href: "#ai-tools", path: "/user/account/ai", label: "AI", helper: "Prompt tools" },
+  { href: "#overview", path: "/user/account", label: "workspace.sections.overview.label", helper: "workspace.sections.overview.helper" },
+  { href: "#profile", path: "/user/account/profile", label: "workspace.sections.profile.label", helper: "workspace.sections.profile.helper" },
+  { href: "#users", path: "/user/account/users", label: "workspace.sections.users.label", helper: "workspace.sections.users.helper" },
+  { href: "#organizations", path: "/user/account/organizations", label: "workspace.sections.organizations.label", helper: "workspace.sections.organizations.helper" },
+  { href: "#products", path: "/user/account/products", label: "workspace.sections.products.label", helper: "workspace.sections.products.helper" },
+  { href: "#assignments", path: "/user/account/assignments", label: "workspace.sections.assignments.label", helper: "workspace.sections.assignments.helper" },
+  { href: "#protocols", path: "/user/account/protocols", label: "workspace.sections.protocols.label", helper: "workspace.sections.protocols.helper" },
+  { href: "#ai-tools", path: "/user/account/ai", label: "workspace.sections.ai.label", helper: "workspace.sections.ai.helper" },
 ];
 
 export function getWorkspaceSections(role?: string | null) {
@@ -38,19 +38,19 @@ export function parseOptionalNumber(value: string) {
   return Number.isFinite(parsed) ? parsed : null;
 }
 
-export function parseRequiredNumber(value: string, label: string) {
+export function parseRequiredNumber(value: string, message: string) {
   const parsed = parseOptionalNumber(value);
   if (parsed === null) {
-    throw new Error(`${label} is required.`);
+    throw new Error(message);
   }
 
   return parsed;
 }
 
-export function requireText(value: string, label: string) {
+export function requireText(value: string, message: string) {
   const trimmed = value.trim();
   if (!trimmed) {
-    throw new Error(`${label} is required.`);
+    throw new Error(message);
   }
 
   return trimmed;
@@ -79,9 +79,9 @@ export function toLocalDateTime(value?: string | null) {
   return new Date(parsed.getTime() - timezoneOffset).toISOString().slice(0, 16);
 }
 
-export function formatDateTime(value?: string | null) {
+export function formatDateTime(value?: string | null, locale?: string, emptyLabel = "Open") {
   if (!value) {
-    return "Open";
+    return emptyLabel;
   }
 
   const parsed = new Date(value);
@@ -89,12 +89,12 @@ export function formatDateTime(value?: string | null) {
     return value;
   }
 
-  return parsed.toLocaleString();
+  return parsed.toLocaleString(locale);
 }
 
-export function formatDuration(duration?: number | null) {
+export function formatDuration(duration?: number | null, unavailableLabel = "N/A") {
   if (duration === null || duration === undefined) {
-    return "N/A";
+    return unavailableLabel;
   }
 
   if (duration >= 1_000_000) {

@@ -3,6 +3,7 @@ import React from "react";
 import { useRouter } from "next/navigation";
 
 import { apiRequest, buildApiUrl, getErrorMessage } from "@/app/lib/api";
+import { useTranslations } from "@/app/lib/i18n";
 import { saveAuthSession } from "@/app/lib/session";
 import type { LoginResponse } from "@/app/lib/types";
 import { Button } from "../../ui/Button";
@@ -17,6 +18,7 @@ interface LoginFormData {
 
 const LoginForm = () => {
     const router = useRouter();
+    const { t } = useTranslations();
 
     const [formData, setFormData] = React.useState<LoginFormData>({
         name: "",
@@ -50,7 +52,7 @@ const LoginForm = () => {
             saveAuthSession(authPayload);
             router.replace("/user/account");
         } catch (err: unknown) {
-            const message = getErrorMessage(err) || "Unable to login. Please try again.";
+            const message = getErrorMessage(err) || t("loginForm.errorFallback");
             setError(message);
             console.error("Login failed:", err);
         } finally {
@@ -67,12 +69,12 @@ const LoginForm = () => {
             <form onSubmit={handleSubmit} className="mt-8 space-y-5">
                 <div className="grid gap-5">
                     <div>
-                        <Label htmlFor="name">Name</Label>
+                        <Label htmlFor="name">{t("loginForm.name")}</Label>
                         <Input id="name" name="name" value={formData.name} onChange={handleChange} required />
                     </div>
 
                     <div>
-                        <Label htmlFor="email">Work Email</Label>
+                        <Label htmlFor="email">{t("loginForm.email")}</Label>
                         <Input
                             id="email"
                             name="email"
@@ -84,7 +86,7 @@ const LoginForm = () => {
                     </div>
 
                     <div>
-                        <Label htmlFor="password">Password</Label>
+                        <Label htmlFor="password">{t("loginForm.password")}</Label>
                         <Input
                             id="password"
                             name="password"
@@ -97,7 +99,7 @@ const LoginForm = () => {
                 </div>
 
                 <Button type="submit" className="w-full" size="lg" disabled={loading}>
-                    {loading ? "Signing in…" : "Sign in"}
+                    {loading ? t("loginForm.submitting") : t("loginForm.submit")}
                 </Button>
             </form>
 
@@ -108,7 +110,7 @@ const LoginForm = () => {
             )}
 
             <div className="mt-6 flex flex-col gap-3">
-                <p className="text-xs text-slate-500">Or continue with</p>
+                <p className="text-xs text-slate-500">{t("loginForm.orContinue")}</p>
                 <Button
                     type="button"
                     variant="outline"
@@ -118,7 +120,7 @@ const LoginForm = () => {
                     disabled={loading}
                 >
                     <span className="inline-flex h-2.5 w-2.5 rounded-full bg-red-500" />
-                    Sign in with Google
+                    {t("loginForm.google")}
                 </Button>
             </div>
         </>

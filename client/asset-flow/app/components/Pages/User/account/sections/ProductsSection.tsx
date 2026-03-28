@@ -1,11 +1,13 @@
 import { Button } from "@/app/components/shared/ui/Button";
 import { Input } from "@/app/components/shared/ui/Input";
 import { Label } from "@/app/components/shared/ui/Label";
+import { useTranslations } from "@/app/lib/i18n";
 
 import { EmptyState, FeedbackMessage, FieldHint, SectionCard, SelectField } from "../shared";
 import type { AccountWorkspaceState } from "../useAccountWorkspace";
 
 export function ProductsSection({ workspace }: { workspace: AccountWorkspaceState }) {
+  const { t } = useTranslations();
   const {
     canManageProducts,
     feedbackByKey,
@@ -39,17 +41,17 @@ export function ProductsSection({ workspace }: { workspace: AccountWorkspaceStat
   return (
     <SectionCard
       id="products"
-      title="Products"
+      title={t("products.title")}
       description={
         canManageProducts
           ? isLeader
-            ? "Create, update, search, and maintain inventory records inside your company."
-            : "Create, update, search, and maintain inventory records from one place."
-          : "Review the assets that are currently visible to your account."
+            ? t("products.descriptionLeader")
+            : t("products.descriptionAdmin")
+          : t("products.descriptionEmployee")
       }
       actions={
         <Button variant="outline" onClick={handleLoadAllProducts} disabled={Boolean(pendingByKey.products)}>
-          {pendingByKey.products ? "Loading..." : isEmployee ? "Refresh my assets" : "Reload products"}
+          {pendingByKey.products ? t("common.loading") : isEmployee ? t("products.refreshMyAssets") : t("products.reloadProducts")}
         </Button>
       }
     >
@@ -59,11 +61,11 @@ export function ProductsSection({ workspace }: { workspace: AccountWorkspaceStat
 
           {canManageProducts ? (
             <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
-              <p className="text-sm font-semibold text-slate-900">Create or update product</p>
-              <FieldHint>Choose the company by name whenever it is available in the workspace.</FieldHint>
+              <p className="text-sm font-semibold text-slate-900">{t("products.createOrUpdate")}</p>
+              <FieldHint>{t("products.companyHint")}</FieldHint>
               <div className="mt-4 grid gap-4 sm:grid-cols-2">
                 <div>
-                  <Label htmlFor="product-id">Asset reference for update</Label>
+                  <Label htmlFor="product-id">{t("products.assetReferenceForUpdate")}</Label>
                   <Input
                     id="product-id"
                     type="number"
@@ -76,7 +78,7 @@ export function ProductsSection({ workspace }: { workspace: AccountWorkspaceStat
                 {organizationOptions.length > 0 ? (
                   <SelectField
                     id="product-organization-id"
-                    label="Company"
+                    label={t("common.company")}
                     value={productForm.organizationId}
                     onChange={(value) =>
                       setProductForm((previous) => ({
@@ -85,11 +87,11 @@ export function ProductsSection({ workspace }: { workspace: AccountWorkspaceStat
                       }))
                     }
                     options={organizationOptions}
-                    placeholder="Select a company"
+                    placeholder={t("registerForm.selectCompany")}
                   />
                 ) : (
                   <div>
-                    <Label htmlFor="product-organization-id">Company reference</Label>
+                    <Label htmlFor="product-organization-id">{t("products.companyReference")}</Label>
                     <Input
                       id="product-organization-id"
                       type="number"
@@ -104,7 +106,7 @@ export function ProductsSection({ workspace }: { workspace: AccountWorkspaceStat
                   </div>
                 )}
                 <div>
-                  <Label htmlFor="product-type">Product type</Label>
+                  <Label htmlFor="product-type">{t("products.productType")}</Label>
                   <Input
                     id="product-type"
                     value={productForm.productType}
@@ -117,7 +119,7 @@ export function ProductsSection({ workspace }: { workspace: AccountWorkspaceStat
                   />
                 </div>
                 <div>
-                  <Label htmlFor="product-brand">Brand</Label>
+                  <Label htmlFor="product-brand">{t("products.brand")}</Label>
                   <Input
                     id="product-brand"
                     value={productForm.productBrand}
@@ -130,7 +132,7 @@ export function ProductsSection({ workspace }: { workspace: AccountWorkspaceStat
                   />
                 </div>
                 <div>
-                  <Label htmlFor="product-model">Model</Label>
+                  <Label htmlFor="product-model">{t("products.model")}</Label>
                   <Input
                     id="product-model"
                     value={productForm.productModel}
@@ -143,7 +145,7 @@ export function ProductsSection({ workspace }: { workspace: AccountWorkspaceStat
                   />
                 </div>
                 <div>
-                  <Label htmlFor="product-asset-tag">Asset tag</Label>
+                  <Label htmlFor="product-asset-tag">{t("products.assetTag")}</Label>
                   <Input
                     id="product-asset-tag"
                     value={productForm.assetTag}
@@ -158,42 +160,42 @@ export function ProductsSection({ workspace }: { workspace: AccountWorkspaceStat
               </div>
               <div className="mt-5 flex flex-wrap gap-3">
                 <Button onClick={() => handleCreateProduct(false)} disabled={Boolean(pendingByKey.products)}>
-                  Create product
+                  {t("products.createProduct")}
                 </Button>
                 <Button
                   variant="outline"
                   onClick={() => handleCreateProduct(true)}
                   disabled={Boolean(pendingByKey.products)}
                 >
-                  Create product (compatibility mode)
+                  {t("products.createProductCompatibility")}
                 </Button>
                 <Button variant="secondary" onClick={handleUpdateProduct} disabled={Boolean(pendingByKey.products)}>
-                  Update product
+                  {t("products.updateProduct")}
                 </Button>
               </div>
             </div>
           ) : (
             <EmptyState
-              title="Read-only asset view"
-              description="Your role can review assigned assets here, but inventory changes stay with company leaders and admins."
+              title={t("products.readOnlyTitle")}
+              description={t("products.readOnlyDescription")}
             />
           )}
 
           <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
-            <p className="text-sm font-semibold text-slate-900">Read and delete</p>
+            <p className="text-sm font-semibold text-slate-900">{t("products.readAndDelete")}</p>
             <div className="mt-4 grid gap-4 sm:grid-cols-2">
               {productOptions.length > 0 ? (
                 <SelectField
                   id="product-lookup-id"
-                  label="Asset"
+                  label={t("common.asset")}
                   value={productLookupId}
                   onChange={setProductLookupId}
                   options={productOptions}
-                  placeholder="Select an asset"
+                  placeholder={t("products.selectAsset")}
                 />
               ) : (
                 <div>
-                  <Label htmlFor="product-lookup-id">Asset reference</Label>
+                  <Label htmlFor="product-lookup-id">{t("products.assetReference")}</Label>
                   <Input
                     id="product-lookup-id"
                     type="number"
@@ -203,7 +205,7 @@ export function ProductsSection({ workspace }: { workspace: AccountWorkspaceStat
                 </div>
               )}
               <div>
-                <Label htmlFor="product-asset-search">Asset tag</Label>
+                <Label htmlFor="product-asset-search">{t("products.searchAssetTag")}</Label>
                 <Input
                   id="product-asset-search"
                   value={productAssetTag}
@@ -211,7 +213,7 @@ export function ProductsSection({ workspace }: { workspace: AccountWorkspaceStat
                 />
               </div>
               <div className="sm:col-span-2">
-                <Label htmlFor="product-type-query">Search by type</Label>
+                <Label htmlFor="product-type-query">{t("products.searchByType")}</Label>
                 <Input
                   id="product-type-query"
                   value={productTypeQuery}
@@ -221,21 +223,21 @@ export function ProductsSection({ workspace }: { workspace: AccountWorkspaceStat
             </div>
             <div className="mt-5 flex flex-wrap gap-3">
               <Button variant="outline" onClick={handleLookupProduct} disabled={Boolean(pendingByKey.products)}>
-                Load details
+                {t("products.loadDetails")}
               </Button>
               <Button
                 variant="outline"
                 onClick={handleSearchProductByAssetTag}
                 disabled={Boolean(pendingByKey.products)}
               >
-                Search asset tag
+                {t("products.searchAssetTagButton")}
               </Button>
               <Button variant="outline" onClick={handleSearchProductByType} disabled={Boolean(pendingByKey.products)}>
-                Search type
+                {t("products.searchTypeButton")}
               </Button>
               {canManageProducts ? (
                 <Button variant="danger" onClick={handleDeleteProduct} disabled={Boolean(pendingByKey.products)}>
-                  Delete product
+                  {t("products.deleteProduct")}
                 </Button>
               ) : null}
             </div>
@@ -253,35 +255,35 @@ export function ProductsSection({ workspace }: { workspace: AccountWorkspaceStat
                   <p className="text-sm text-slate-500">{selectedProduct.productType}</p>
                 </div>
                 <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">
-                  Asset
+                  {t("common.asset")}
                 </span>
               </div>
               <dl className="mt-4 grid gap-3 text-sm text-slate-600">
                 <div className="flex justify-between gap-4">
-                  <dt>Asset tag</dt>
+                  <dt>{t("products.assetTag")}</dt>
                   <dd className="font-semibold text-slate-900">{selectedProduct.assetTag}</dd>
                 </div>
                 <div className="flex justify-between gap-4">
-                  <dt>Organization</dt>
+                  <dt>{t("common.company")}</dt>
                   <dd className="font-semibold text-slate-900">{getOrganizationName(selectedProduct.organizationId)}</dd>
                 </div>
               </dl>
               <div className="mt-4">
                 <Button variant="outline" onClick={() => populateProductForm(selectedProduct)}>
-                  Edit in form
+                  {t("products.editInForm")}
                 </Button>
               </div>
             </div>
           ) : (
             <EmptyState
-              title="No selected product"
-              description="Use the lookup or create actions to view a product here."
+              title={t("products.noSelectedProductTitle")}
+              description={t("products.noSelectedProductDescription")}
             />
           )}
 
           {productTypeResults.length > 0 ? (
             <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-              <p className="text-sm font-semibold text-slate-900">Type search results</p>
+              <p className="text-sm font-semibold text-slate-900">{t("products.typeResults")}</p>
               <div className="mt-4 grid gap-3">
                 {productTypeResults.map((product) => (
                   <div key={product.id} className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
@@ -292,11 +294,11 @@ export function ProductsSection({ workspace }: { workspace: AccountWorkspaceStat
                       {product.productType} • {product.assetTag}
                     </p>
                     <p className="mt-1 text-sm text-slate-500">
-                      Company: {getOrganizationName(product.organizationId)}
+                      {t("products.companyPrefix", { company: getOrganizationName(product.organizationId) })}
                     </p>
                     <div className="mt-3">
                       <Button variant="outline" onClick={() => populateProductForm(product)}>
-                        Use in form
+                        {t("products.useInForm")}
                       </Button>
                     </div>
                   </div>
@@ -307,7 +309,7 @@ export function ProductsSection({ workspace }: { workspace: AccountWorkspaceStat
 
           {products.length > 0 ? (
             <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-              <p className="text-sm font-semibold text-slate-900">{isEmployee ? "My visible assets" : "All products"}</p>
+              <p className="text-sm font-semibold text-slate-900">{isEmployee ? t("products.myVisibleAssets") : t("products.allProducts")}</p>
               <div className="mt-4 grid max-h-[30rem] gap-3 overflow-y-auto pr-1">
                 {products.map((product) => (
                   <div key={product.id} className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
@@ -320,16 +322,16 @@ export function ProductsSection({ workspace }: { workspace: AccountWorkspaceStat
                           {product.productType} • {product.assetTag}
                         </p>
                         <p className="text-sm text-slate-500">
-                          Company: {getOrganizationName(product.organizationId)}
+                          {t("products.companyPrefix", { company: getOrganizationName(product.organizationId) })}
                         </p>
                       </div>
                       <span className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-slate-700">
-                        Asset
+                        {t("common.asset")}
                       </span>
                     </div>
                     <div className="mt-3">
                       <Button variant="outline" onClick={() => populateProductForm(product)}>
-                        Use in form
+                        {t("products.useInForm")}
                       </Button>
                     </div>
                   </div>
@@ -338,8 +340,8 @@ export function ProductsSection({ workspace }: { workspace: AccountWorkspaceStat
             </div>
           ) : (
             <EmptyState
-              title="No products loaded"
-              description="Create a product or reload the product list to populate this panel."
+              title={t("products.noProductsTitle")}
+              description={t("products.noProductsDescription")}
             />
           )}
         </div>

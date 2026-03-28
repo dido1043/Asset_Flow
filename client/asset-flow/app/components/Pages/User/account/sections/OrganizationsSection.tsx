@@ -1,11 +1,13 @@
 import { Button } from "@/app/components/shared/ui/Button";
 import { Input } from "@/app/components/shared/ui/Input";
 import { Label } from "@/app/components/shared/ui/Label";
+import { useTranslations } from "@/app/lib/i18n";
 
 import { EmptyState, FeedbackMessage, SectionCard, SelectField } from "../shared";
 import type { AccountWorkspaceState } from "../useAccountWorkspace";
 
 export function OrganizationsSection({ workspace }: { workspace: AccountWorkspaceState }) {
+  const { t } = useTranslations();
   const {
     allOrganizations,
     becomeLeaderForm,
@@ -40,11 +42,11 @@ export function OrganizationsSection({ workspace }: { workspace: AccountWorkspac
   return (
     <SectionCard
       id="organizations"
-      title="Organizations"
+      title={t("organizations.title")}
       description={
         isLeader
-          ? "Review your company and its inventory without leaving your own organization scope."
-          : "Work with leader lookup, organization creation, member joins, leadership transfer, and inventory."
+          ? t("organizations.descriptionLeader")
+          : t("organizations.descriptionAdmin")
       }
     >
       <div className="grid gap-6 lg:grid-cols-2">
@@ -53,26 +55,26 @@ export function OrganizationsSection({ workspace }: { workspace: AccountWorkspac
 
           <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
             <p className="text-sm font-semibold text-slate-900">
-              {isLeader ? "Load your company" : "Find a company by leader"}
+              {isLeader ? t("organizations.loadYourCompany") : t("organizations.findByLeader")}
             </p>
             <div className="mt-4 flex flex-col gap-3 sm:flex-row">
               <div className="flex-1">
                 {isLeader ? (
                   <p className="text-sm text-slate-600">
-                    Your organization view is locked to the company linked to your account.
+                    {t("organizations.lockedToCompany")}
                   </p>
                 ) : leaderOptions.length > 0 ? (
                   <SelectField
                     id="organization-leader-id"
-                    label="Leader"
+                    label={t("organizations.leader")}
                     value={organizationLookupLeaderId}
                     onChange={setOrganizationLookupLeaderId}
                     options={leaderOptions}
-                    placeholder="Select a leader"
+                    placeholder={t("organizations.selectLeader")}
                   />
                 ) : (
                   <>
-                    <Label htmlFor="organization-leader-id">Leader reference</Label>
+                    <Label htmlFor="organization-leader-id">{t("organizations.leaderReference")}</Label>
                     <Input
                       id="organization-leader-id"
                       type="number"
@@ -84,7 +86,7 @@ export function OrganizationsSection({ workspace }: { workspace: AccountWorkspac
               </div>
               <div className="flex items-end">
                 <Button onClick={handleLookupOrganization} disabled={Boolean(pendingByKey.organizations)}>
-                  {isLeader ? "Load my company" : "Load organization"}
+                  {isLeader ? t("organizations.loadMyCompany") : t("organizations.loadOrganization")}
                 </Button>
               </div>
             </div>
@@ -92,12 +94,12 @@ export function OrganizationsSection({ workspace }: { workspace: AccountWorkspac
 
           {canCreateOrganizations ? (
             <form onSubmit={handleCreateOrganization} className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
-              <p className="text-sm font-semibold text-slate-900">Create organization</p>
+              <p className="text-sm font-semibold text-slate-900">{t("organizations.createOrganization")}</p>
               <div className="mt-4 grid gap-4 sm:grid-cols-2">
                 {leaderOptions.length > 0 ? (
                   <SelectField
                     id="create-organization-leader-id"
-                    label="Leader"
+                    label={t("organizations.leader")}
                     value={organizationCreateForm.leaderId}
                     onChange={(value) =>
                       setOrganizationCreateForm((previous) => ({
@@ -106,11 +108,11 @@ export function OrganizationsSection({ workspace }: { workspace: AccountWorkspac
                       }))
                     }
                     options={leaderOptions}
-                    placeholder="Select who leads this company"
+                    placeholder={t("organizations.selectWhoLeads")}
                   />
                 ) : (
                   <div>
-                    <Label htmlFor="create-organization-leader-id">Leader reference</Label>
+                    <Label htmlFor="create-organization-leader-id">{t("organizations.leaderReference")}</Label>
                     <Input
                       id="create-organization-leader-id"
                       type="number"
@@ -125,7 +127,7 @@ export function OrganizationsSection({ workspace }: { workspace: AccountWorkspac
                   </div>
                 )}
                 <div>
-                  <Label htmlFor="create-organization-name">Company name</Label>
+                  <Label htmlFor="create-organization-name">{t("organizations.companyName")}</Label>
                   <Input
                     id="create-organization-name"
                     value={organizationCreateForm.organizationName}
@@ -140,7 +142,7 @@ export function OrganizationsSection({ workspace }: { workspace: AccountWorkspac
               </div>
               <div className="mt-4">
                 <Button type="submit" disabled={Boolean(pendingByKey.organizations)}>
-                  Create organization
+                  {t("organizations.createOrganization")}
                 </Button>
               </div>
             </form>
@@ -148,12 +150,12 @@ export function OrganizationsSection({ workspace }: { workspace: AccountWorkspac
 
           {canManageOrganizationMembers ? (
             <form onSubmit={handleJoinOrganization} className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
-              <p className="text-sm font-semibold text-slate-900">Join organization</p>
+              <p className="text-sm font-semibold text-slate-900">{t("organizations.joinOrganization")}</p>
               <div className="mt-4 grid gap-4 sm:grid-cols-2">
                 {userOptions.length > 0 ? (
                   <SelectField
                     id="join-user-id"
-                    label="Teammate"
+                    label={t("common.teammate")}
                     value={joinOrganizationForm.userId}
                     onChange={(value) =>
                       setJoinOrganizationForm((previous) => ({
@@ -162,11 +164,11 @@ export function OrganizationsSection({ workspace }: { workspace: AccountWorkspac
                       }))
                     }
                     options={userOptions}
-                    placeholder="Select a teammate"
+                    placeholder={t("users.selectTeammate")}
                   />
                 ) : (
                   <div>
-                    <Label htmlFor="join-user-id">Teammate reference</Label>
+                    <Label htmlFor="join-user-id">{t("users.teammateReference")}</Label>
                     <Input
                       id="join-user-id"
                       type="number"
@@ -183,7 +185,7 @@ export function OrganizationsSection({ workspace }: { workspace: AccountWorkspac
                 {organizationOptions.length > 0 ? (
                   <SelectField
                     id="join-organization-id"
-                    label="Company"
+                    label={t("common.company")}
                     value={joinOrganizationForm.organizationId}
                     onChange={(value) =>
                       setJoinOrganizationForm((previous) => ({
@@ -192,11 +194,11 @@ export function OrganizationsSection({ workspace }: { workspace: AccountWorkspac
                       }))
                     }
                     options={organizationOptions}
-                    placeholder="Select a company"
+                    placeholder={t("registerForm.selectCompany")}
                   />
                 ) : (
                   <div>
-                    <Label htmlFor="join-organization-id">Company reference</Label>
+                    <Label htmlFor="join-organization-id">{t("products.companyReference")}</Label>
                     <Input
                       id="join-organization-id"
                       type="number"
@@ -213,7 +215,7 @@ export function OrganizationsSection({ workspace }: { workspace: AccountWorkspac
               </div>
               <div className="mt-4">
                 <Button type="submit" disabled={Boolean(pendingByKey.organizations)}>
-                  Join organization
+                  {t("organizations.joinOrganization")}
                 </Button>
               </div>
             </form>
@@ -221,12 +223,12 @@ export function OrganizationsSection({ workspace }: { workspace: AccountWorkspac
 
           {canManageOrganizationMembers ? (
             <form onSubmit={handleBecomeLeader} className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
-              <p className="text-sm font-semibold text-slate-900">Become leader</p>
+              <p className="text-sm font-semibold text-slate-900">{t("organizations.becomeLeader")}</p>
               <div className="mt-4 grid gap-4 sm:grid-cols-2">
                 {userOptions.length > 0 ? (
                   <SelectField
                     id="leader-user-id"
-                    label="New leader"
+                    label={t("organizations.leader")}
                     value={becomeLeaderForm.userId}
                     onChange={(value) =>
                       setBecomeLeaderForm((previous) => ({
@@ -235,11 +237,11 @@ export function OrganizationsSection({ workspace }: { workspace: AccountWorkspac
                       }))
                     }
                     options={userOptions}
-                    placeholder="Select who becomes leader"
+                    placeholder={t("organizations.selectWhoBecomesLeader")}
                   />
                 ) : (
                   <div>
-                    <Label htmlFor="leader-user-id">Teammate reference</Label>
+                    <Label htmlFor="leader-user-id">{t("users.teammateReference")}</Label>
                     <Input
                       id="leader-user-id"
                       type="number"
@@ -256,7 +258,7 @@ export function OrganizationsSection({ workspace }: { workspace: AccountWorkspac
                 {organizationOptions.length > 0 ? (
                   <SelectField
                     id="leader-organization-id"
-                    label="Company"
+                    label={t("common.company")}
                     value={becomeLeaderForm.organizationId}
                     onChange={(value) =>
                       setBecomeLeaderForm((previous) => ({
@@ -265,11 +267,11 @@ export function OrganizationsSection({ workspace }: { workspace: AccountWorkspac
                       }))
                     }
                     options={organizationOptions}
-                    placeholder="Select a company"
+                    placeholder={t("registerForm.selectCompany")}
                   />
                 ) : (
                   <div>
-                    <Label htmlFor="leader-organization-id">Company reference</Label>
+                    <Label htmlFor="leader-organization-id">{t("products.companyReference")}</Label>
                     <Input
                       id="leader-organization-id"
                       type="number"
@@ -286,7 +288,7 @@ export function OrganizationsSection({ workspace }: { workspace: AccountWorkspac
               </div>
               <div className="mt-4">
                 <Button type="submit" disabled={Boolean(pendingByKey.organizations)}>
-                  Promote to leader
+                  {t("organizations.promoteLeader")}
                 </Button>
               </div>
             </form>
@@ -295,22 +297,22 @@ export function OrganizationsSection({ workspace }: { workspace: AccountWorkspac
 
         <div className="space-y-5">
           <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-            <p className="text-sm font-semibold text-slate-900">Selected company</p>
+            <p className="text-sm font-semibold text-slate-900">{t("organizations.selectedCompany")}</p>
             {leaderOrganization ? (
               <dl className="mt-4 grid gap-3 text-sm text-slate-600">
                 <div className="flex justify-between gap-4">
-                  <dt>Name</dt>
+                  <dt>{t("organizations.name")}</dt>
                   <dd className="font-semibold text-slate-900">{leaderOrganization.organizationName}</dd>
                 </div>
                 <div className="flex justify-between gap-4">
-                  <dt>Leader</dt>
+                  <dt>{t("organizations.leader")}</dt>
                   <dd className="font-semibold text-slate-900">
                     {allOrganizations.find((organization) => organization.id === leaderOrganization.id)?.leaderName ||
-                      "Unknown"}
+                      t("common.unknown")}
                   </dd>
                 </div>
                 <div className="flex justify-between gap-4">
-                  <dt>Members</dt>
+                  <dt>{t("organizations.members")}</dt>
                   <dd className="font-semibold text-slate-900">
                     {users.filter((user) => user.organizationId === leaderOrganization.id).length}
                   </dd>
@@ -318,28 +320,28 @@ export function OrganizationsSection({ workspace }: { workspace: AccountWorkspac
               </dl>
             ) : (
               <EmptyState
-                title="No organization selected"
-                description="Use the leader lookup or company creation form to load one here."
+                title={t("organizations.noOrganizationSelectedTitle")}
+                description={t("organizations.noOrganizationSelectedDescription")}
               />
             )}
           </div>
 
           <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
-            <p className="text-sm font-semibold text-slate-900">Inventory by company</p>
+            <p className="text-sm font-semibold text-slate-900">{t("organizations.inventoryByCompany")}</p>
             <div className="mt-4 flex flex-col gap-3 sm:flex-row">
               <div className="flex-1">
                 {organizationOptions.length > 0 ? (
                   <SelectField
                     id="inventory-organization-id"
-                    label="Company"
+                    label={t("common.company")}
                     value={inventoryOrgId}
                     onChange={setInventoryOrgId}
                     options={organizationOptions}
-                    placeholder="Select a company"
+                    placeholder={t("registerForm.selectCompany")}
                   />
                 ) : (
                   <>
-                    <Label htmlFor="inventory-organization-id">Company reference</Label>
+                    <Label htmlFor="inventory-organization-id">{t("products.companyReference")}</Label>
                     <Input
                       id="inventory-organization-id"
                       type="number"
@@ -351,7 +353,7 @@ export function OrganizationsSection({ workspace }: { workspace: AccountWorkspac
               </div>
               <div className="flex items-end">
                 <Button onClick={handleLoadOrganizationInventory} disabled={Boolean(pendingByKey.organizations)}>
-                  Load inventory
+                  {t("organizations.loadInventory")}
                 </Button>
               </div>
             </div>
@@ -369,13 +371,13 @@ export function OrganizationsSection({ workspace }: { workspace: AccountWorkspac
                       <p className="text-sm text-slate-500">{product.productType}</p>
                     </div>
                     <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">
-                      In stock
+                      {t("common.inStock")}
                     </span>
                   </div>
-                  <p className="mt-3 text-sm text-slate-600">Asset tag: {product.assetTag}</p>
+                  <p className="mt-3 text-sm text-slate-600">{t("organizations.assetTag", { assetTag: product.assetTag })}</p>
                   <div className="mt-4">
                     <Button variant="outline" onClick={() => populateProductForm(product)}>
-                      Use in product form
+                      {t("organizations.useInProductForm")}
                     </Button>
                   </div>
                 </div>
@@ -383,8 +385,8 @@ export function OrganizationsSection({ workspace }: { workspace: AccountWorkspac
             </div>
           ) : (
             <EmptyState
-              title="No inventory loaded"
-              description="Load products by company to see them listed here."
+              title={t("organizations.noInventoryLoadedTitle")}
+              description={t("organizations.noInventoryLoadedDescription")}
             />
           )}
         </div>
