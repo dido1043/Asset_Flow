@@ -63,21 +63,21 @@ const AccountPage = () => {
             </div>
 
             {destinationSections.length > 0 ? (
-              <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+              <div className="grid gap-4 md:grid-cols-2 2xl:grid-cols-3">
                 {destinationSections.map((section) => (
                   <Link
                     key={section.path}
                     href={section.path}
-                    className="group rounded-3xl border border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-indigo-200 hover:shadow-md"
+                    className="group overflow-hidden rounded-3xl border border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-indigo-200 hover:shadow-md"
                   >
-                    <div className="flex items-start justify-between gap-4">
-                      <div>
-                        <p className="text-lg font-semibold text-slate-900">{section.label}</p>
-                        <p className="mt-2 text-sm text-slate-600">{section.helper}</p>
+                    <div className="flex min-h-36 flex-col gap-4">
+                      <div className="min-w-0">
+                        <p className="break-words text-lg font-semibold text-slate-900">{section.label}</p>
+                        <span className="mt-3 inline-flex self-start whitespace-nowrap rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700 transition group-hover:bg-indigo-50 group-hover:text-indigo-700">
+                          Open
+                        </span>
+                        <p className="mt-2 max-w-xs text-sm text-slate-600">{section.helper}</p>
                       </div>
-                      <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700 transition group-hover:bg-indigo-50 group-hover:text-indigo-700">
-                        Open
-                      </span>
                     </div>
                   </Link>
                 ))}
