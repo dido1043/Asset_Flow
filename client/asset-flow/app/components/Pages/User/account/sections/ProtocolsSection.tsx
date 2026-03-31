@@ -6,6 +6,14 @@ import { useTranslations } from "@/app/lib/i18n";
 import { EmptyState, FeedbackMessage, FieldHint, SectionCard, SelectField } from "../shared";
 import type { AccountWorkspaceState } from "../useAccountWorkspace";
 
+function getProtocolHref(protocolUri: string) {
+  if (/^https?:\/\//i.test(protocolUri) || protocolUri.startsWith("/api/protocol-file")) {
+    return protocolUri;
+  }
+
+  return `/api/protocol-file?path=${encodeURIComponent(protocolUri)}`;
+}
+
 export function ProtocolsSection({ workspace }: { workspace: AccountWorkspaceState }) {
   const { t } = useTranslations();
   const {
@@ -200,7 +208,7 @@ export function ProtocolsSection({ workspace }: { workspace: AccountWorkspaceSta
               <p className="mt-2">{t("protocols.protocolFileDescription")}</p>
               <div className="mt-4">
                 <a
-                  href={selectedProtocol.protocolUri}
+                  href={getProtocolHref(selectedProtocol.protocolUri)}
                   target="_blank"
                   rel="noreferrer"
                   className="inline-flex h-10 items-center justify-center rounded-xl bg-indigo-600 px-4 text-sm font-semibold text-white transition hover:bg-indigo-700"

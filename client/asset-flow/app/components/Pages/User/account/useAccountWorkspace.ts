@@ -67,6 +67,7 @@ export function useAccountWorkspace() {
 
   const [currentUser, setCurrentUser] = React.useState<UserDto | null>(null);
   const [users, setUsers] = React.useState<UserDto[]>([]);
+  const [directoryUsers, setDirectoryUsers] = React.useState<UserDto[]>([]);
   const [selectedUser, setSelectedUser] = React.useState<UserDto | null>(null);
   const [organizations, setOrganizations] = React.useState<KnownOrganization[]>([]);
 
@@ -155,9 +156,9 @@ export function useAccountWorkspace() {
   const canManageAssignments = isAdmin || isLeader;
   const canManageProtocols = isAdmin || isLeader;
   const canDeleteUsers = isAdmin;
-  const canManageOrganizationMembers = isAdmin;
+  const canManageOrganizationMembers = isAdmin || isLeader;
   const canCreateOrganizations = isLeader;
-  const canHireEmployees = isLeader;
+  //const canHireEmployees = isLeader;
 
   const workspaceScopeLabel = isAdmin
     ? t("workspace.scope.allCompanyData")
@@ -311,6 +312,7 @@ export function useAccountWorkspace() {
       return {
         currentUser: null,
         users: [],
+        directoryUsers: [],
         organizations: [],
         leaderOrganization: null,
         organizationInventory: [],
@@ -338,6 +340,16 @@ export function useAccountWorkspace() {
                 () => apiRequest<UserDto[]>(`/auth/users/org/${nextOrganizationId}`),
                 [],
               ),
+              nextCurrentUser,
+            )
+          : [nextCurrentUser];
+
+    const nextDirectoryUsers =
+      nextCurrentUser.role === "ADMIN"
+        ? nextUsers
+        : nextCurrentUser.role === "LEADER"
+          ? ensureUserIncluded(
+              await loadOrFallback(t("feedback.users"), () => apiRequest<UserDto[]>("/auth/users"), nextUsers),
               nextCurrentUser,
             )
           : [nextCurrentUser];
@@ -480,6 +492,7 @@ export function useAccountWorkspace() {
     return {
       currentUser: nextCurrentUser,
       users: nextUsers,
+      directoryUsers: nextDirectoryUsers,
       organizations: nextOrganizations,
       leaderOrganization: nextLeaderOrganization,
       organizationInventory: nextCurrentUser.role === "LEADER" ? nextProducts : [],
@@ -495,6 +508,7 @@ export function useAccountWorkspace() {
     if (!snapshot.currentUser) {
       setCurrentUser(null);
       setUsers([]);
+      setDirectoryUsers([]);
       setSelectedUser(null);
       setOrganizations([]);
       setLeaderOrganization(null);
@@ -516,6 +530,7 @@ export function useAccountWorkspace() {
 
     setCurrentUser(nextCurrentUser);
     setUsers(snapshot.users);
+    setDirectoryUsers(snapshot.directoryUsers);
     setOrganizations(snapshot.organizations);
     setLeaderOrganization(snapshot.leaderOrganization);
     setOrganizationInventory(snapshot.organizationInventory);
@@ -524,7 +539,7 @@ export function useAccountWorkspace() {
     setCurrentAssignments(snapshot.currentAssignments);
     setProtocols(snapshot.protocols);
 
-    setSelectedUser((previous) => syncSelectedItem(snapshot.users, previous) ?? nextCurrentUser);
+    setSelectedUser((previous) => syncSelectedItem(snapshot.directoryUsers, previous) ?? nextCurrentUser);
     setSelectedProduct((previous) => syncSelectedItem(snapshot.products, previous));
     setSelectedAssignment((previous) => syncSelectedItem(snapshot.assignments, previous));
     setSelectedProtocol((previous) => syncSelectedItem(snapshot.protocols, previous));
@@ -556,6 +571,7 @@ export function useAccountWorkspace() {
       applyWorkspaceSnapshot({
         currentUser: null,
         users: [],
+        directoryUsers: [],
         organizations: [],
         leaderOrganization: null,
         organizationInventory: [],
@@ -630,7 +646,7 @@ export function useAccountWorkspace() {
     setDeleteUserId(userIdValue);
     setOrganizationLookupLeaderId(userIdValue);
     setOrganizationCreateForm((previous) => ({ ...previous, leaderId: userIdValue }));
-    setJoinOrganizationForm((previous) => ({ ...previous, userId: userIdValue }));
+    setJoinOrganizationForm((previous) => ({ ...previous, userId: isLeader ? "" : userIdValue }));
     setBecomeLeaderForm((previous) => ({ ...previous, userId: userIdValue }));
     setInventoryOrgId(organizationIdValue);
     setAssignmentForm((previous) => ({ ...previous, employeeId: userIdValue }));
@@ -638,7 +654,7 @@ export function useAccountWorkspace() {
     setProtocolCreateForm((previous) => ({ ...previous, userId: userIdValue, organizationId: organizationIdValue }));
 
     seededIdsRef.current = true;
-  }, [currentUser]);
+  }, [currentUser, isLeader]);
 
   const upsertOrganizationSummary = React.useCallback(
     (organization: OrganizationDto, leaderId?: number | null) => {
@@ -683,11 +699,15 @@ export function useAccountWorkspace() {
       return t("common.notAssigned");
     }
 
-    const user = users.find((candidate) => candidate.id === userId) ?? (currentUser?.id === userId ? currentUser : null);
+    const user =
+      directoryUsers.find((candidate) => candidate.id === userId) ??
+      users.find((candidate) => candidate.id === userId) ??
+      (currentUser?.id === userId ? currentUser : null);
     return user ? user.fullName : t("fallback.unknownTeammate");
   };
 
-  const getUserOptionLabel = (user: UserDto) => `${user.fullName} • ${user.email}`;
+  const getUserOptionLabel = (user: UserDto) =>
+    typeof user.id === "number" ? `${user.fullName}#${user.id}` : user.fullName;
 
   const getOrganizationName = (organizationId?: number | null) => {
     if (organizationId == null) {
@@ -730,11 +750,30 @@ export function useAccountWorkspace() {
 
   const leaderUsers = users.filter((user) => user.role === "LEADER" && typeof user.id === "number");
   const usersWithIds = users.filter((user) => typeof user.id === "number");
+  const directoryUsersWithIds = directoryUsers.filter((user) => typeof user.id === "number");
   const employeeUsers = users.filter((user) => user.role === "EMPLOYEE" && typeof user.id === "number");
   const productsWithIds = products.filter((product) => typeof product.id === "number");
   const assignmentsWithIds = assignments.filter((assignment) => typeof assignment.id === "number");
 
   const userOptions: SelectOption[] = usersWithIds.map((user) => ({
+    value: String(user.id),
+    label: getUserOptionLabel(user),
+  }));
+
+  const directoryUserOptions: SelectOption[] = directoryUsersWithIds.map((user) => ({
+    value: String(user.id),
+    label: getUserOptionLabel(user),
+  }));
+
+  const joinOrganizationUserOptions: SelectOption[] = (isLeader
+    ? directoryUsersWithIds.filter(
+        (user) =>
+          user.role === "EMPLOYEE" &&
+          user.id !== currentUser?.id &&
+          (currentUser?.organizationId == null || user.organizationId !== currentUser.organizationId),
+      )
+    : usersWithIds
+  ).map((user) => ({
     value: String(user.id),
     label: getUserOptionLabel(user),
   }));
@@ -774,6 +813,7 @@ export function useAccountWorkspace() {
     }));
 
   const accessibleUserIds = new Set(usersWithIds.map((user) => user.id as number));
+  const visibleUserIds = new Set(directoryUsersWithIds.map((user) => user.id as number));
   const accessibleProductIds = new Set(productsWithIds.map((product) => product.id as number));
   const accessibleAssignmentIds = new Set(assignmentsWithIds.map((assignment) => assignment.id as number));
   const accessibleProtocolIds = new Set(
@@ -798,7 +838,7 @@ export function useAccountWorkspace() {
 
   const workspaceSectionBadges: Record<string, string> = {
     profile: getRoleLabel(currentUser?.role || session?.role, t),
-    users: String(users.length),
+    users: String(directoryUsers.length),
     organizations: String(allOrganizations.length),
     products: String(products.length),
     assignments: String(assignments.length),
@@ -831,9 +871,7 @@ export function useAccountWorkspace() {
     return nextAssignments;
   };
 
-  const reloadWorkspaceSnapshot = React.useCallback(async () => {
-    await refreshWorkspaceSnapshot();
-  }, [refreshWorkspaceSnapshot]);
+  const reloadWorkspaceSnapshot = React.useCallback(async () => refreshWorkspaceSnapshot(), [refreshWorkspaceSnapshot]);
 
   const handleWorkspaceRefresh = async () => {
     if (!session) {
@@ -865,19 +903,21 @@ export function useAccountWorkspace() {
     session,
     currentUser,
     users,
+    directoryUsers,
     profileForm,
     userLookupId,
     deleteUserId,
     isAdmin,
     isLeader,
     canDeleteUsers,
-    accessibleUserIds,
+    visibleUserIds,
     runAction,
     setFeedback,
     requiredFieldMessage,
     setCurrentUser,
     setSelectedUser,
     setUsers,
+    setDirectoryUsers,
     setProfileForm,
     handleSignOut,
     refreshWorkspaceSnapshot: reloadWorkspaceSnapshot,
@@ -1291,6 +1331,8 @@ export function useAccountWorkspace() {
     currentAssignments,
     currentUser,
     deleteUserId,
+    directoryUserOptions,
+    directoryUsers,
     employeeOptions,
     feedbackByKey,
     getOrganizationName,
@@ -1330,6 +1372,7 @@ export function useAccountWorkspace() {
     isEmployee,
     isLeader,
     joinOrganizationForm,
+    joinOrganizationUserOptions,
     leaderOptions,
     leaderOrganization,
     myAssignmentsCount,

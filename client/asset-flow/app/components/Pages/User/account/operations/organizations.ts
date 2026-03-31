@@ -105,7 +105,7 @@ export function createOrganizationOperations({
     event.preventDefault();
 
     if (!canCreateOrganizations) {
-      setFeedback("organizations", { tone: "error", message: t("feedback.onlyAdminsCreateCompanies") });
+      setFeedback("organizations", { tone: "error", message: t("feedback.onlyLeadersCanCreateCompanies") });
       return;
     }
 

@@ -6,7 +6,7 @@ import type { AuthSession, UserDto } from "@/app/lib/types";
 
 import type { ProfileFormState } from "../types";
 import { parseOptionalNumber, parseRequiredNumber, requireText } from "../utils";
-import { ensureUserIncluded, syncSelectedItem } from "../workspaceHelpers";
+import { syncSelectedItem } from "../workspaceHelpers";
 import type {
   ReloadWorkspace,
   RequiredFieldMessage,
@@ -20,19 +20,21 @@ type UserOperationsParams = {
   session: AuthSession | null;
   currentUser: UserDto | null;
   users: UserDto[];
+  directoryUsers: UserDto[];
   profileForm: ProfileFormState;
   userLookupId: string;
   deleteUserId: string;
   isAdmin: boolean;
   isLeader: boolean;
   canDeleteUsers: boolean;
-  accessibleUserIds: Set<number>;
+  visibleUserIds: Set<number>;
   runAction: RunAction;
   setFeedback: SetFeedback;
   requiredFieldMessage: RequiredFieldMessage;
   setCurrentUser: StateSetter<UserDto | null>;
   setSelectedUser: StateSetter<UserDto | null>;
   setUsers: StateSetter<UserDto[]>;
+  setDirectoryUsers: StateSetter<UserDto[]>;
   setProfileForm: StateSetter<ProfileFormState>;
   handleSignOut: () => void;
   refreshWorkspaceSnapshot: ReloadWorkspace;
@@ -43,19 +45,21 @@ export function createUserOperations({
   session,
   currentUser,
   users,
+  directoryUsers,
   profileForm,
   userLookupId,
   deleteUserId,
   isAdmin,
   isLeader,
   canDeleteUsers,
-  accessibleUserIds,
+  visibleUserIds,
   runAction,
   setFeedback,
   requiredFieldMessage,
   setCurrentUser,
   setSelectedUser,
   setUsers,
+  setDirectoryUsers,
   setProfileForm,
   handleSignOut,
   refreshWorkspaceSnapshot,
@@ -98,6 +102,9 @@ export function createUserOperations({
     setUsers((previous) =>
       previous.map((user) => (user.id === updatedUser.id ? { ...user, ...updatedUser } : user)),
     );
+    setDirectoryUsers((previous) =>
+      previous.map((user) => (user.id === updatedUser.id ? { ...user, ...updatedUser } : user)),
+    );
     setProfileForm((previous) => ({ ...previous, password: "" }));
     saveAuthSession({
       ...session,
@@ -107,42 +114,32 @@ export function createUserOperations({
   };
 
   const handleLoadUsers = async () => {
-    const nextUsers = await runAction(
+    const snapshot = await runAction(
       "users",
       async () => {
-        if (!currentUser) {
-          return [];
+        const nextSnapshot = await refreshWorkspaceSnapshot();
+
+        if (!nextSnapshot?.currentUser) {
+          throw new Error(t("feedback.workspaceRefreshError"));
         }
 
-        if (currentUser.role === "ADMIN") {
-          return apiRequest<UserDto[]>("/auth/users");
-        }
-
-        if (currentUser.role === "LEADER" && currentUser.organizationId != null) {
-          return ensureUserIncluded(
-            await apiRequest<UserDto[]>(`/auth/users/org/${currentUser.organizationId}`),
-            currentUser,
-          );
-        }
-
-        return [currentUser];
+        return nextSnapshot;
       },
       isAdmin
         ? t("feedback.usersLoaded")
         : isLeader
-          ? t("feedback.teammatesLoaded")
+          ? t("feedback.usersLoaded")
           : t("feedback.accountAlreadyVisible"),
     );
 
-    if (nextUsers) {
-      setUsers(nextUsers);
-      setSelectedUser((previous) => syncSelectedItem(nextUsers, previous) ?? currentUser);
+    if (snapshot?.currentUser) {
+      setSelectedUser((previous) => syncSelectedItem(snapshot.directoryUsers, previous) ?? snapshot.currentUser);
     }
   };
 
   const handleLookupUser = async () => {
     const userId = parseRequiredNumber(userLookupId, requiredFieldMessage("fields.teammate"));
-    if (!isAdmin && !accessibleUserIds.has(userId)) {
+    if (!isAdmin && !visibleUserIds.has(userId)) {
       setFeedback("users", {
         tone: "error",
         message: t("feedback.onlyScopeTeammatesOpen"),
@@ -150,11 +147,11 @@ export function createUserOperations({
       return;
     }
 
-    const localUser = users.find((user) => user.id === userId);
+    const localUser = directoryUsers.find((user) => user.id === userId) ?? users.find((user) => user.id === userId);
     const user = await runAction(
       "users",
       () =>
-        localUser && !isAdmin
+        localUser
           ? Promise.resolve(localUser)
           : apiRequest<UserDto>(`/auth/user/${userId}`),
       t("feedback.userLoaded"),
@@ -188,6 +185,7 @@ export function createUserOperations({
     }
 
     setUsers((previous) => previous.filter((user) => user.id !== userId));
+    setDirectoryUsers((previous) => previous.filter((user) => user.id !== userId));
     setSelectedUser((previous) => (previous?.id === userId ? null : previous));
 
     if (session?.userId === userId) {

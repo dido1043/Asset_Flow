@@ -20,6 +20,7 @@ export type KnownOrganization = OrganizationDto & {
 export type WorkspaceSnapshot = {
   currentUser: UserDto | null;
   users: UserDto[];
+  directoryUsers: UserDto[];
   organizations: KnownOrganization[];
   leaderOrganization: OrganizationDto | null;
   organizationInventory: ProductDto[];

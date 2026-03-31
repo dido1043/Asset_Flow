@@ -15,6 +15,8 @@ export function UsersSection({ workspace }: { workspace: AccountWorkspaceState }
   const {
     canDeleteUsers,
     deleteUserId,
+    directoryUserOptions,
+    directoryUsers,
     feedbackByKey,
     getOrganizationName,
     handleDeleteUser,
@@ -31,17 +33,21 @@ export function UsersSection({ workspace }: { workspace: AccountWorkspaceState }
     userOptions,
     users,
   } = workspace;
+  const visibleUsers = isLeader ? directoryUsers : users;
+  const visibleUserOptions = isLeader ? directoryUserOptions : userOptions;
   const deferredUserSearch = useDeferredValue(userSearch);
   const filteredUsers = useMemo(() => {
     const query = deferredUserSearch.trim().toLowerCase();
 
     if (!query) {
-      return users;
+      return visibleUsers;
     }
 
-    return users.filter((user) =>
+    return visibleUsers.filter((user) =>
       [
         user.fullName,
+        typeof user.id === "number" ? `${user.fullName}#${user.id}` : "",
+        typeof user.id === "number" ? String(user.id) : "",
         user.email,
         getOrganizationName(user.organizationId),
         getRoleLabel(user.role, t),
@@ -49,7 +55,7 @@ export function UsersSection({ workspace }: { workspace: AccountWorkspaceState }
         .filter(Boolean)
         .some((value) => value.toLowerCase().includes(query)),
     );
-  }, [deferredUserSearch, getOrganizationName, t, users]);
+  }, [deferredUserSearch, getOrganizationName, t, visibleUsers]);
 
   return (
     <SectionCard
@@ -62,7 +68,7 @@ export function UsersSection({ workspace }: { workspace: AccountWorkspaceState }
       }
       actions={
         <Button variant="outline" onClick={handleLoadUsers} disabled={Boolean(pendingByKey.users)}>
-          {pendingByKey.users ? t("common.loading") : isLeader ? t("users.reloadTeammates") : t("users.reloadUsers")}
+          {pendingByKey.users ? t("common.loading") : isLeader ? t("users.reloadUsers") : t("users.reloadUsers")}
         </Button>
       }
     >
@@ -74,13 +80,13 @@ export function UsersSection({ workspace }: { workspace: AccountWorkspaceState }
             <p className="text-sm font-semibold text-slate-900">{t("users.chooseTeammate")}</p>
             <div className="mt-4 flex flex-col gap-3 sm:flex-row">
               <div className="flex-1">
-                {userOptions.length > 0 ? (
+                {visibleUserOptions.length > 0 ? (
                   <SelectField
                     id="user-lookup-id"
                     label={t("common.user")}
                     value={userLookupId}
                     onChange={setUserLookupId}
-                    options={userOptions}
+                    options={visibleUserOptions}
                     placeholder={t("users.selectTeammate")}
                   />
                 ) : isAdmin ? (
@@ -147,7 +153,9 @@ export function UsersSection({ workspace }: { workspace: AccountWorkspaceState }
             <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                 <div className="min-w-0 flex-1">
-                  <p className="break-words text-sm font-semibold text-slate-900">{selectedUser.fullName}</p>
+                  <p className="break-words text-sm font-semibold text-slate-900">
+                    {typeof selectedUser.id === "number" ? `${selectedUser.fullName}#${selectedUser.id}` : selectedUser.fullName}
+                  </p>
                   <p className="break-all text-sm text-slate-500">{selectedUser.email}</p>
                 </div>
                 <span
@@ -182,7 +190,7 @@ export function UsersSection({ workspace }: { workspace: AccountWorkspaceState }
         </div>
 
         <div>
-          {users.length > 0 ? (
+          {visibleUsers.length > 0 ? (
             <div className="space-y-4">
               <div className="rounded-3xl border border-slate-200 bg-slate-50/80 p-4">
                 <Label htmlFor="user-search">{t("common.search")}</Label>
@@ -203,7 +211,9 @@ export function UsersSection({ workspace }: { workspace: AccountWorkspaceState }
                     <div key={user.id} className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
                       <div className="flex flex-col gap-3">
                         <div className="min-w-0">
-                          <p className="break-words text-sm font-semibold text-slate-900">{user.fullName}</p>
+                          <p className="break-words text-sm font-semibold text-slate-900">
+                            {typeof user.id === "number" ? `${user.fullName}#${user.id}` : user.fullName}
+                          </p>
                           <p className="break-all text-sm text-slate-500">{user.email}</p>
                         </div>
                         <span

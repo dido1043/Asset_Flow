@@ -1,3 +1,5 @@
+import { useDeferredValue, useMemo, useState } from "react";
+
 import { Button } from "@/app/components/shared/ui/Button";
 import { Input } from "@/app/components/shared/ui/Input";
 import { Label } from "@/app/components/shared/ui/Label";
@@ -8,6 +10,7 @@ import type { AccountWorkspaceState } from "../useAccountWorkspace";
 
 export function OrganizationsSection({ workspace }: { workspace: AccountWorkspaceState }) {
   const { t } = useTranslations();
+  const [employeeSearch, setEmployeeSearch] = useState("");
   const {
     allOrganizations,
     becomeLeaderForm,
@@ -22,6 +25,7 @@ export function OrganizationsSection({ workspace }: { workspace: AccountWorkspac
     inventoryOrgId,
     isLeader,
     joinOrganizationForm,
+    joinOrganizationUserOptions,
     leaderOptions,
     leaderOrganization,
     organizationCreateForm,
@@ -38,6 +42,20 @@ export function OrganizationsSection({ workspace }: { workspace: AccountWorkspac
     userOptions,
     users,
   } = workspace;
+  const deferredEmployeeSearch = useDeferredValue(employeeSearch);
+  const filteredJoinOrganizationUserOptions = useMemo(() => {
+    if (!isLeader) {
+      return joinOrganizationUserOptions;
+    }
+
+    const query = deferredEmployeeSearch.trim().toLowerCase();
+
+    if (!query) {
+      return joinOrganizationUserOptions;
+    }
+
+    return joinOrganizationUserOptions.filter((option) => option.label.toLowerCase().includes(query));
+  }, [deferredEmployeeSearch, isLeader, joinOrganizationUserOptions]);
 
   return (
     <SectionCard
@@ -150,21 +168,51 @@ export function OrganizationsSection({ workspace }: { workspace: AccountWorkspac
 
           {canManageOrganizationMembers ? (
             <form onSubmit={handleJoinOrganization} className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
-              <p className="text-sm font-semibold text-slate-900">{t("organizations.joinOrganization")}</p>
+              <p className="text-sm font-semibold text-slate-900">
+                {isLeader ? t("organizations.hireEmployee") : t("organizations.joinOrganization")}
+              </p>
               <div className="mt-4 grid gap-4 sm:grid-cols-2">
-                {userOptions.length > 0 ? (
-                  <SelectField
-                    id="join-user-id"
-                    label={t("common.teammate")}
-                    value={joinOrganizationForm.userId}
-                    onChange={(value) =>
-                      setJoinOrganizationForm((previous) => ({
-                        ...previous,
-                        userId: value,
-                      }))
-                    }
-                    options={userOptions}
-                    placeholder={t("users.selectTeammate")}
+                {joinOrganizationUserOptions.length > 0 ? (
+                  <div className="space-y-4">
+                    {isLeader ? (
+                      <div>
+                        <Label htmlFor="join-user-search">{t("common.search")}</Label>
+                        <Input
+                          id="join-user-search"
+                          value={employeeSearch}
+                          onChange={(event) => setEmployeeSearch(event.target.value)}
+                          placeholder={t("organizations.employeeSearchPlaceholder")}
+                        />
+                        <p className="mt-2 text-xs text-slate-500">
+                          {t("organizations.hireResultsLabel", { count: filteredJoinOrganizationUserOptions.length })}
+                        </p>
+                      </div>
+                    ) : null}
+                    {filteredJoinOrganizationUserOptions.length > 0 ? (
+                      <SelectField
+                        id="join-user-id"
+                        label={t("common.teammate")}
+                        value={joinOrganizationForm.userId}
+                        onChange={(value) =>
+                          setJoinOrganizationForm((previous) => ({
+                            ...previous,
+                            userId: value,
+                          }))
+                        }
+                        options={filteredJoinOrganizationUserOptions}
+                        placeholder={isLeader ? t("organizations.selectEmployeeToHire") : t("users.selectTeammate")}
+                      />
+                    ) : (
+                      <EmptyState
+                        title={t("organizations.noHireMatchesTitle")}
+                        description={t("organizations.noHireMatchesDescription")}
+                      />
+                    )}
+                  </div>
+                ) : isLeader ? (
+                  <EmptyState
+                    title={t("organizations.noHireCandidatesTitle")}
+                    description={t("organizations.noHireCandidatesDescription")}
                   />
                 ) : (
                   <div>
@@ -215,7 +263,7 @@ export function OrganizationsSection({ workspace }: { workspace: AccountWorkspac
               </div>
               <div className="mt-4">
                 <Button type="submit" disabled={Boolean(pendingByKey.organizations)}>
-                  {t("organizations.joinOrganization")}
+                  {isLeader ? t("organizations.hireEmployee") : t("organizations.joinOrganization")}
                 </Button>
               </div>
             </form>

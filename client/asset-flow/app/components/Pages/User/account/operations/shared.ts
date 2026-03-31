@@ -2,7 +2,7 @@ import type { Dispatch, SetStateAction } from "react";
 
 import type { OrganizationDto, ProductDto, UserDto } from "@/app/lib/types";
 
-import type { Feedback } from "../types";
+import type { Feedback, WorkspaceSnapshot } from "../types";
 
 export type Translate = (key: string, values?: Record<string, string | number>) => string;
 
@@ -18,7 +18,7 @@ export type SetFeedback = (key: string, feedback: Feedback | null) => void;
 
 export type RequiredFieldMessage = (fieldKey: string) => string;
 
-export type ReloadWorkspace = () => Promise<void>;
+export type ReloadWorkspace = () => Promise<WorkspaceSnapshot | null>;
 
 export type RefreshCurrentUser = () => Promise<UserDto | null>;
 
