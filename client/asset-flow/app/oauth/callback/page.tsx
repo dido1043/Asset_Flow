@@ -1,7 +1,7 @@
 'use client';
 
 import Link from "next/link";
-import { Suspense, useEffect, useState } from "react";
+import { startTransition, Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
 import { cn } from "@/app/components/shared/utils/cn";
@@ -9,6 +9,27 @@ import { apiRequest } from "@/app/lib/api";
 import { useTranslations } from "@/app/lib/i18n";
 import { saveAuthSession } from "@/app/lib/session";
 import type { LoginResponse } from "@/app/lib/types";
+
+const oauthExchangeRequests = new Map<string, Promise<LoginResponse>>();
+
+function exchangeOAuthCode(code: string) {
+  const existingRequest = oauthExchangeRequests.get(code);
+  if (existingRequest) {
+    return existingRequest;
+  }
+
+  const request = apiRequest<LoginResponse>("/auth/oauth/exchange", {
+    method: "POST",
+    auth: false,
+    json: { code },
+  }).catch((error) => {
+    oauthExchangeRequests.delete(code);
+    throw error;
+  });
+
+  oauthExchangeRequests.set(code, request);
+  return request;
+}
 
 function OAuthCallbackCard({
   error,
@@ -88,30 +109,32 @@ function OAuthCallbackContent() {
       return;
     }
 
-    const controller = new AbortController();
+    let cancelled = false;
 
-    const exchangeCode = async () => {
+    const completeOAuthExchange = async () => {
       try {
-        const authPayload = await apiRequest<LoginResponse>("/auth/oauth/exchange", {
-          method: "POST",
-          auth: false,
-          json: { code },
-          signal: controller.signal,
-        });
+        const authPayload = await exchangeOAuthCode(code);
+        if (cancelled) {
+          return;
+        }
 
         saveAuthSession(authPayload);
-        router.replace("/user/account");
-      } catch (err) {
-        if ((err as DOMException).name !== "AbortError") {
+        startTransition(() => {
+          router.replace("/user/account");
+        });
+      } catch {
+        if (!cancelled) {
           setError(t("oauth.errorFallback"));
           setLoading(false);
         }
       }
     };
 
-    void exchangeCode();
+    void completeOAuthExchange();
 
-    return () => controller.abort();
+    return () => {
+      cancelled = true;
+    };
   }, [router, code, t]);
 
   return <OAuthCallbackCard error={error} missingCode={missingCode} loading={loading} />;

@@ -8,7 +8,6 @@ import { getRoleLabel, useTranslations } from "@/app/lib/i18n";
 import {
   clearAuthSession,
   readAuthSession,
-  saveAuthSession,
   subscribeToAuthChanges,
 } from "@/app/lib/session";
 import type {
@@ -21,7 +20,23 @@ import type {
   UserDto,
 } from "@/app/lib/types";
 
-import type { Feedback, KnownOrganization, SelectOption } from "./types";
+import { createOrganizationOperations } from "./operations/organizations";
+import { createProductOperations } from "./operations/products";
+import { createProtocolOperations } from "./operations/protocols";
+import { createUserOperations } from "./operations/users";
+import type {
+  AssignmentFormState,
+  BecomeLeaderFormState,
+  Feedback,
+  JoinOrganizationFormState,
+  KnownOrganization,
+  OrganizationCreateFormState,
+  ProductFormState,
+  ProfileFormState,
+  ProtocolCreateFormState,
+  SelectOption,
+  WorkspaceSnapshot,
+} from "./types";
 import {
   getWorkspaceSections,
   parseOptionalNumber,
@@ -30,64 +45,12 @@ import {
   toIsoDateTime,
   toLocalDateTime,
 } from "./utils";
-
-type WorkspaceSnapshot = {
-  currentUser: UserDto | null;
-  users: UserDto[];
-  organizations: KnownOrganization[];
-  leaderOrganization: OrganizationDto | null;
-  organizationInventory: ProductDto[];
-  products: ProductDto[];
-  assignments: AssignmentDto[];
-  currentAssignments: AssignmentDto[];
-  protocols: ProtocolDto[];
-  errors: string[];
-};
-
-function dedupeById<T extends { id?: number | null }>(items: T[]) {
-  const seen = new Set<number>();
-
-  return items.filter((item) => {
-    if (typeof item.id !== "number") {
-      return true;
-    }
-
-    if (seen.has(item.id)) {
-      return false;
-    }
-
-    seen.add(item.id);
-    return true;
-  });
-}
-
-function ensureUserIncluded(users: UserDto[], currentUser: UserDto) {
-  return dedupeById([currentUser, ...users]);
-}
-
-function syncSelectedItem<T extends { id?: number | null }>(items: T[], previous: T | null) {
-  if (typeof previous?.id !== "number") {
-    return null;
-  }
-
-  return items.find((item) => item.id === previous.id) ?? null;
-}
-
-function buildOrganizationPlaceholder(
-  organizationId: number,
-  organizationName: string,
-  memberCount: number,
-  leaderId?: number | null,
-  leaderName?: string | null,
-): KnownOrganization {
-  return {
-    id: organizationId,
-    organizationName,
-    leaderId: leaderId ?? null,
-    leaderName: leaderName ?? null,
-    memberCount,
-  };
-}
+import {
+  buildOrganizationPlaceholder,
+  dedupeById,
+  ensureUserIncluded,
+  syncSelectedItem,
+} from "./workspaceHelpers";
 
 export function useAccountWorkspace() {
   const router = useRouter();
@@ -124,7 +87,7 @@ export function useAccountWorkspace() {
   const [selectedProtocol, setSelectedProtocol] = React.useState<ProtocolDto | null>(null);
   const [aiResult, setAiResult] = React.useState<AiResponseDto | null>(null);
 
-  const [profileForm, setProfileForm] = React.useState({
+  const [profileForm, setProfileForm] = React.useState<ProfileFormState>({
     fullName: "",
     email: "",
     password: "",
@@ -136,21 +99,21 @@ export function useAccountWorkspace() {
   const [deleteUserId, setDeleteUserId] = React.useState("");
 
   const [organizationLookupLeaderId, setOrganizationLookupLeaderId] = React.useState("");
-  const [organizationCreateForm, setOrganizationCreateForm] = React.useState({
+  const [organizationCreateForm, setOrganizationCreateForm] = React.useState<OrganizationCreateFormState>({
     leaderId: "",
     organizationName: "",
   });
-  const [joinOrganizationForm, setJoinOrganizationForm] = React.useState({
+  const [joinOrganizationForm, setJoinOrganizationForm] = React.useState<JoinOrganizationFormState>({
     userId: "",
     organizationId: "",
   });
-  const [becomeLeaderForm, setBecomeLeaderForm] = React.useState({
+  const [becomeLeaderForm, setBecomeLeaderForm] = React.useState<BecomeLeaderFormState>({
     userId: "",
     organizationId: "",
   });
   const [inventoryOrgId, setInventoryOrgId] = React.useState("");
 
-  const [productForm, setProductForm] = React.useState({
+  const [productForm, setProductForm] = React.useState<ProductFormState>({
     id: "",
     productType: "",
     productBrand: "",
@@ -162,7 +125,7 @@ export function useAccountWorkspace() {
   const [productAssetTag, setProductAssetTag] = React.useState("");
   const [productTypeQuery, setProductTypeQuery] = React.useState("");
 
-  const [assignmentForm, setAssignmentForm] = React.useState({
+  const [assignmentForm, setAssignmentForm] = React.useState<AssignmentFormState>({
     id: "",
     employeeId: "",
     productId: "",
@@ -174,7 +137,7 @@ export function useAccountWorkspace() {
   const [assignmentProductId, setAssignmentProductId] = React.useState("");
 
   const [protocolLookupId, setProtocolLookupId] = React.useState("");
-  const [protocolCreateForm, setProtocolCreateForm] = React.useState({
+  const [protocolCreateForm, setProtocolCreateForm] = React.useState<ProtocolCreateFormState>({
     organizationId: "",
     userId: "",
   });
@@ -193,7 +156,8 @@ export function useAccountWorkspace() {
   const canManageProtocols = isAdmin || isLeader;
   const canDeleteUsers = isAdmin;
   const canManageOrganizationMembers = isAdmin;
-  const canCreateOrganizations = isAdmin;
+  const canCreateOrganizations = isLeader;
+  const canHireEmployees = isLeader;
 
   const workspaceScopeLabel = isAdmin
     ? t("workspace.scope.allCompanyData")
@@ -867,6 +831,10 @@ export function useAccountWorkspace() {
     return nextAssignments;
   };
 
+  const reloadWorkspaceSnapshot = React.useCallback(async () => {
+    await refreshWorkspaceSnapshot();
+  }, [refreshWorkspaceSnapshot]);
+
   const handleWorkspaceRefresh = async () => {
     if (!session) {
       return;
@@ -888,501 +856,96 @@ export function useAccountWorkspace() {
     }
   };
 
-  const handleProfileUpdate = async (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-
-    if (!session) {
-      return;
-    }
-
-    const updatedUser = await runAction(
-      "profile",
-      async () => {
-        const payload: UserDto = {
-          fullName: requireText(profileForm.fullName, requiredFieldMessage("fields.fullName")),
-          email: requireText(profileForm.email, requiredFieldMessage("fields.email")),
-          password: profileForm.password || null,
-          role: currentUser?.role ?? profileForm.role,
-          age: parseOptionalNumber(profileForm.age),
-          organizationId: currentUser?.organizationId ?? null,
-          assignmentIds: currentUser?.assignmentIds ?? [],
-        };
-
-        return apiRequest<UserDto>(`/auth/user/edit/${session.userId}`, {
-          method: "PUT",
-          json: payload,
-        });
-      },
-      t("feedback.profileUpdated"),
-    );
-
-    if (!updatedUser) {
-      return;
-    }
-
-    setCurrentUser(updatedUser);
-    setSelectedUser(updatedUser);
-    setUsers((previous) =>
-      previous.map((user) => (user.id === updatedUser.id ? { ...user, ...updatedUser } : user)),
-    );
-    setProfileForm((previous) => ({ ...previous, password: "" }));
-    saveAuthSession({
-      ...session,
-      role: updatedUser.role,
-      issuedAt: session.issuedAt,
-    });
-  };
-
-  const handleLoadUsers = async () => {
-    const nextUsers = await runAction(
-      "users",
-      async () => {
-        if (!currentUser) {
-          return [];
-        }
-
-        if (currentUser.role === "ADMIN") {
-          return apiRequest<UserDto[]>("/auth/users");
-        }
-
-        if (currentUser.role === "LEADER" && currentUser.organizationId != null) {
-          return ensureUserIncluded(
-            await apiRequest<UserDto[]>(`/auth/users/org/${currentUser.organizationId}`),
-            currentUser,
-          );
-        }
-
-        return [currentUser];
-      },
-      isAdmin
-        ? t("feedback.usersLoaded")
-        : isLeader
-          ? t("feedback.teammatesLoaded")
-          : t("feedback.accountAlreadyVisible"),
-    );
-
-    if (nextUsers) {
-      setUsers(nextUsers);
-      setSelectedUser((previous) => syncSelectedItem(nextUsers, previous) ?? currentUser);
-    }
-  };
-
-  const handleLookupUser = async () => {
-    const userId = parseRequiredNumber(userLookupId, requiredFieldMessage("fields.teammate"));
-    if (!isAdmin && !accessibleUserIds.has(userId)) {
-      setFeedback("users", {
-        tone: "error",
-        message: t("feedback.onlyScopeTeammatesOpen"),
-      });
-      return;
-    }
-
-    const localUser = users.find((user) => user.id === userId);
-    const user = await runAction(
-      "users",
-      () => (localUser && !isAdmin ? Promise.resolve(localUser) : apiRequest<UserDto>(`/auth/user/${userId}`)),
-      t("feedback.userLoaded"),
-    );
-
-    if (user) {
-      setSelectedUser(user);
-    }
-  };
-
-  const handleDeleteUser = async () => {
-    if (!canDeleteUsers) {
-      setFeedback("users", { tone: "error", message: t("feedback.onlyAdminsDeleteUsers") });
-      return;
-    }
-
-    const userId = parseRequiredNumber(deleteUserId, requiredFieldMessage("fields.teammate"));
-
-    if (!window.confirm(t("feedback.deleteUserConfirm", { name: getUserName(userId) }))) {
-      return;
-    }
-
-    const deletedUser = await runAction(
-      "users",
-      () => apiRequest<UserDto>(`/auth/user/delete/${userId}`, { method: "DELETE" }),
-      t("feedback.userDeleted"),
-    );
-
-    if (!deletedUser) {
-      return;
-    }
-
-    setUsers((previous) => previous.filter((user) => user.id !== userId));
-    setSelectedUser((previous) => (previous?.id === userId ? null : previous));
-
-    if (session?.userId === userId) {
-      handleSignOut();
-      return;
-    }
-
-    await refreshWorkspaceSnapshot();
-  };
-
-  const handleLookupOrganization = async () => {
-    if (!canManageOrganizations) {
-      setFeedback("organizations", { tone: "error", message: t("feedback.restrictedCompanyRecords") });
-      return;
-    }
-
-    const organization = await runAction(
-      "organizations",
-      async () => {
-        if (isLeader) {
-          return allOrganizations.find((candidate) => candidate.id === currentUser?.organizationId) ?? leaderOrganization;
-        }
-
-        const leaderId = parseRequiredNumber(organizationLookupLeaderId, requiredFieldMessage("fields.leader"));
-        return apiRequest<OrganizationDto>(`/org/leader/${leaderId}`);
-      },
-      t("feedback.organizationLoaded"),
-    );
-
-    if (organization) {
-      setLeaderOrganization(organization);
-      if (isAdmin) {
-        const leaderId = parseRequiredNumber(organizationLookupLeaderId, requiredFieldMessage("fields.leader"));
-        upsertOrganizationSummary(organization, leaderId);
-      }
-    }
-  };
-
-  const handleCreateOrganization = async (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-
-    if (!canCreateOrganizations) {
-      setFeedback("organizations", { tone: "error", message: t("feedback.onlyAdminsCreateCompanies") });
-      return;
-    }
-
-    const leaderId = parseRequiredNumber(organizationCreateForm.leaderId, requiredFieldMessage("fields.leader"));
-    const organizationName = requireText(
-      organizationCreateForm.organizationName,
-      requiredFieldMessage("fields.organizationName"),
-    );
-
-    const organization = await runAction(
-      "organizations",
-      () =>
-        apiRequest<OrganizationDto>(`/org/create/${leaderId}`, {
-          method: "POST",
-          json: { organizationName },
-        }),
-      t("feedback.organizationCreated"),
-    );
-
-    if (!organization) {
-      return;
-    }
-
-    setLeaderOrganization(organization);
-    upsertOrganizationSummary(organization, leaderId);
-    await refreshWorkspaceSnapshot();
-  };
-
-  const handleJoinOrganization = async (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-
-    if (!canManageOrganizationMembers) {
-      setFeedback("organizations", {
-        tone: "error",
-        message: t("feedback.onlyAdminsMoveUsers"),
-      });
-      return;
-    }
-
-    const userId = parseRequiredNumber(joinOrganizationForm.userId, requiredFieldMessage("fields.teammate"));
-    const organizationId = parseRequiredNumber(joinOrganizationForm.organizationId, requiredFieldMessage("fields.company"));
-
-    const organization = await runAction(
-      "organizations",
-      () =>
-        apiRequest<OrganizationDto>(`/org/join/${userId}/${organizationId}`, {
-          method: "POST",
-        }),
-      t("feedback.organizationJoined"),
-    );
-
-    if (!organization) {
-      return;
-    }
-
-    setLeaderOrganization(organization);
-    upsertOrganizationSummary(organization);
-    await refreshWorkspaceSnapshot();
-  };
-
-  const handleBecomeLeader = async (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-
-    if (!canManageOrganizationMembers) {
-      setFeedback("organizations", {
-        tone: "error",
-        message: t("feedback.onlyAdminsAssignLeaders"),
-      });
-      return;
-    }
-
-    const userId = parseRequiredNumber(becomeLeaderForm.userId, requiredFieldMessage("fields.teammate"));
-    const organizationId = parseRequiredNumber(becomeLeaderForm.organizationId, requiredFieldMessage("fields.company"));
-
-    const result = await runAction(
-      "organizations",
-      () =>
-        apiRequest<void>(`/org/becomeLeader/${userId}/${organizationId}`, {
-          method: "POST",
-        }),
-      t("feedback.leaderUpdated"),
-    );
-
-    if (result === null) {
-      return;
-    }
-
-    if (session?.userId === userId) {
-      await refreshCurrentUserSnapshot();
-      saveAuthSession({
-        ...(session ?? readAuthSession()),
-        role: "LEADER",
-        token: session?.token ?? "",
-        expiresIn: session?.expiresIn ?? 0,
-        userId: session?.userId ?? 0,
-        issuedAt: session?.issuedAt,
-      });
-    }
-
-    await refreshWorkspaceSnapshot();
-    const organization = await apiRequest<OrganizationDto>(`/org/leader/${userId}`);
-    setLeaderOrganization(organization);
-    upsertOrganizationSummary(organization, userId);
-  };
-
-  const handleLoadOrganizationInventory = async () => {
-    if (!canManageOrganizations) {
-      setFeedback("organizations", { tone: "error", message: t("feedback.restrictedInventory") });
-      return;
-    }
-
-    const organizationId = parseRequiredNumber(inventoryOrgId, requiredFieldMessage("fields.company"));
-
-    if (!isAdmin && organizationId !== currentUser?.organizationId) {
-      setFeedback("organizations", {
-        tone: "error",
-        message: t("feedback.leadersOwnInventoryOnly"),
-      });
-      return;
-    }
-
-    const inventory = await runAction(
-      "organizations",
-      () => apiRequest<ProductDto[]>(`/org/inventory/${organizationId}`),
-      t("feedback.inventoryLoaded"),
-    );
-
-    if (inventory) {
-      setOrganizationInventory(inventory);
-    }
-  };
-
-  const buildProductPayload = () => ({
-    productType: requireText(productForm.productType, requiredFieldMessage("fields.productType")),
-    productBrand: requireText(productForm.productBrand, requiredFieldMessage("fields.brand")),
-    productModel: requireText(productForm.productModel, requiredFieldMessage("fields.model")),
-    assetTag: requireText(productForm.assetTag, requiredFieldMessage("fields.assetTag")),
-    organizationId: isLeader ? currentUser?.organizationId ?? null : parseOptionalNumber(productForm.organizationId),
+  const {
+    handleProfileUpdate,
+    handleLoadUsers,
+    handleLookupUser,
+    handleDeleteUser,
+  } = createUserOperations({
+    session,
+    currentUser,
+    users,
+    profileForm,
+    userLookupId,
+    deleteUserId,
+    isAdmin,
+    isLeader,
+    canDeleteUsers,
+    accessibleUserIds,
+    runAction,
+    setFeedback,
+    requiredFieldMessage,
+    setCurrentUser,
+    setSelectedUser,
+    setUsers,
+    setProfileForm,
+    handleSignOut,
+    refreshWorkspaceSnapshot: reloadWorkspaceSnapshot,
+    t,
   });
 
-  const handleCreateProduct = async (legacy = false) => {
-    if (!canManageProducts) {
-      setFeedback("products", { tone: "error", message: t("feedback.restrictedAssetView") });
-      return;
-    }
+  const {
+    handleLookupOrganization,
+    handleCreateOrganization,
+    handleJoinOrganization,
+    handleBecomeLeader,
+    handleLoadOrganizationInventory,
+  } = createOrganizationOperations({
+    session,
+    currentUser,
+    allOrganizations,
+    leaderOrganization,
+    organizationLookupLeaderId,
+    organizationCreateForm,
+    joinOrganizationForm,
+    becomeLeaderForm,
+    inventoryOrgId,
+    isAdmin,
+    isLeader,
+    canManageOrganizations,
+    canCreateOrganizations,
+    canManageOrganizationMembers,
+    runAction,
+    setFeedback,
+    requiredFieldMessage,
+    setLeaderOrganization,
+    setOrganizationInventory,
+    refreshWorkspaceSnapshot: reloadWorkspaceSnapshot,
+    refreshCurrentUserSnapshot,
+    upsertOrganizationSummary,
+    t,
+  });
 
-    const endpoint = legacy ? "/product/add" : "/product";
-
-    const product = await runAction(
-      "products",
-      () =>
-        apiRequest<ProductDto>(endpoint, {
-          method: "POST",
-          json: buildProductPayload(),
-        }),
-      legacy ? t("feedback.productCreatedCompatibility") : t("feedback.productCreated"),
-    );
-
-    if (!product) {
-      return;
-    }
-
-    setSelectedProduct(product);
-    await refreshProductsList();
-  };
-
-  const handleUpdateProduct = async () => {
-    if (!canManageProducts) {
-      setFeedback("products", { tone: "error", message: t("feedback.onlyAdminsLeadersEditProducts") });
-      return;
-    }
-
-    const productId = parseRequiredNumber(productForm.id, requiredFieldMessage("fields.asset"));
-
-    if (!isAdmin && !accessibleProductIds.has(productId)) {
-      setFeedback("products", { tone: "error", message: t("feedback.onlyCompanyAssetsUpdate") });
-      return;
-    }
-
-    const payload = {
-      productType: productForm.productType.trim() || undefined,
-      productBrand: productForm.productBrand.trim() || undefined,
-      productModel: productForm.productModel.trim() || undefined,
-      assetTag: productForm.assetTag.trim() || undefined,
-      organizationId: isLeader ? currentUser?.organizationId ?? null : parseOptionalNumber(productForm.organizationId),
-    };
-
-    const product = await runAction(
-      "products",
-      () =>
-        apiRequest<ProductDto>(`/product/${productId}`, {
-          method: "PUT",
-          json: payload,
-        }),
-      t("feedback.productUpdated"),
-    );
-
-    if (!product) {
-      return;
-    }
-
-    setSelectedProduct(product);
-    await refreshProductsList();
-  };
-
-  const handleLoadAllProducts = async () => {
-    const nextProducts = await runAction(
-      "products",
-      async () => {
-        if (!currentUser) {
-          return [];
-        }
-
-        if (currentUser.role === "ADMIN") {
-          return apiRequest<ProductDto[]>("/product/all");
-        }
-
-        if (currentUser.role === "LEADER" && currentUser.organizationId != null) {
-          return apiRequest<ProductDto[]>(`/product/org/${currentUser.organizationId}`);
-        }
-
-        return products;
-      },
-      isAdmin
-        ? t("feedback.productsLoaded")
-        : isLeader
-          ? t("feedback.companyAssetsLoaded")
-          : t("feedback.assignedAssetsAlreadyVisible"),
-    );
-
-    if (nextProducts) {
-      setProducts(nextProducts);
-    }
-  };
-
-  const handleLookupProduct = async () => {
-    const productId = parseRequiredNumber(productLookupId, requiredFieldMessage("fields.asset"));
-
-    if (!isAdmin && !accessibleProductIds.has(productId)) {
-      setFeedback("products", {
-        tone: "error",
-        message: t("feedback.onlyVisibleAssetsOpen"),
-      });
-      return;
-    }
-
-    const localProduct = products.find((product) => product.id === productId);
-    const product = await runAction(
-      "products",
-      () => (localProduct && !isAdmin ? Promise.resolve(localProduct) : apiRequest<ProductDto>(`/product/${productId}`)),
-      t("feedback.productLoaded"),
-    );
-
-    if (product) {
-      setSelectedProduct(product);
-    }
-  };
-
-  const handleSearchProductByAssetTag = async () => {
-    const assetTag = requireText(productAssetTag, requiredFieldMessage("fields.assetTag"));
-    const product = await runAction("products", async () => {
-      if (isAdmin) {
-        return apiRequest<ProductDto>(`/product/asset/${encodeURIComponent(assetTag)}`);
-      }
-
-      const match = products.find((candidate) => candidate.assetTag.toLowerCase() === assetTag.toLowerCase());
-      if (!match) {
-        throw new Error(t("feedback.noVisibleAssetWithTag"));
-      }
-
-      return match;
-    }, t("feedback.productAssetSearchComplete"));
-
-    if (product) {
-      setSelectedProduct(product);
-    }
-  };
-
-  const handleSearchProductByType = async () => {
-    const productType = requireText(productTypeQuery, requiredFieldMessage("fields.productType"));
-    const result = await runAction("products", async () => {
-      if (isAdmin) {
-        return apiRequest<ProductDto[]>(`/product/search/type/${encodeURIComponent(productType)}`);
-      }
-
-      return products.filter((product) => product.productType.toLowerCase().includes(productType.toLowerCase()));
-    }, t("feedback.productTypeSearchComplete"));
-
-    if (result) {
-      setProductTypeResults(result);
-    }
-  };
-
-  const handleDeleteProduct = async () => {
-    if (!canManageProducts) {
-      setFeedback("products", { tone: "error", message: t("feedback.onlyAdminsLeadersDeleteProducts") });
-      return;
-    }
-
-    const productId = parseRequiredNumber(productLookupId || productForm.id, requiredFieldMessage("fields.asset"));
-
-    if (!isAdmin && !accessibleProductIds.has(productId)) {
-      setFeedback("products", { tone: "error", message: t("feedback.onlyCompanyAssetsDelete") });
-      return;
-    }
-
-    if (!window.confirm(t("feedback.deleteProductConfirm", { name: getProductName(productId) }))) {
-      return;
-    }
-
-    const result = await runAction(
-      "products",
-      () =>
-        apiRequest<void>(`/product/${productId}`, {
-          method: "DELETE",
-        }),
-      t("feedback.productDeleted"),
-    );
-
-    if (result === null) {
-      return;
-    }
-
-    setSelectedProduct((previous) => (previous?.id === productId ? null : previous));
-    setProductTypeResults((previous) => previous.filter((product) => product.id !== productId));
-    setOrganizationInventory((previous) => previous.filter((product) => product.id !== productId));
-    await refreshProductsList();
-  };
+  const {
+    handleCreateProduct,
+    handleUpdateProduct,
+    handleLoadAllProducts,
+    handleLookupProduct,
+    handleSearchProductByAssetTag,
+    handleSearchProductByType,
+    handleDeleteProduct,
+  } = createProductOperations({
+    currentUser,
+    products,
+    productForm,
+    productLookupId,
+    productAssetTag,
+    productTypeQuery,
+    isAdmin,
+    isLeader,
+    canManageProducts,
+    accessibleProductIds,
+    runAction,
+    setFeedback,
+    requiredFieldMessage,
+    setSelectedProduct,
+    setProducts,
+    setProductTypeResults,
+    setOrganizationInventory,
+    refreshProductsList,
+    getProductName,
+    t,
+  });
 
   const buildAssignmentPayload = () => ({
     employeeId: parseRequiredNumber(assignmentForm.employeeId, requiredFieldMessage("fields.teammate")),
@@ -1647,86 +1210,22 @@ export function useAccountWorkspace() {
     await refreshCurrentUserSnapshot();
   };
 
-  const handleLookupProtocol = async () => {
-    if (!canManageProtocols) {
-      setFeedback("protocols", {
-        tone: "error",
-        message: t("feedback.protocolsAdminsLeadersOnly"),
-      });
-      return;
-    }
-
-    const protocolId = parseRequiredNumber(protocolLookupId, requiredFieldMessage("fields.protocol"));
-
-    if (!isAdmin && !accessibleProtocolIds.has(protocolId)) {
-      setFeedback("protocols", {
-        tone: "error",
-        message: t("feedback.onlyScopeProtocolsOpen"),
-      });
-      return;
-    }
-
-    const localProtocol = protocols.find((protocol) => protocol.id === protocolId);
-    const protocol = await runAction(
-      "protocols",
-      () =>
-        localProtocol && !isAdmin
-          ? Promise.resolve(localProtocol)
-          : apiRequest<ProtocolDto>(`/protocol/${protocolId}`),
-      t("feedback.protocolLoaded"),
-    );
-
-    if (protocol) {
-      setSelectedProtocol(protocol);
-    }
-  };
-
-  const handleCreateProtocol = async (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-
-    if (!canManageProtocols) {
-      setFeedback("protocols", {
-        tone: "error",
-        message: t("feedback.protocolCreationAdminsLeadersOnly"),
-      });
-      return;
-    }
-
-    const organizationId = isLeader
-      ? currentUser?.organizationId ?? parseRequiredNumber(protocolCreateForm.organizationId, requiredFieldMessage("fields.company"))
-      : parseRequiredNumber(protocolCreateForm.organizationId, requiredFieldMessage("fields.company"));
-    const userId = parseRequiredNumber(protocolCreateForm.userId, requiredFieldMessage("fields.teammate"));
-
-    if (!isAdmin && organizationId !== currentUser?.organizationId) {
-      setFeedback("protocols", {
-        tone: "error",
-        message: t("feedback.leadersOwnProtocolsOnly"),
-      });
-      return;
-    }
-
-    if (!isAdmin && !accessibleUserIds.has(userId)) {
-      setFeedback("protocols", {
-        tone: "error",
-        message: t("feedback.onlyScopeTeammateProtocols"),
-      });
-      return;
-    }
-
-    const protocol = await runAction(
-      "protocols",
-      () =>
-        apiRequest<ProtocolDto>(`/protocol/create/${organizationId}/user/${userId}`, {
-          method: "POST",
-        }),
-      t("feedback.protocolCreated"),
-    );
-
-    if (protocol) {
-      setSelectedProtocol(protocol);
-      await refreshWorkspaceSnapshot();
-    }
-  };
+  const { handleLookupProtocol, handleCreateProtocol } = createProtocolOperations({
+    currentUser,
+    protocols,
+    protocolLookupId,
+    protocolCreateForm,
+    isAdmin,
+    canManageProtocols,
+    accessibleProtocolIds,
+    accessibleUserIds,
+    runAction,
+    setFeedback,
+    requiredFieldMessage,
+    setSelectedProtocol,
+    refreshWorkspaceSnapshot: reloadWorkspaceSnapshot,
+    t,
+  });
 
   const handleGenerateAiResponse = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
