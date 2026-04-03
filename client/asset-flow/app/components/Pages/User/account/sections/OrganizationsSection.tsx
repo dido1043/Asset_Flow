@@ -3,14 +3,16 @@ import { useDeferredValue, useMemo, useState } from "react";
 import { Button } from "@/app/components/shared/ui/Button";
 import { Input } from "@/app/components/shared/ui/Input";
 import { Label } from "@/app/components/shared/ui/Label";
-import { useTranslations } from "@/app/lib/i18n";
+import { getRoleLabel, useTranslations } from "@/app/lib/i18n";
 
 import { EmptyState, FeedbackMessage, SectionCard, SelectField } from "../shared";
 import type { AccountWorkspaceState } from "../useAccountWorkspace";
+import { getRoleBadgeClass } from "../utils";
 
 export function OrganizationsSection({ workspace }: { workspace: AccountWorkspaceState }) {
   const { t } = useTranslations();
   const [employeeSearch, setEmployeeSearch] = useState("");
+  const [rosterSearch, setRosterSearch] = useState("");
   const {
     allOrganizations,
     becomeLeaderForm,
@@ -43,6 +45,8 @@ export function OrganizationsSection({ workspace }: { workspace: AccountWorkspac
     users,
   } = workspace;
   const deferredEmployeeSearch = useDeferredValue(employeeSearch);
+  const deferredRosterSearch = useDeferredValue(rosterSearch);
+  const selectedOrganizationId = typeof leaderOrganization?.id === "number" ? leaderOrganization.id : null;
   const filteredJoinOrganizationUserOptions = useMemo(() => {
     if (!isLeader) {
       return joinOrganizationUserOptions;
@@ -56,6 +60,48 @@ export function OrganizationsSection({ workspace }: { workspace: AccountWorkspac
 
     return joinOrganizationUserOptions.filter((option) => option.label.toLowerCase().includes(query));
   }, [deferredEmployeeSearch, isLeader, joinOrganizationUserOptions]);
+  const selectedOrganizationUsers = useMemo(() => {
+    if (selectedOrganizationId === null) {
+      return [];
+    }
+
+    const roleOrder = {
+      LEADER: 0,
+      ADMIN: 1,
+      EMPLOYEE: 2,
+    } as const;
+
+    return users
+      .filter((user) => user.organizationId === selectedOrganizationId)
+      .sort((left, right) => {
+        const roleDifference = roleOrder[left.role] - roleOrder[right.role];
+
+        if (roleDifference !== 0) {
+          return roleDifference;
+        }
+
+        return left.fullName.localeCompare(right.fullName);
+      });
+  }, [selectedOrganizationId, users]);
+  const filteredOrganizationUsers = useMemo(() => {
+    const query = deferredRosterSearch.trim().toLowerCase();
+
+    if (!query) {
+      return selectedOrganizationUsers;
+    }
+
+    return selectedOrganizationUsers.filter((user) =>
+      [
+        user.fullName,
+        typeof user.id === "number" ? `${user.fullName}#${user.id}` : "",
+        typeof user.id === "number" ? String(user.id) : "",
+        user.email,
+        getRoleLabel(user.role, t),
+      ]
+        .filter(Boolean)
+        .some((value) => value.toLowerCase().includes(query)),
+    );
+  }, [deferredRosterSearch, selectedOrganizationUsers, t]);
 
   return (
     <SectionCard
@@ -362,7 +408,7 @@ export function OrganizationsSection({ workspace }: { workspace: AccountWorkspac
                 <div className="flex justify-between gap-4">
                   <dt>{t("organizations.members")}</dt>
                   <dd className="font-semibold text-slate-900">
-                    {users.filter((user) => user.organizationId === leaderOrganization.id).length}
+                    {selectedOrganizationUsers.length}
                   </dd>
                 </div>
               </dl>
@@ -405,6 +451,73 @@ export function OrganizationsSection({ workspace }: { workspace: AccountWorkspac
                 </Button>
               </div>
             </div>
+          </div>
+
+          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
+            <p className="text-sm font-semibold text-slate-900">{t("organizations.companyRoster")}</p>
+            {leaderOrganization ? (
+              <div className="mt-4 space-y-4">
+                <div className="rounded-3xl border border-slate-200 bg-white/80 p-4">
+                  <Label htmlFor="organization-roster-search">{t("common.search")}</Label>
+                  <Input
+                    id="organization-roster-search"
+                    value={rosterSearch}
+                    onChange={(event) => setRosterSearch(event.target.value)}
+                    placeholder={t("organizations.rosterSearchPlaceholder")}
+                  />
+                  <p className="mt-2 text-xs text-slate-500">
+                    {t("organizations.rosterResultsLabel", { count: filteredOrganizationUsers.length })}
+                  </p>
+                </div>
+
+                {filteredOrganizationUsers.length > 0 ? (
+                  <div className="grid gap-4">
+                    {filteredOrganizationUsers.map((user) => (
+                      <div key={user.id ?? user.email} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                          <div className="min-w-0">
+                            <p className="break-words text-sm font-semibold text-slate-900">
+                              {typeof user.id === "number" ? `${user.fullName}#${user.id}` : user.fullName}
+                            </p>
+                            <p className="break-all text-sm text-slate-500">{user.email}</p>
+                          </div>
+                          <span
+                            className={`inline-flex self-start rounded-full px-3 py-1 text-xs font-semibold ${getRoleBadgeClass(
+                              user.role,
+                            )}`}
+                          >
+                            {getRoleLabel(user.role, t)}
+                          </span>
+                        </div>
+                        <div className="mt-4 space-y-2 text-sm text-slate-600">
+                          <p>
+                            {t("common.age")}: {user.age ?? t("common.notSet")}
+                          </p>
+                          <p>{t("users.assignmentsPrefix", { count: user.assignmentIds?.length ?? 0 })}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : selectedOrganizationUsers.length > 0 ? (
+                  <EmptyState
+                    title={t("organizations.noRosterMatchesTitle")}
+                    description={t("organizations.noRosterMatchesDescription")}
+                  />
+                ) : (
+                  <EmptyState
+                    title={t("organizations.noRosterMembersTitle")}
+                    description={t("organizations.noRosterMembersDescription")}
+                  />
+                )}
+              </div>
+            ) : (
+              <div className="mt-4">
+                <EmptyState
+                  title={t("organizations.noOrganizationSelectedTitle")}
+                  description={t("organizations.noOrganizationSelectedDescription")}
+                />
+              </div>
+            )}
           </div>
 
           {organizationInventory.length > 0 ? (
