@@ -23,6 +23,7 @@ export function ProfileSection({ workspace }: { workspace: AccountWorkspaceState
         <>
           <Button
             variant="outline"
+            className="bg-transparent disabled:bg-transparent"
             onClick={handleWorkspaceRefresh}
             disabled={Boolean(pendingByKey.workspace || bootstrapping)}
           >

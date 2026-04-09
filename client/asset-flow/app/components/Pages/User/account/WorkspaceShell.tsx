@@ -217,7 +217,7 @@ function WorkspaceShellInner({ children }: { children: React.ReactNode }) {
             <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
               <Button
                 variant="outline"
-                className="w-full border-white/10 bg-white/10 text-white hover:bg-white/20 hover:text-white"
+                className="w-full border-white/10 bg-transparent text-white hover:bg-white/10 hover:text-white disabled:border-white/10 disabled:bg-transparent disabled:text-slate-200"
                 onClick={handleWorkspaceRefresh}
                 disabled={Boolean(pendingByKey.workspace || bootstrapping)}
               >

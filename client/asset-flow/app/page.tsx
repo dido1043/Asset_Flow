@@ -4,9 +4,23 @@ import React from "react";
 import Link from "next/link";
 
 import { useTranslations } from "@/app/lib/i18n";
+import { readAuthSession, subscribeToAuthChanges } from "@/app/lib/session";
+import type { AuthSession } from "@/app/lib/types";
 
 const Home = () => {
   const { t } = useTranslations();
+  const [session, setSession] = React.useState<AuthSession | null>(null);
+  const [sessionChecked, setSessionChecked] = React.useState(false);
+
+  React.useEffect(() => {
+    const syncSession = () => {
+      setSession(readAuthSession());
+      setSessionChecked(true);
+    };
+
+    syncSession();
+    return subscribeToAuthChanges(syncSession);
+  }, []);
 
   return (
     <main className="page-enter relative min-h-[calc(100vh-4.5rem)] overflow-hidden px-4 py-10 sm:px-6 lg:px-8">
@@ -36,19 +50,20 @@ const Home = () => {
           <p className="mt-5 max-w-2xl text-base text-slate-600 sm:text-lg">
             {t("home.description")}
           </p>
-
-          <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center">
-            <Link href="/user/register">
-              <span className="inline-flex min-h-12 items-center justify-center rounded-2xl bg-slate-900 px-5 text-base font-semibold text-white shadow-lg shadow-slate-900/10 transition hover:-translate-y-0.5 hover:bg-slate-800">
-                {t("home.createAccount")}
-              </span>
-            </Link>
-            <Link href="/user/login">
-              <span className="inline-flex min-h-12 items-center justify-center rounded-2xl border border-slate-200 bg-white px-5 text-base font-semibold text-slate-700 shadow-sm transition hover:-translate-y-0.5 hover:border-slate-300 hover:bg-slate-50">
-                {t("home.signIn")}
-              </span>
-            </Link>
-          </div>
+          {sessionChecked && !session ? (
+            <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center">
+              <Link href="/user/register">
+                <span className="inline-flex min-h-12 items-center justify-center rounded-2xl bg-slate-900 px-5 text-base font-semibold text-white shadow-lg shadow-slate-900/10 transition hover:-translate-y-0.5 hover:bg-slate-800">
+                  {t("home.createAccount")}
+                </span>
+              </Link>
+              <Link href="/user/login">
+                <span className="inline-flex min-h-12 items-center justify-center rounded-2xl border border-slate-200 bg-white px-5 text-base font-semibold text-slate-700 shadow-sm transition hover:-translate-y-0.5 hover:border-slate-300 hover:bg-slate-50">
+                  {t("home.signIn")}
+                </span>
+              </Link>
+            </div>
+          ) : null}
 
           <div className="mt-10 grid gap-4 lg:grid-cols-3">
             <div className="rounded-3xl border border-slate-200/80 bg-white/80 p-5 shadow-sm">
