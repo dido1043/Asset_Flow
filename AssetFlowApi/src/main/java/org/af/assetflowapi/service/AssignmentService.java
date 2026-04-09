@@ -26,11 +26,12 @@ public class AssignmentService {
     private final ModelMapper modelMapper;
 
     public List<AssignmentDto> getUserAssignments(Long userId) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new IllegalArgumentException("User with id " + userId + " not found"));
+        if (!userRepository.existsById(userId)) {
+            throw new IllegalArgumentException("User with id " + userId + " not found");
+        }
 
-        return user.getAssignments().stream()
-                .map(assignment -> modelMapper.map(assignment, AssignmentDto.class))
+        return assignmentRepository.findByEmployeeId(userId).stream()
+                .map(this::mapToDto)
                 .toList();
     }
 

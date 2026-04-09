@@ -18,6 +18,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.Optional;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -91,5 +92,18 @@ class AssignmentServiceTest {
         assertTrue(ex.getMessage().contains("AssignmentDto cannot be null"));
     }
 
-}
+    @Test
+    void getUserAssignments_mapsEmployeeAndProductIds() {
+        when(userRepository.existsById(2L)).thenReturn(true);
+        when(assignmentRepository.findByEmployeeId(2L)).thenReturn(List.of(assignment));
+        when(modelMapper.map(assignment, AssignmentDto.class)).thenReturn(new AssignmentDto());
 
+        List<AssignmentDto> result = assignmentService.getUserAssignments(2L);
+
+        assertEquals(1, result.size());
+        assertEquals(2L, result.getFirst().getEmployeeId());
+        assertEquals(3L, result.getFirst().getProductId());
+        verify(assignmentRepository).findByEmployeeId(2L);
+    }
+
+}

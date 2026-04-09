@@ -146,7 +146,7 @@ export function createProductOperations({
           return apiRequest<ProductDto[]>(`/product/org/${currentUser.organizationId}`);
         }
 
-        return products;
+        return refreshProductsList();
       },
       isAdmin
         ? t("feedback.productsLoaded")

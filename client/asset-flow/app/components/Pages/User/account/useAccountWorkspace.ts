@@ -264,6 +264,26 @@ export function useAccountWorkspace() {
       }
     };
 
+    const loadAssignmentsByIds = async (assignmentIds: Array<number | null | undefined>) => {
+      const normalizedIds = [...new Set(assignmentIds.filter((assignmentId): assignmentId is number => Number.isFinite(assignmentId)))];
+
+      if (normalizedIds.length === 0) {
+        return [];
+      }
+
+      const results = await Promise.allSettled(
+        normalizedIds.map((assignmentId) => apiRequest<AssignmentDto>(`/assignment/get/${assignmentId}`)),
+      );
+
+      if (results.some((result) => result.status === "rejected")) {
+        rememberError(t("feedback.assignments"));
+      }
+
+      return dedupeById(
+        results.flatMap((result) => (result.status === "fulfilled" ? [result.value] : [])),
+      ).sort((left, right) => (right.id ?? 0) - (left.id ?? 0));
+    };
+
     const loadProductsFromAssignments = async (assignmentList: AssignmentDto[]) => {
       const productIds = [...new Set(assignmentList.map((assignment) => assignment.productId).filter(Number.isFinite))];
 
@@ -363,13 +383,23 @@ export function useAccountWorkspace() {
               () => apiRequest<AssignmentDto[]>(`/assignment/org/${nextOrganizationId}`),
               [],
             )
-          : nextUserId != null
-            ? await loadOrFallback(
+          : await (async () => {
+              const assignmentDetails = await loadAssignmentsByIds(nextCurrentUser.assignmentIds ?? []);
+
+              if (assignmentDetails.length > 0) {
+                return assignmentDetails;
+              }
+
+              if (nextUserId == null) {
+                return [];
+              }
+
+              return loadOrFallback(
                 t("feedback.assignments"),
                 () => apiRequest<AssignmentDto[]>(`/assignment/user/${nextUserId}`),
                 [],
-              )
-            : [];
+              );
+            })();
 
     const nextCurrentAssignments =
       nextCurrentUser.role === "ADMIN"
@@ -1121,6 +1151,11 @@ export function useAccountWorkspace() {
 
         if (currentUser.role === "LEADER" && currentUser.organizationId != null) {
           return apiRequest<AssignmentDto[]>(`/assignment/org/${currentUser.organizationId}`);
+        }
+
+        if (currentUser.role === "EMPLOYEE") {
+          const snapshot = await refreshWorkspaceSnapshot();
+          return snapshot?.assignments ?? [];
         }
 
         if (typeof currentUser.id === "number") {
