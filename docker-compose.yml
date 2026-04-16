@@ -1,0 +1,56 @@
+services:
+  db:
+    image: ${POSTGRES_IMAGE}
+    container_name: ${POSTGRES_CONTAINER_NAME}
+    env_file:
+      - .env
+    ports:
+      - "${POSTGRES_PORT}:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  ollama:
+    image: ${OLLAMA_IMAGE}
+    container_name: ${OLLAMA_CONTAINER_NAME}
+    env_file:
+      - .env
+    ports:
+      - "${OLLAMA_PORT}:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+  app:
+    build: .
+    container_name: ${APP_CONTAINER_NAME}
+    env_file:
+      - .env
+    environment:
+      OLLAMA_BASE_URL: http://ollama:11434
+    ports:
+      - "${APP_PORT}:8080"
+    depends_on:
+      db:
+        condition: service_healthy
+      ollama:
+        condition: service_started
+  frontend:
+    build:
+      context: ./client/asset-flow
+      args:
+        API_URL: ${API_URL}
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
+    container_name: ${FRONTEND_CONTAINER_NAME}
+    env_file:
+      - .env
+    ports:
+      - "${FRONTEND_PORT}:3000"
+    depends_on:
+      app:
+        condition: service_started
+volumes:
+  postgres_data:
+  ollama_data:

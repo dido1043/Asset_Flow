@@ -28,7 +28,14 @@ export class ApiError extends Error {
 }
 
 export function getApiBaseUrl() {
-  return process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
+  const browserUrl = process.env.NEXT_PUBLIC_API_URL;
+  const serverUrl = process.env.API_URL;
+
+  if (typeof window === "undefined") {
+    return serverUrl || browserUrl || "http://localhost:8080";
+  }
+
+  return browserUrl || serverUrl || "http://localhost:8080";
 }
 
 export function buildApiUrl(
