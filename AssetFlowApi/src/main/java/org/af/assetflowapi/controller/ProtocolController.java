@@ -18,16 +18,40 @@ public class ProtocolController {
     @GetMapping("/{id}")
     public ResponseEntity<ProtocolDto> getProtocolById(@PathVariable Long id) {
         ProtocolDto protocol = protocolService.getProtocolById(id);
+        // Add web-accessible download URL
+        if (protocol.getId() != null) {
+            protocol.setProtocolUri("/protocol/download/" + protocol.getId());
+        }
         return ResponseEntity.ok(protocol);
     }
+
+    @GetMapping("/download/{id}")
+    public ResponseEntity<byte[]> downloadProtocol(@PathVariable Long id) {
+        byte[] file = protocolService.downloadProtocol(id);
+        return ResponseEntity.ok()
+                .header("Content-Disposition", "attachment; filename=\"protocol-" + id + ".pdf\"")
+                .body(file);
+    }
+
     @GetMapping("/org/{orgId}")
     public ResponseEntity<List<ProtocolDto>> getProtocolsByOrganization(@PathVariable Long orgId) {
         List<ProtocolDto> protocols = protocolService.getProtocolsByOrganization(orgId);
+        // Add web-accessible download URLs to each protocol
+        protocols.forEach(p -> {
+            if (p.getId() != null) {
+                p.setProtocolUri("/protocol/download/" + p.getId());
+            }
+        });
         return ResponseEntity.ok(protocols);
     }
+    
     @PostMapping("/create/{organizationId}/user/{userId}")
     public ResponseEntity<ProtocolDto> createProtocol(@PathVariable Long organizationId, @PathVariable Long userId) {
         ProtocolDto created = protocolService.createProtocol(organizationId, userId);
+        // Add web-accessible download URL
+        if (created.getId() != null) {
+            created.setProtocolUri("/protocol/download/" + created.getId());
+        }
         return ResponseEntity.status(HttpStatus.CREATED).body(created);
     }
 

@@ -32,6 +32,8 @@ services:
       OLLAMA_BASE_URL: http://ollama:11434
     ports:
       - "${APP_PORT}:8080"
+    volumes:
+      - ./protocols:/app/target/protocols
     depends_on:
       db:
         condition: service_healthy

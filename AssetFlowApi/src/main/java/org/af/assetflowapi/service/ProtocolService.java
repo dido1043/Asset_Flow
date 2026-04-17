@@ -110,7 +110,8 @@ public class ProtocolService {
         }
 
         String protocolNumber = "PROT-" + organization.getId() + "-" + user.getId() + "-" + System.currentTimeMillis();
-        Path filePath = targetDir.resolve("protocol_" + protocolNumber + ".pdf");
+        String filename = "protocol_" + protocolNumber + ".pdf";
+        Path filePath = targetDir.resolve(filename);
 
         List<Assignment> userAssignments = user.getAssignments();
 
@@ -137,9 +138,31 @@ public class ProtocolService {
         }catch (IOException e) {
             throw new RuntimeException("Failed to create protocol PDF", e);
         }
-        return filePath.toUri().toString();
+        // Store only the filename, not the full file system path
+        return filename;
     }
+    public byte[] downloadProtocol(Long protocolId) {
+        Protocol protocol = protocolRepository.findById(protocolId)
+                .orElseThrow(() -> new IllegalArgumentException("Protocol with id " + protocolId + " not found"));
+        String filename = protocol.getProtocolUri();
 
+        if (filename == null || filename.isBlank()) {
+            throw new IllegalStateException("Protocol with id " + protocolId + " does not have a valid filename");
+        }
+
+        try {
+            Path filePath = Path.of("target", "protocols", filename);
+            
+            // Check if file exists
+            if (!Files.exists(filePath)) {
+                throw new IOException("File does not exist at path: " + filePath.toAbsolutePath());
+            }
+            
+            return Files.readAllBytes(filePath);
+        } catch (IOException e) {
+            throw new RuntimeException("Failed to read protocol PDF: " + filename + ". Error: " + e.getMessage(), e);
+        }
+    }
     private String userAssetsToString(List<Assignment> userAssignments) {
         if (userAssignments == null || userAssignments.isEmpty()) {
             return "No assets assigned.";
