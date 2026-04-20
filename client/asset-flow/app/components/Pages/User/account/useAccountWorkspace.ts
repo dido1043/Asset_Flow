@@ -322,6 +322,20 @@ export function useAccountWorkspace() {
       ).sort((left, right) => (right.id ?? 0) - (left.id ?? 0));
     };
 
+    const loadProtocolsForEmployee = async (employeeId: number | null) => {
+      if (employeeId == null) {
+        return [];
+      }
+
+      const employeeProtocols = await loadOrFallback(
+        t("feedback.protocols"),
+        () => apiRequest<ProtocolDto[]>(`/protocol/employee/${employeeId}`),
+        [],
+      );
+
+      return dedupeById(employeeProtocols).sort((left, right) => (right.id ?? 0) - (left.id ?? 0));
+    };
+
     const nextCurrentUser = await loadOrFallback(
       t("feedback.currentUser"),
       () => apiRequest<UserDto>(`/auth/user/${activeSession.userId}`),
@@ -512,7 +526,9 @@ export function useAccountWorkspace() {
           )
         : nextCurrentUser.role === "LEADER" && nextOrganizationId != null
           ? await loadProtocolsForOrganizations([nextOrganizationId])
-          : [];
+          : nextCurrentUser.role === "EMPLOYEE"
+            ? await loadProtocolsForEmployee(nextUserId)
+            : [];
 
     const nextLeaderOrganization =
       nextOrganizationId == null
@@ -1285,7 +1301,7 @@ export function useAccountWorkspace() {
     await refreshCurrentUserSnapshot();
   };
 
-  const { handleLookupProtocol, handleCreateProtocol } = createProtocolOperations({
+  const { handleLookupProtocol, handleCreateProtocol, handleEditProtocol } = createProtocolOperations({
     currentUser,
     protocols,
     protocolLookupId,
@@ -1381,6 +1397,7 @@ export function useAccountWorkspace() {
     handleDeleteAssignment,
     handleDeleteProduct,
     handleDeleteUser,
+    handleEditProtocol,
     handleGenerateAiResponse,
     handleJoinOrganization,
     handleLoadAllAssignments,

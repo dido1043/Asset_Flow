@@ -21,7 +21,7 @@ export const workspaceSections: WorkspaceSection[] = [
 export function getWorkspaceSections(role?: string | null) {
   if (role === "EMPLOYEE") {
     return workspaceSections.filter(
-      (section) => !["#users", "#organizations", "#protocols"].includes(section.href),
+      (section) => !["#users", "#organizations"].includes(section.href),
     );
   }
 

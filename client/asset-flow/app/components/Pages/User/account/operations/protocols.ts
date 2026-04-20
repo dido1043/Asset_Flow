@@ -48,14 +48,6 @@ export function createProtocolOperations({
   t,
 }: ProtocolOperationsParams) {
   const handleLookupProtocol = async () => {
-    if (!canManageProtocols) {
-      setFeedback("protocols", {
-        tone: "error",
-        message: t("feedback.protocolsAdminsLeadersOnly"),
-      });
-      return;
-    }
-
     const protocolId = parseRequiredNumber(protocolLookupId, requiredFieldMessage("fields.protocol"));
 
     if (!isAdmin && !accessibleProtocolIds.has(protocolId)) {
@@ -130,8 +122,50 @@ export function createProtocolOperations({
     }
   };
 
+  const handleEditProtocol = async (protocolId: number, content: string) => {
+    const protocol = protocols.find((p) => p.id === protocolId);
+    if (!protocol) {
+      setFeedback("protocols", {
+        tone: "error",
+        message: t("feedback.protocolNotFound"),
+      });
+      return;
+    }
+
+    // Check if user can edit this protocol
+    // Can edit if: user is the protocol owner OR user is admin OR user is leader in the same organization
+    const canEdit =
+      currentUser?.id === protocol.employeeId ||
+      isAdmin ||
+      (currentUser?.role === "LEADER" && protocol.organizationId === currentUser?.organizationId);
+
+    if (!canEdit) {
+      setFeedback("protocols", {
+        tone: "error",
+        message: t("feedback.protocolEditPermissionDenied"),
+      });
+      return;
+    }
+
+    await runAction(
+      "protocols",
+      () =>
+        apiRequest<ProtocolDto>(`/protocol/edit/${protocolId}`, {
+          method: "PUT",
+          body: content,
+          headers: {
+            "Content-Type": "text/plain;charset=UTF-8",
+          },
+        }),
+      t("feedback.protocolUpdated"),
+    );
+
+    await refreshWorkspaceSnapshot();
+  };
+
   return {
     handleLookupProtocol,
     handleCreateProtocol,
+    handleEditProtocol,
   };
 }

@@ -46,6 +46,7 @@ export type ProtocolDto = {
   protocolUri: string;
   employeeId: number | null;
   organizationId: number | null;
+  content?: string | null;
 };
 
 export type AiResponseDto = {
