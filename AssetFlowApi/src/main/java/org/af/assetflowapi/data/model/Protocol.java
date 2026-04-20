@@ -19,6 +19,9 @@ public class Protocol {
     @Column(name = "protocol_uri", nullable = false)
     private String protocolUri;
 
+    @Column(name = "content", columnDefinition = "TEXT")
+    private String content;
+
     // Many-to-One to Employee (now User)
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "employee_id", nullable = false)

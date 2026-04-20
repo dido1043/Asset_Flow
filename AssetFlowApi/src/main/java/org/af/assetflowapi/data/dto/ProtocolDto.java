@@ -12,5 +12,6 @@ public class ProtocolDto {
     private String protocolUri;
     private Long employeeId;
     private Long organizationId;
+    private String content;
 }
 

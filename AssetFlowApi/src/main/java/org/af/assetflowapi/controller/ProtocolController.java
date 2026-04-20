@@ -14,6 +14,17 @@ import java.util.List;
 @AllArgsConstructor
 public class ProtocolController {
     private final ProtocolService protocolService;
+    @GetMapping("/employee/{employeeId}")
+    public ResponseEntity<List<ProtocolDto>> getProtocolsByEmployee(@PathVariable Long employeeId) {
+        List<ProtocolDto> protocols = protocolService.getProtocolsByEmployee(employeeId);
+        // Add web-accessible download URLs to each protocol
+        protocols.forEach(p -> {
+            if (p.getId() != null) {
+                p.setProtocolUri("/protocol/download/" + p.getId());
+            }
+        });
+        return ResponseEntity.ok(protocols);
+    }
 
     @GetMapping("/{id}")
     public ResponseEntity<ProtocolDto> getProtocolById(@PathVariable Long id) {
@@ -55,4 +66,9 @@ public class ProtocolController {
         return ResponseEntity.status(HttpStatus.CREATED).body(created);
     }
 
+    @PutMapping("/edit/{protocolId}")
+    public ResponseEntity<ProtocolDto> editProtocolText(@PathVariable Long protocolId, @RequestBody String content) {
+        ProtocolDto updated = protocolService.editProtocolText(protocolId, content);
+        return ResponseEntity.status(HttpStatus.OK).body(updated);
+    }
 }
