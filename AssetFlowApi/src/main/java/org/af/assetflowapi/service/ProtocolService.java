@@ -15,6 +15,7 @@ import com.itextpdf.layout.element.Paragraph;
 import lombok.AllArgsConstructor;
 import org.af.assetflowapi.component.prompts.ProtocolCreationPromptBuilder;
 import org.af.assetflowapi.data.dto.AI.AiResponseDto;
+import org.af.assetflowapi.data.enums.ProtocolType;
 import org.af.assetflowapi.data.dto.ProtocolDto;
 import org.af.assetflowapi.data.model.*;
 import org.af.assetflowapi.repository.OrganizationRepository;
@@ -88,13 +89,14 @@ public class ProtocolService {
                     " does not belong to organization with id " + organization.getId());
         }
 
-        Map<String, String> uri = generateProtocolPdfUri(organization, user);
+        Map<String, String> uri = generateProtocolPdfUri(organization, user, ProtocolType.ASSET_ASSIGNMENT);
 
         Protocol protocol = new Protocol();
         protocol.setOrganization(organization);
         protocol.setEmployee(user);
         protocol.setProtocolUri(uri.keySet().stream().findFirst().orElse(null)); // Store the filename as the protocol URI
         protocol.setContent(uri.values().stream().findFirst().orElse("")); // Store the generated content in the protocol
+        protocol.setType(ProtocolType.ASSET_ASSIGNMENT);
         //TODO: For testing
         Protocol saved = protocolRepository.save(protocol);
 
@@ -103,6 +105,42 @@ public class ProtocolService {
         result.setProtocolUri(saved.getProtocolUri());
         result.setOrganizationId(saved.getOrganization() != null ? saved.getOrganization().getId() : null);
         result.setContent(normalizeProtocolContent(saved.getContent()));
+        result.setType(saved.getType() != null ? saved.getType().name() : null);
+        if (saved.getEmployee() != null && saved.getEmployee().getId() != null) {
+            result.setEmployeeId(saved.getEmployee().getId());
+        }
+
+        return result;
+    }
+    public ProtocolDto createReturningAssetProtocol(Long organizationId, Long userId) {
+        Organization organization = organizationRepository.findById(organizationId)
+                .orElseThrow(() -> new IllegalArgumentException("Organization with id " + organizationId + " not found"));
+
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("User with id " + userId + " not found"));
+
+        if (!organization.getEmployees().contains(user)) {
+            throw new IllegalArgumentException("User with id " + userId +
+                    " does not belong to organization with id " + organization.getId());
+        }
+
+        Map<String, String> uri = generateProtocolPdfUri(organization, user, ProtocolType.ASSET_RETURN);
+
+        Protocol protocol = new Protocol();
+        protocol.setOrganization(organization);
+        protocol.setEmployee(user);
+        protocol.setProtocolUri(uri.keySet().stream().findFirst().orElse(null)); // Store the filename as the protocol URI
+        protocol.setContent(uri.values().stream().findFirst().orElse("")); // Store the generated content in the protocol
+        protocol.setType(ProtocolType.ASSET_RETURN);
+        //TODO: For testing
+        Protocol saved = protocolRepository.save(protocol);
+
+        ProtocolDto result = new ProtocolDto();
+        result.setId(saved.getId());
+        result.setProtocolUri(saved.getProtocolUri());
+        result.setOrganizationId(saved.getOrganization() != null ? saved.getOrganization().getId() : null);
+        result.setContent(normalizeProtocolContent(saved.getContent()));
+        result.setType(saved.getType() != null ? saved.getType().name() : null);
         if (saved.getEmployee() != null && saved.getEmployee().getId() != null) {
             result.setEmployeeId(saved.getEmployee().getId());
         }
@@ -125,7 +163,7 @@ public class ProtocolService {
                 .toList();
     }
 
-    public Map<String, String> generateProtocolPdfUri(Organization organization, User user) {
+    public Map<String, String> generateProtocolPdfUri(Organization organization, User user, ProtocolType type) {
         Path targetDir = Path.of("target", "protocols");
         try {
             Files.createDirectories(targetDir);
@@ -141,7 +179,9 @@ public class ProtocolService {
 
         String assetsBlock = userAssetsToString(userAssignments);
 
-        String prompt = promptBuilder.buildPrompt(organization.getId(), user.getId(), assetsBlock);
+        String prompt = type == ProtocolType.ASSET_ASSIGNMENT ? 
+            promptBuilder.buildPrompt(organization.getId(), user.getId(), assetsBlock) : 
+            promptBuilder.buildPromptForReturningAssignments(organization.getId(), user.getId(), assetsBlock);
 
         AiResponseDto aiDto = aiService.generateTextCompletion(prompt);
         String content = normalizeProtocolContent(aiDto.getResponse());
@@ -337,4 +377,6 @@ public class ProtocolService {
             throw new RuntimeException("Failed to create any PDF font", e);
         }
     }
+
+    
 }

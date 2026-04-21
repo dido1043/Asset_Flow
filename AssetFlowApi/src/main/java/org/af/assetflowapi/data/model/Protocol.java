@@ -5,6 +5,8 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
 
+import org.af.assetflowapi.data.enums.ProtocolType;
+
 @Entity
 @Table(name = "protocol")
 @Data
@@ -21,6 +23,10 @@ public class Protocol {
 
     @Column(name = "content", columnDefinition = "TEXT")
     private String content;
+
+    @Column(name = "type", nullable = false)
+    @Enumerated(EnumType.STRING)
+    private ProtocolType type;
 
     // Many-to-One to Employee (now User)
     @ManyToOne(fetch = FetchType.LAZY)

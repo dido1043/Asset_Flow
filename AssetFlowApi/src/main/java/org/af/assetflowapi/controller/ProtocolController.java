@@ -59,13 +59,19 @@ public class ProtocolController {
     @PostMapping("/create/{organizationId}/user/{userId}")
     public ResponseEntity<ProtocolDto> createProtocol(@PathVariable Long organizationId, @PathVariable Long userId) {
         ProtocolDto created = protocolService.createProtocol(organizationId, userId);
-        // Add web-accessible download URL
         if (created.getId() != null) {
             created.setProtocolUri("/protocol/download/" + created.getId());
         }
         return ResponseEntity.status(HttpStatus.CREATED).body(created);
     }
-
+    @PostMapping("/create-return/{organizationId}/user/{userId}")
+    public ResponseEntity<ProtocolDto> createReturnProtocol(@PathVariable Long organizationId, @PathVariable Long userId) {
+        ProtocolDto created = protocolService.createReturningAssetProtocol(organizationId, userId);
+        if (created.getId() != null) {
+            created.setProtocolUri("/protocol/download/" + created.getId());
+        }
+        return ResponseEntity.status(HttpStatus.CREATED).body(created);
+    }   
     @PutMapping("/edit/{protocolId}")
     public ResponseEntity<ProtocolDto> editProtocolText(@PathVariable Long protocolId, @RequestBody String content) {
         ProtocolDto updated = protocolService.editProtocolText(protocolId, content);
