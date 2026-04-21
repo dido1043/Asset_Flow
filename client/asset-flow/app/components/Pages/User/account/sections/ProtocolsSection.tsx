@@ -2,6 +2,7 @@ import { Button } from "@/app/components/shared/ui/Button";
 import { Input } from "@/app/components/shared/ui/Input";
 import { Label } from "@/app/components/shared/ui/Label";
 import { useTranslations } from "@/app/lib/i18n";
+import type { ProtocolDto, ProtocolType } from "@/app/lib/types";
 import React from "react";
 
 import { FeedbackMessage, FieldHint, SectionCard, SelectField } from "../shared";
@@ -15,46 +16,8 @@ function getProtocolHref(protocolUri: string) {
   return `/api/protocol-file?path=${encodeURIComponent(protocolUri)}`;
 }
 
-function normalizeProtocolContentForEditing(content?: string | null) {
-  if (!content) {
-    return "";
-  }
-
-  let normalized = content.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
-  const trimmed = normalized.trim();
-
-  if (trimmed.startsWith('"') && trimmed.endsWith('"')) {
-    try {
-      const parsed = JSON.parse(trimmed);
-      if (typeof parsed === "string") {
-        normalized = parsed;
-      }
-    } catch {
-      normalized = trimmed.slice(1, -1);
-    }
-  }
-
-  normalized = normalized.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
-
-  while (/\\\\[nr]/.test(normalized)) {
-    normalized = normalized.replace(/\\\\n/g, "\\n").replace(/\\\\r/g, "\\r");
-  }
-
-  normalized = normalized
-    .replace(/\\r\\n/g, "\n")
-    .replace(/\\n/g, "\n")
-    .replace(/\\r/g, "\n")
-    .replace(/\\t/g, "\t")
-    .replace(/\\"/g, '"')
-    .replace(/\\\\/g, "\\");
-
-  return repairBareNewlineMarkers(normalized);
-}
-
-function repairBareNewlineMarkers(content: string) {
-  return content
-    .replace(/n(?=(?:[IVXLCDM]+|\d+)\.\s)/g, "\n")
-    .replace(/([.)])n(?=[^\n:]{2,80}:\s*\.{4,})/g, "$1\n");
+function normalizeProtocolType(type?: ProtocolDto["type"]): ProtocolType {
+  return type === "ASSET_RETURN" ? "ASSET_RETURN" : "ASSET_ASSIGNMENT";
 }
 
 export function ProtocolsSection({ workspace }: { workspace: AccountWorkspaceState }) {
@@ -63,9 +26,7 @@ export function ProtocolsSection({ workspace }: { workspace: AccountWorkspaceSta
     feedbackByKey,
     getOrganizationName,
     getUserName,
-    canManageProtocols,
     handleCreateProtocol,
-    isEmployee,
     isLeader,
     organizationOptions,
     pendingByKey,
@@ -81,6 +42,32 @@ export function ProtocolsSection({ workspace }: { workspace: AccountWorkspaceSta
 
   const [editingProtocolId, setEditingProtocolId] = React.useState<number | null>(null);
   const [editContent, setEditContent] = React.useState("");
+  const [protocolTypeFilter, setProtocolTypeFilter] = React.useState<"" | ProtocolType>("");
+  const protocolTypeOptions = React.useMemo(
+    () => [
+      { value: "ASSET_ASSIGNMENT", label: t("protocols.assignmentProtocol") },
+      { value: "ASSET_RETURN", label: t("protocols.returnProtocol") },
+    ],
+    [t],
+  );
+  const protocolTypeFilterOptions = React.useMemo(
+    () => [
+      { value: "ASSET_ASSIGNMENT", label: t("protocols.assignmentProtocol") },
+      { value: "ASSET_RETURN", label: t("protocols.returnProtocol") },
+    ],
+    [t],
+  );
+  const getProtocolTypeLabel = React.useCallback(
+    (type: ProtocolType) => (type === "ASSET_RETURN" ? t("protocols.returnProtocol") : t("protocols.assignmentProtocol")),
+    [t],
+  );
+  const visibleProtocols = React.useMemo(
+    () =>
+      protocols.filter(
+        (protocol) => !protocolTypeFilter || normalizeProtocolType(protocol.type) === protocolTypeFilter,
+      ),
+    [protocolTypeFilter, protocols],
+  );
 
   const canEditProtocol = (protocol: typeof protocols[0]) => {
     // Can edit if: user is the protocol owner OR user is admin OR user is leader in the same organization
@@ -93,7 +80,7 @@ export function ProtocolsSection({ workspace }: { workspace: AccountWorkspaceSta
 
   const handleOpenEdit = (protocol: typeof protocols[0]) => {
     setEditingProtocolId(protocol.id ?? null);
-    setEditContent(normalizeProtocolContentForEditing(protocol.content));
+    setEditContent(protocol.content ?? "");
   };
 
   const handleCloseEdit = () => {
@@ -115,93 +102,118 @@ export function ProtocolsSection({ workspace }: { workspace: AccountWorkspaceSta
       description={
         isLeader
           ? t("protocols.descriptionLeader")
-          : isEmployee
-            ? t("protocols.descriptionEmployee")
-            : t("protocols.descriptionAdmin")
+          : t("protocols.descriptionAdmin")
       }
     >
       <div className="space-y-5">
         <FeedbackMessage feedback={feedbackByKey.protocols} />
 
-        {canManageProtocols && (
-          <form onSubmit={handleCreateProtocol} className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
-            <p className="text-sm font-semibold text-slate-900">{t("protocols.createProtocol")}</p>
-            <FieldHint>{t("protocols.hint")}</FieldHint>
-            <div className="mt-4 grid gap-4 sm:grid-cols-2">
-              {organizationOptions.length > 0 ? (
-                <SelectField
+        <form onSubmit={handleCreateProtocol} className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
+          <p className="text-sm font-semibold text-slate-900">{t("protocols.createProtocol")}</p>
+          <FieldHint>{t("protocols.hint")}</FieldHint>
+          <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <SelectField
+              id="protocol-type"
+              label={t("protocols.protocolType")}
+              value={protocolCreateForm.type}
+              onChange={(value) =>
+                setProtocolCreateForm((previous) => ({
+                  ...previous,
+                  type: value === "ASSET_RETURN" ? "ASSET_RETURN" : "ASSET_ASSIGNMENT",
+                }))
+              }
+              options={protocolTypeOptions}
+              placeholder={t("protocols.selectProtocolType")}
+            />
+            {organizationOptions.length > 0 ? (
+              <SelectField
+                id="protocol-organization-id"
+                label={t("common.company")}
+                value={protocolCreateForm.organizationId}
+                onChange={(value) =>
+                  setProtocolCreateForm((previous) => ({
+                    ...previous,
+                    organizationId: value,
+                  }))
+                }
+                options={organizationOptions}
+                placeholder={t("registerForm.selectCompany")}
+              />
+            ) : (
+              <div>
+                <Label htmlFor="protocol-organization-id">{t("products.companyReference")}</Label>
+                <Input
                   id="protocol-organization-id"
-                  label={t("common.company")}
+                  type="number"
                   value={protocolCreateForm.organizationId}
-                  onChange={(value) =>
+                  onChange={(event) =>
                     setProtocolCreateForm((previous) => ({
                       ...previous,
-                      organizationId: value,
+                      organizationId: event.target.value,
                     }))
                   }
-                  options={organizationOptions}
-                  placeholder={t("registerForm.selectCompany")}
                 />
-              ) : (
-                <div>
-                  <Label htmlFor="protocol-organization-id">{t("products.companyReference")}</Label>
-                  <Input
-                    id="protocol-organization-id"
-                    type="number"
-                    value={protocolCreateForm.organizationId}
-                    onChange={(event) =>
-                      setProtocolCreateForm((previous) => ({
-                        ...previous,
-                        organizationId: event.target.value,
-                      }))
-                    }
-                  />
-                </div>
-              )}
-              {protocolUserOptions.length > 0 ? (
-                <SelectField
+              </div>
+            )}
+            {protocolUserOptions.length > 0 ? (
+              <SelectField
+                id="protocol-user-id"
+                label={selectedProtocolOrganizationId == null ? t("common.teammate") : t("protocols.teammateInCompany")}
+                value={protocolCreateForm.userId}
+                onChange={(value) =>
+                  setProtocolCreateForm((previous) => ({
+                    ...previous,
+                    userId: value,
+                  }))
+                }
+                options={protocolUserOptions}
+                placeholder={t("users.selectTeammate")}
+              />
+            ) : (
+              <div>
+                <Label htmlFor="protocol-user-id">{t("users.teammateReference")}</Label>
+                <Input
                   id="protocol-user-id"
-                  label={selectedProtocolOrganizationId == null ? t("common.teammate") : t("protocols.teammateInCompany")}
+                  type="number"
                   value={protocolCreateForm.userId}
-                  onChange={(value) =>
+                  onChange={(event) =>
                     setProtocolCreateForm((previous) => ({
                       ...previous,
-                      userId: value,
+                      userId: event.target.value,
                     }))
                   }
-                  options={protocolUserOptions}
-                  placeholder={t("users.selectTeammate")}
                 />
-              ) : (
-                <div>
-                  <Label htmlFor="protocol-user-id">{t("users.teammateReference")}</Label>
-                  <Input
-                    id="protocol-user-id"
-                    type="number"
-                    value={protocolCreateForm.userId}
-                    onChange={(event) =>
-                      setProtocolCreateForm((previous) => ({
-                        ...previous,
-                        userId: event.target.value,
-                      }))
-                    }
-                  />
-                </div>
-              )}
-            </div>
-            <div className="mt-4">
-              <Button type="submit" disabled={Boolean(pendingByKey.protocols)}>
-                {t("protocols.createButton")}
-              </Button>
-            </div>
-          </form>
-        )}
+              </div>
+            )}
+          </div>
+          <div className="mt-4">
+            <Button type="submit" disabled={Boolean(pendingByKey.protocols)}>
+              {protocolCreateForm.type === "ASSET_RETURN"
+                ? t("protocols.createReturnButton")
+                : t("protocols.createButton")}
+            </Button>
+          </div>
+        </form>
 
         {protocols.length > 0 ? (
           <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-            <p className="text-sm font-semibold text-slate-900">{isLeader ? t("protocols.companyProtocols") : t("protocols.visibleProtocols")}</p>
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+              <p className="text-sm font-semibold text-slate-900">{isLeader ? t("protocols.companyProtocols") : t("protocols.visibleProtocols")}</p>
+              <SelectField
+                id="protocol-type-filter"
+                label={t("protocols.filterByType")}
+                value={protocolTypeFilter}
+                onChange={(value) => setProtocolTypeFilter(value === "ASSET_RETURN" || value === "ASSET_ASSIGNMENT" ? value : "")}
+                options={protocolTypeFilterOptions}
+                placeholder={t("protocols.allProtocolTypes")}
+                className="w-full sm:w-64"
+              />
+            </div>
             <div className="mt-4 grid gap-3">
-              {protocols.map((protocol) => (
+              {visibleProtocols.length > 0 ? visibleProtocols.map((protocol) => {
+                const protocolType = normalizeProtocolType(protocol.type);
+
+                return (
                 <div
                   key={protocol.id}
                   className={`rounded-2xl border border-slate-200 p-4 ${
@@ -242,6 +254,9 @@ export function ProtocolsSection({ workspace }: { workspace: AccountWorkspaceSta
                           <p className="mt-1 text-sm text-slate-600">
                             {getUserName(protocol.employeeId)} • {getOrganizationName(protocol.organizationId)}
                           </p>
+                          <span className="mt-2 inline-flex rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
+                            {getProtocolTypeLabel(protocolType)}
+                          </span>
                         </div>
                         <div className="flex gap-2">
                           <a
@@ -266,16 +281,15 @@ export function ProtocolsSection({ workspace }: { workspace: AccountWorkspaceSta
                     </>
                   )}
                 </div>
-              ))}
+                );
+              }) : (
+                <p className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 p-4 text-sm text-slate-500">
+                  {t("protocols.noProtocolsForType")}
+                </p>
+              )}
             </div>
           </div>
-        ) : (
-          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
-            <p className="text-sm text-slate-600">
-              {isEmployee ? t("protocols.noEmployeeProtocols") : t("protocols.noSavedProtocols")}
-            </p>
-          </div>
-        )}
+        ) : null}
 
       </div>
     </SectionCard>

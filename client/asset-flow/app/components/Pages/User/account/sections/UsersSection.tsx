@@ -4,10 +4,15 @@ import { Button } from "@/app/components/shared/ui/Button";
 import { Input } from "@/app/components/shared/ui/Input";
 import { Label } from "@/app/components/shared/ui/Label";
 import { getRoleLabel, useTranslations } from "@/app/lib/i18n";
+import type { UserDto } from "@/app/lib/types";
 
 import { EmptyState, FeedbackMessage, SectionCard, SelectField } from "../shared";
 import type { AccountWorkspaceState } from "../useAccountWorkspace";
 import { getRoleBadgeClass } from "../utils";
+
+function isUnemployedUser(user: UserDto) {
+  return user.role === "EMPLOYEE" && user.organizationId == null;
+}
 
 export function UsersSection({ workspace }: { workspace: AccountWorkspaceState }) {
   const { t } = useTranslations();
@@ -33,8 +38,23 @@ export function UsersSection({ workspace }: { workspace: AccountWorkspaceState }
     userOptions,
     users,
   } = workspace;
-  const visibleUsers = isLeader ? directoryUsers : users;
-  const visibleUserOptions = isLeader ? directoryUserOptions : userOptions;
+  const allVisibleUsers = isLeader ? directoryUsers : users;
+  const allVisibleUserOptions = isLeader ? directoryUserOptions : userOptions;
+  const visibleUsers = useMemo(() => allVisibleUsers.filter(isUnemployedUser), [allVisibleUsers]);
+  const visibleUserIds = useMemo(
+    () =>
+      new Set(
+        visibleUsers
+          .map((user) => user.id)
+          .filter((userId): userId is number => typeof userId === "number"),
+      ),
+    [visibleUsers],
+  );
+  const visibleUserOptions = useMemo(
+    () => allVisibleUserOptions.filter((option) => visibleUserIds.has(Number(option.value))),
+    [allVisibleUserOptions, visibleUserIds],
+  );
+  const selectedVisibleUser = selectedUser && isUnemployedUser(selectedUser) ? selectedUser : null;
   const deferredUserSearch = useDeferredValue(userSearch);
   const filteredUsers = useMemo(() => {
     const query = deferredUserSearch.trim().toLowerCase();
@@ -119,13 +139,13 @@ export function UsersSection({ workspace }: { workspace: AccountWorkspaceState }
               <p className="text-sm font-semibold text-slate-900">{t("users.removeUser")}</p>
               <div className="mt-4 flex flex-col gap-3 sm:flex-row">
                 <div className="flex-1">
-                  {userOptions.length > 0 ? (
+                  {visibleUserOptions.length > 0 ? (
                     <SelectField
                       id="delete-user-id"
                       label={t("users.userToRemove")}
                       value={deleteUserId}
                       onChange={setDeleteUserId}
-                      options={userOptions}
+                      options={visibleUserOptions}
                       placeholder={t("users.selectTeammate")}
                     />
                   ) : (
@@ -149,35 +169,35 @@ export function UsersSection({ workspace }: { workspace: AccountWorkspaceState }
             </div>
           ) : null}
 
-          {selectedUser ? (
+          {selectedVisibleUser ? (
             <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                 <div className="min-w-0 flex-1">
                   <p className="break-words text-sm font-semibold text-slate-900">
-                    {typeof selectedUser.id === "number" ? `${selectedUser.fullName}#${selectedUser.id}` : selectedUser.fullName}
+                    {typeof selectedVisibleUser.id === "number" ? `${selectedVisibleUser.fullName}#${selectedVisibleUser.id}` : selectedVisibleUser.fullName}
                   </p>
-                  <p className="break-all text-sm text-slate-500">{selectedUser.email}</p>
+                  <p className="break-all text-sm text-slate-500">{selectedVisibleUser.email}</p>
                 </div>
                 <span
                   className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${getRoleBadgeClass(
-                    selectedUser.role,
+                    selectedVisibleUser.role,
                   )} shrink-0 self-start whitespace-nowrap`}
                 >
-                  {getRoleLabel(selectedUser.role, t)}
+                  {getRoleLabel(selectedVisibleUser.role, t)}
                 </span>
               </div>
               <dl className="mt-4 grid gap-3 text-sm text-slate-600">
                 <div className="flex justify-between gap-4">
                   <dt>{t("common.age")}</dt>
-                  <dd className="font-semibold text-slate-900">{selectedUser.age ?? t("common.notSet")}</dd>
+                  <dd className="font-semibold text-slate-900">{selectedVisibleUser.age ?? t("common.notSet")}</dd>
                 </div>
                 <div className="flex justify-between gap-4">
                   <dt>{t("common.company")}</dt>
-                  <dd className="font-semibold text-slate-900">{getOrganizationName(selectedUser.organizationId)}</dd>
+                  <dd className="font-semibold text-slate-900">{getOrganizationName(selectedVisibleUser.organizationId)}</dd>
                 </div>
                 <div className="flex justify-between gap-4">
                   <dt>{t("common.assignments")}</dt>
-                  <dd className="font-semibold text-slate-900">{selectedUser.assignmentIds?.length ?? 0}</dd>
+                  <dd className="font-semibold text-slate-900">{selectedVisibleUser.assignmentIds?.length ?? 0}</dd>
                 </div>
               </dl>
             </div>

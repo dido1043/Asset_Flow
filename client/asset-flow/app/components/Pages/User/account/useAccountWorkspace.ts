@@ -141,6 +141,7 @@ export function useAccountWorkspace() {
   const [protocolCreateForm, setProtocolCreateForm] = React.useState<ProtocolCreateFormState>({
     organizationId: "",
     userId: "",
+    type: "ASSET_ASSIGNMENT",
   });
 
   const [aiPrompt, setAiPrompt] = React.useState("");

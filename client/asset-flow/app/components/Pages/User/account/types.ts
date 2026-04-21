@@ -3,6 +3,7 @@ import type {
   OrganizationDto,
   ProductDto,
   ProtocolDto,
+  ProtocolType,
   UserDto,
 } from "@/app/lib/types";
 
@@ -74,6 +75,7 @@ export type AssignmentFormState = {
 export type ProtocolCreateFormState = {
   organizationId: string;
   userId: string;
+  type: ProtocolType;
 };
 
 export type SelectOption = {

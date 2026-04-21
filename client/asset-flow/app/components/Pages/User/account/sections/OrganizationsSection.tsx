@@ -15,11 +15,9 @@ export function OrganizationsSection({ workspace }: { workspace: AccountWorkspac
   const [rosterSearch, setRosterSearch] = useState("");
   const {
     allOrganizations,
-    becomeLeaderForm,
     canCreateOrganizations,
     canManageOrganizationMembers,
     feedbackByKey,
-    handleBecomeLeader,
     handleCreateOrganization,
     handleJoinOrganization,
     handleLoadOrganizationInventory,
@@ -36,12 +34,10 @@ export function OrganizationsSection({ workspace }: { workspace: AccountWorkspac
     organizationOptions,
     pendingByKey,
     populateProductForm,
-    setBecomeLeaderForm,
     setInventoryOrgId,
     setJoinOrganizationForm,
     setOrganizationCreateForm,
     setOrganizationLookupLeaderId,
-    userOptions,
     users,
   } = workspace;
   const deferredEmployeeSearch = useDeferredValue(employeeSearch);
@@ -310,79 +306,6 @@ export function OrganizationsSection({ workspace }: { workspace: AccountWorkspac
               <div className="mt-4">
                 <Button type="submit" disabled={Boolean(pendingByKey.organizations)}>
                   {isLeader ? t("organizations.hireEmployee") : t("organizations.joinOrganization")}
-                </Button>
-              </div>
-            </form>
-          ) : null}
-
-          {canManageOrganizationMembers ? (
-            <form onSubmit={handleBecomeLeader} className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
-              <p className="text-sm font-semibold text-slate-900">{t("organizations.becomeLeader")}</p>
-              <div className="mt-4 grid gap-4 sm:grid-cols-2">
-                {userOptions.length > 0 ? (
-                  <SelectField
-                    id="leader-user-id"
-                    label={t("organizations.leader")}
-                    value={becomeLeaderForm.userId}
-                    onChange={(value) =>
-                      setBecomeLeaderForm((previous) => ({
-                        ...previous,
-                        userId: value,
-                      }))
-                    }
-                    options={userOptions}
-                    placeholder={t("organizations.selectWhoBecomesLeader")}
-                  />
-                ) : (
-                  <div>
-                    <Label htmlFor="leader-user-id">{t("users.teammateReference")}</Label>
-                    <Input
-                      id="leader-user-id"
-                      type="number"
-                      value={becomeLeaderForm.userId}
-                      onChange={(event) =>
-                        setBecomeLeaderForm((previous) => ({
-                          ...previous,
-                          userId: event.target.value,
-                        }))
-                      }
-                    />
-                  </div>
-                )}
-                {organizationOptions.length > 0 ? (
-                  <SelectField
-                    id="leader-organization-id"
-                    label={t("common.company")}
-                    value={becomeLeaderForm.organizationId}
-                    onChange={(value) =>
-                      setBecomeLeaderForm((previous) => ({
-                        ...previous,
-                        organizationId: value,
-                      }))
-                    }
-                    options={organizationOptions}
-                    placeholder={t("registerForm.selectCompany")}
-                  />
-                ) : (
-                  <div>
-                    <Label htmlFor="leader-organization-id">{t("products.companyReference")}</Label>
-                    <Input
-                      id="leader-organization-id"
-                      type="number"
-                      value={becomeLeaderForm.organizationId}
-                      onChange={(event) =>
-                        setBecomeLeaderForm((previous) => ({
-                          ...previous,
-                          organizationId: event.target.value,
-                        }))
-                      }
-                    />
-                  </div>
-                )}
-              </div>
-              <div className="mt-4">
-                <Button type="submit" disabled={Boolean(pendingByKey.organizations)}>
-                  {t("organizations.promoteLeader")}
                 </Button>
               </div>
             </form>

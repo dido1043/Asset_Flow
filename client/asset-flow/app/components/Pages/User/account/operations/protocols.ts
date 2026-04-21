@@ -14,6 +14,8 @@ import type {
   Translate,
 } from "./shared";
 
+const RETURN_PROTOCOL_TYPE = "ASSET_RETURN";
+
 type ProtocolOperationsParams = {
   currentUser: UserDto | null;
   protocols: ProtocolDto[];
@@ -107,10 +109,15 @@ export function createProtocolOperations({
       return;
     }
 
+    const endpoint =
+      protocolCreateForm.type === RETURN_PROTOCOL_TYPE
+        ? `/protocol/create-return/${organizationId}/user/${userId}`
+        : `/protocol/create/${organizationId}/user/${userId}`;
+
     const protocol = await runAction(
       "protocols",
       () =>
-        apiRequest<ProtocolDto>(`/protocol/create/${organizationId}/user/${userId}`, {
+        apiRequest<ProtocolDto>(endpoint, {
           method: "POST",
         }),
       t("feedback.protocolCreated"),

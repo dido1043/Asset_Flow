@@ -1,4 +1,5 @@
 export type Role = "ADMIN" | "LEADER" | "EMPLOYEE";
+export type ProtocolType = "ASSET_ASSIGNMENT" | "ASSET_RETURN";
 
 export type AuthSession = {
   token: string;
@@ -47,6 +48,7 @@ export type ProtocolDto = {
   employeeId: number | null;
   organizationId: number | null;
   content?: string | null;
+  type?: ProtocolType | string | null;
 };
 
 export type AiResponseDto = {
