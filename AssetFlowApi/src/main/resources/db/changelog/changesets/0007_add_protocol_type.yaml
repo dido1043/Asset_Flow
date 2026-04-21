@@ -1,0 +1,38 @@
+databaseChangeLog:
+  - changeSet:
+      id: 0007-add-content-and-type-to-protocol
+      author: dev
+      preConditions:
+        - onFail: MARK_RAN
+        - not:
+            - columnExists:
+                tableName: protocol
+                columnName: content
+      changes:
+        - addColumn:
+            tableName: protocol
+            columns:
+              - column:
+                  name: content
+                  type: TEXT
+                  constraints:
+                    nullable: true
+  - changeSet:
+      id: 0007-add-type-to-protocol
+      author: dev
+      preConditions:
+        - onFail: MARK_RAN
+        - not:
+            - columnExists:
+                tableName: protocol
+                columnName: type
+      changes:
+        - addColumn:
+            tableName: protocol
+            columns:
+              - column:
+                  name: type
+                  type: VARCHAR(50)
+                  constraints:
+                    nullable: false
+                  defaultValue: ASSET_ASSIGNMENT
