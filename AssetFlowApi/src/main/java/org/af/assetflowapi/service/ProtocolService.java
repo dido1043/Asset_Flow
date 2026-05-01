@@ -55,6 +55,7 @@ public class ProtocolService {
                     dto.setProtocolUri(protocol.getProtocolUri());
                     dto.setOrganizationId(protocol.getOrganization() != null ? protocol.getOrganization().getId() : null);
                     dto.setContent(normalizeProtocolContent(protocol.getContent()));
+                    dto.setType(protocol.getType() != null ? protocol.getType().name() : null);
                     if (protocol.getEmployee() != null && protocol.getEmployee().getId() != null) {
                         dto.setEmployeeId(protocol.getEmployee().getId());
                     }
@@ -71,6 +72,7 @@ public class ProtocolService {
         result.setProtocolUri(protocol.getProtocolUri());
         result.setOrganizationId(protocol.getOrganization() != null ? protocol.getOrganization().getId() : null);
         result.setContent(normalizeProtocolContent(protocol.getContent()));
+        result.setType(protocol.getType() != null ? protocol.getType().name() : null);
         if (protocol.getEmployee() != null && protocol.getEmployee().getId() != null) {
             result.setEmployeeId(protocol.getEmployee().getId());
         }
@@ -155,6 +157,7 @@ public class ProtocolService {
                     dto.setProtocolUri(protocol.getProtocolUri());
                     dto.setOrganizationId(protocol.getOrganization() != null ? protocol.getOrganization().getId() : null);
                     dto.setContent(normalizeProtocolContent(protocol.getContent()));
+                    dto.setType(protocol.getType() != null ? protocol.getType().name() : null);
                     if (protocol.getEmployee() != null && protocol.getEmployee().getId() != null) {
                         dto.setEmployeeId(protocol.getEmployee().getId());
                     }
