@@ -7,6 +7,7 @@ import org.af.assetflowapi.data.dto.auth.LoginUserDto;
 import org.af.assetflowapi.data.dto.auth.OAuthCodeExchangeRequest;
 import org.af.assetflowapi.data.dto.response.LoginResponse;
 import org.af.assetflowapi.data.model.User;
+import org.af.assetflowapi.service.AuthorizationService;
 import org.af.assetflowapi.service.auth.AuthenticationService;
 import org.af.assetflowapi.service.auth.JwtService;
 import org.af.assetflowapi.service.auth.OAuthCodeService;
@@ -16,6 +17,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
 import org.springframework.web.bind.annotation.*;
 
@@ -33,6 +35,7 @@ public class AuthenticationController {
     private final JwtService jwtService;
     private final OAuthCodeService oAuthCodeService;
     private final ModelMapper modelMapper;
+    private final AuthorizationService authorizationService;
 
     @Value("${frontend.url:http://localhost:3000}")
     private String frontendUrl;
@@ -42,20 +45,27 @@ public class AuthenticationController {
     public ResponseEntity<List<UserDto>> getAllUsers() {
         return ResponseEntity.ok(authenticationService.getUsers());
     }
-    @PreAuthorize("hasAnyRole('ADMIN', 'LEADER')")
+
+    @PreAuthorize("isAuthenticated()")
     @GetMapping("/user/{userId}")
-    public ResponseEntity<UserDto> getUser(@PathVariable Long userId) {
+    public ResponseEntity<UserDto> getUser(@AuthenticationPrincipal User caller, @PathVariable Long userId) {
+        authorizationService.requireSelfOrSameOrgLeaderOrAdmin(caller, userId);
         return ResponseEntity.ok(authenticationService.getUser(userId));
     }
+
     @PreAuthorize("hasAnyRole('ADMIN', 'LEADER')")
     @GetMapping("/users/org/{orgId}")
-    public ResponseEntity<List<UserDto>> getUsersByOrganization(@PathVariable Long orgId) {
+    public ResponseEntity<List<UserDto>> getUsersByOrganization(@AuthenticationPrincipal User caller,
+                                                                @PathVariable Long orgId) {
+        authorizationService.requireOrgLeaderOrAdmin(caller, orgId);
         return ResponseEntity.ok(authenticationService.getUsersByOrganization(orgId));
     }
+
     @PostMapping("/register")
     public ResponseEntity<UserDto> register(@RequestBody UserDto user) {
         return ResponseEntity.status(201).body(authenticationService.register(user));
     }
+
     @PostMapping("/login")
     public ResponseEntity<LoginResponse> login(@RequestBody LoginUserDto loginUserDto) {
         User authenticatedUser = modelMapper.map(authenticationService.login(loginUserDto), User.class);
@@ -84,7 +94,6 @@ public class AuthenticationController {
         OAuth2AuthenticationToken token = (OAuth2AuthenticationToken) authentication;
         User user = authenticationService.oAuthLogin(token);
 
-        // create JWT and response similar to /login
         String jwtToken = jwtService.generateToken(user);
         LoginResponse loginResponse = new LoginResponse();
         loginResponse.setToken(jwtToken);
@@ -112,8 +121,12 @@ public class AuthenticationController {
         return ResponseEntity.ok(response);
     }
 
+    @PreAuthorize("isAuthenticated()")
     @PutMapping("/user/edit/{userId}")
-    public ResponseEntity<UserDto> editUser(@PathVariable Long userId, @RequestBody UserDto userDto) {
+    public ResponseEntity<UserDto> editUser(@AuthenticationPrincipal User caller,
+                                            @PathVariable Long userId,
+                                            @RequestBody UserDto userDto) {
+        authorizationService.requireSelfOrAdmin(caller, userId);
         return ResponseEntity.ok(authenticationService.editProfile(userId, userDto));
     }
 
@@ -122,5 +135,4 @@ public class AuthenticationController {
     public ResponseEntity<UserDto> deleteUser(@PathVariable Long userId) {
         return ResponseEntity.ok(authenticationService.deleteUser(userId));
     }
-
 }

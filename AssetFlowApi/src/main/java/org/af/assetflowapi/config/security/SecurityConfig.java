@@ -45,6 +45,8 @@ public class SecurityConfig {
                                     "/auth/login",
                                     "/auth/register",
                                     "/auth/oauth2/**",
+                                    "/auth/oauth/exchange",
+                                    "/auth/loginSuccess",
                                     "/swagger-ui/**",
                                     "/v3/api-docs/**").permitAll()
                             .anyRequest().authenticated()
