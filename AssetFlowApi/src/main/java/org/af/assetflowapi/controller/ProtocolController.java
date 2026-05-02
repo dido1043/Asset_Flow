@@ -5,6 +5,7 @@ import org.af.assetflowapi.data.dto.ProtocolDto;
 import org.af.assetflowapi.service.ProtocolService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -44,6 +45,7 @@ public class ProtocolController {
                 .body(file);
     }
 
+    @PreAuthorize("hasAnyRole('ADMIN', 'LEADER')")
     @GetMapping("/org/{orgId}")
     public ResponseEntity<List<ProtocolDto>> getProtocolsByOrganization(@PathVariable Long orgId) {
         List<ProtocolDto> protocols = protocolService.getProtocolsByOrganization(orgId);
@@ -56,6 +58,7 @@ public class ProtocolController {
         return ResponseEntity.ok(protocols);
     }
     
+    @PreAuthorize("hasAnyRole('ADMIN', 'LEADER')")
     @PostMapping("/create/{organizationId}/user/{userId}")
     public ResponseEntity<ProtocolDto> createProtocol(@PathVariable Long organizationId, @PathVariable Long userId) {
         ProtocolDto created = protocolService.createProtocol(organizationId, userId);
@@ -64,6 +67,7 @@ public class ProtocolController {
         }
         return ResponseEntity.status(HttpStatus.CREATED).body(created);
     }
+    @PreAuthorize("hasAnyRole('ADMIN', 'LEADER')")
     @PostMapping("/create-return/{organizationId}/user/{userId}")
     public ResponseEntity<ProtocolDto> createReturnProtocol(@PathVariable Long organizationId, @PathVariable Long userId) {
         ProtocolDto created = protocolService.createReturningAssetProtocol(organizationId, userId);
@@ -72,6 +76,7 @@ public class ProtocolController {
         }
         return ResponseEntity.status(HttpStatus.CREATED).body(created);
     }   
+    @PreAuthorize("hasAnyRole('ADMIN', 'LEADER')")
     @PutMapping("/edit/{protocolId}")
     public ResponseEntity<ProtocolDto> editProtocolText(@PathVariable Long protocolId, @RequestBody String content) {
         ProtocolDto updated = protocolService.editProtocolText(protocolId, content);

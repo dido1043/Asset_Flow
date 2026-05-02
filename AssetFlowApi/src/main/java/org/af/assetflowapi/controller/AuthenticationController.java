@@ -14,6 +14,7 @@ import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
 import org.springframework.web.bind.annotation.*;
@@ -36,14 +37,17 @@ public class AuthenticationController {
     @Value("${frontend.url:http://localhost:3000}")
     private String frontendUrl;
 
+    @PreAuthorize("hasRole('ADMIN')")
     @GetMapping("/users")
     public ResponseEntity<List<UserDto>> getAllUsers() {
         return ResponseEntity.ok(authenticationService.getUsers());
     }
+    @PreAuthorize("hasAnyRole('ADMIN', 'LEADER')")
     @GetMapping("/user/{userId}")
     public ResponseEntity<UserDto> getUser(@PathVariable Long userId) {
         return ResponseEntity.ok(authenticationService.getUser(userId));
     }
+    @PreAuthorize("hasAnyRole('ADMIN', 'LEADER')")
     @GetMapping("/users/org/{orgId}")
     public ResponseEntity<List<UserDto>> getUsersByOrganization(@PathVariable Long orgId) {
         return ResponseEntity.ok(authenticationService.getUsersByOrganization(orgId));
@@ -113,6 +117,7 @@ public class AuthenticationController {
         return ResponseEntity.ok(authenticationService.editProfile(userId, userDto));
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
     @DeleteMapping("/user/delete/{userId}")
     public ResponseEntity<UserDto> deleteUser(@PathVariable Long userId) {
         return ResponseEntity.ok(authenticationService.deleteUser(userId));

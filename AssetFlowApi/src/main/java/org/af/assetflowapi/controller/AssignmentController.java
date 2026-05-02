@@ -5,6 +5,7 @@ import org.af.assetflowapi.data.dto.AssignmentDto;
 import org.af.assetflowapi.service.AssignmentService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -15,6 +16,7 @@ import java.util.List;
 public class AssignmentController {
     private final AssignmentService assignmentService;
 
+    @PreAuthorize("hasAnyRole('ADMIN', 'LEADER')")
     @PostMapping("/add")
     public ResponseEntity<AssignmentDto> createAssignment(@RequestBody AssignmentDto dto) {
         AssignmentDto created = assignmentService.createAssignmentToUser(dto);
@@ -26,16 +28,19 @@ public class AssignmentController {
         return ResponseEntity.ok(assignmentService.getAssignment(id));
     }
 
+    @PreAuthorize("hasAnyRole('ADMIN', 'LEADER')")
     @GetMapping("/all")
     public ResponseEntity<List<AssignmentDto>> getAllAssignments() {
         return ResponseEntity.ok(assignmentService.getAllAssignments());
     }
 
+    @PreAuthorize("hasAnyRole('ADMIN', 'LEADER')")
     @PutMapping("/update/{id}")
     public ResponseEntity<AssignmentDto> updateAssignment(@PathVariable Long id, @RequestBody AssignmentDto dto) {
         return ResponseEntity.ok(assignmentService.updateAssignment(id, dto));
     }
 
+    @PreAuthorize("hasAnyRole('ADMIN', 'LEADER')")
     @DeleteMapping("/delete/{id}")
     public ResponseEntity<Void> deleteAssignment(@PathVariable Long id) {
         assignmentService.deleteAssignment(id);
@@ -47,6 +52,7 @@ public class AssignmentController {
         return ResponseEntity.ok(assignmentService.getUserAssignments(userId));
     }
 
+    @PreAuthorize("hasAnyRole('ADMIN', 'LEADER')")
     @GetMapping("/product/{productId}")
     public ResponseEntity<List<AssignmentDto>> getAssignmentsByProduct(@PathVariable Long productId) {
         return ResponseEntity.ok(assignmentService.getAssignmentsByProduct(productId));
