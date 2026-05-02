@@ -5,6 +5,7 @@ import org.af.assetflowapi.data.dto.ProductDto;
 import org.af.assetflowapi.service.ProductService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -15,6 +16,7 @@ import java.util.List;
 public class ProductController {
     private final ProductService productService;
 
+    @PreAuthorize("hasAnyRole('ADMIN', 'LEADER')")
     @PostMapping
     public ResponseEntity<ProductDto> createProduct(@RequestBody ProductDto dto) {
         ProductDto created = productService.addProduct(dto);
@@ -26,16 +28,19 @@ public class ProductController {
         return ResponseEntity.ok(productService.getProduct(id));
     }
 
+    @PreAuthorize("hasAnyRole('ADMIN', 'LEADER')")
     @GetMapping("/all")
     public ResponseEntity<List<ProductDto>> getAllProducts() {
         return ResponseEntity.ok(productService.getAllProducts());
     }
 
+    @PreAuthorize("hasAnyRole('ADMIN', 'LEADER')")
     @PutMapping("/{id}")
     public ResponseEntity<ProductDto> updateProduct(@PathVariable Long id, @RequestBody ProductDto dto) {
         return ResponseEntity.ok(productService.updateProduct(id, dto));
     }
 
+    @PreAuthorize("hasAnyRole('ADMIN', 'LEADER')")
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteProduct(@PathVariable Long id) {
         productService.deleteProduct(id);
@@ -52,6 +57,7 @@ public class ProductController {
         return ResponseEntity.ok(productService.findByProductType(type));
     }
 
+    @PreAuthorize("hasAnyRole('ADMIN', 'LEADER')")
     @PostMapping("/add")
     public ResponseEntity<ProductDto> addProduct(@RequestBody ProductDto productDto) {
         return ResponseEntity.status(201).body(productService.addProduct(productDto));
