@@ -13,8 +13,6 @@ import com.itextpdf.kernel.pdf.PdfWriter;
 import com.itextpdf.layout.Document;
 import com.itextpdf.layout.element.Paragraph;
 import lombok.AllArgsConstructor;
-import org.af.assetflowapi.component.prompts.ProtocolCreationPromptBuilder;
-import org.af.assetflowapi.data.dto.AI.AiResponseDto;
 import org.af.assetflowapi.data.enums.ProtocolType;
 import org.af.assetflowapi.data.dto.ProtocolDto;
 import org.af.assetflowapi.data.model.*;
@@ -22,7 +20,6 @@ import org.af.assetflowapi.repository.OrganizationRepository;
 import org.af.assetflowapi.repository.ProductRepository;
 import org.af.assetflowapi.repository.ProtocolRepository;
 import org.af.assetflowapi.repository.UserRepository;
-import org.af.assetflowapi.service.AI.AiService;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
@@ -43,9 +40,6 @@ public class ProtocolService {
     private final ProtocolRepository protocolRepository;
     private final UserRepository userRepository;
     private final ProductRepository productRepository;
-    private final ProtocolCreationPromptBuilder promptBuilder;
-
-    private final AiService aiService;
 
     public List<ProtocolDto> getProtocolsByEmployee(Long employeeId) {
         return protocolRepository.findByEmployeeId(employeeId).stream()
@@ -180,20 +174,14 @@ public class ProtocolService {
 
         List<Assignment> userAssignments = user.getAssignments();
 
-        String assetsBlock = userAssetsToString(userAssignments);
-
-        String prompt = type == ProtocolType.ASSET_ASSIGNMENT ? 
-            promptBuilder.buildPrompt(organization.getId(), user.getId(), assetsBlock) : 
-            promptBuilder.buildPromptForReturningAssignments(organization.getId(), user.getId(), assetsBlock);
-
-        AiResponseDto aiDto = aiService.generateTextCompletion(prompt);
-        String content = normalizeProtocolContent(aiDto.getResponse());
+        String content = type == ProtocolType.ASSET_ASSIGNMENT
+                ? buildAssignmentTemplate(organization.getOrganizationName(), user.getFullName(), formatAssetsForAssignment(userAssignments))
+                : buildReturnTemplate(organization.getOrganizationName(), user.getFullName(), formatAssetsForReturn(userAssignments));
 
         createDocumentWithContent(content, filePath);
 
-        Map<String, String> result = new HashMap<String, String>();
+        Map<String, String> result = new HashMap<>();
         result.put(filename, content);
-        // Store only the filename, not the full file system path
         return result;
     }
     public ProtocolDto editProtocolText(Long protocolId, String content){
@@ -233,6 +221,53 @@ public class ProtocolService {
         }
 
         return result;
+    }
+
+    private String buildAssignmentTemplate(String orgName, String employeeName, String assetsBlock) {
+        return String.format(
+            "       ПРИЕМО-ПРЕДАВАТЕЛЕН ПРОТОКОЛ\n\n" +
+            "Днес, ........... 20... г., в гр. .........................., се състави настоящият протокол между:\n" +
+            "%s, ЕИК: .........................., представлявано от ..................................................,\n" +
+            "в качеството му на РАБОТОДАТЕЛ/ПРЕДАВАЩ, от една страна,\n" +
+            "и\n" +
+            "%s, ЕГН: .........................., на длъжност ..................................................,\n" +
+            "наричан по-долу СЛУЖИТЕЛ/ПРИЕМАЩ, от друга страна.\n\n" +
+            "С настоящия протокол ПРЕДАВАЩИЯТ предава, а ПРИЕМАЩИЯТ приема за ползване при изпълнение\n" +
+            "на трудовите си задължения следните активи:\n" +
+            "№   Описание на актива (марка, модел)          Инв. №          Сост.\n" +
+            "-----------------------------------------------------------------------\n" +
+            "%s\n" +
+            "УСЛОВИЯ ЗА ПОЛЗВАНЕ:\n" +
+            "1. Служителят се задължава да съхранява активите с грижата на добър стопанин\n" +
+            "   и да ги използва единствено за преки служебни цели.\n" +
+            "2. При повреда, кражба или загуба, Служителят е длъжен незабавно да уведоми\n" +
+            "   прекия си ръководител.\n" +
+            "3. Служителят носи пълна отчетна отговорност за предоставените му активи\n" +
+            "   съгласно чл. 207, ал. 1, т. 1 от Кодекса на труда.\n\n" +
+            "ПРЕДАЛ: .......................... (Подпис)\n" +
+            "ПРИЕЛ: .......................... (Подпис)",
+            orgName, employeeName, assetsBlock);
+    }
+
+    private String buildReturnTemplate(String orgName, String employeeName, String assetsBlock) {
+        return String.format(
+            "       ПРИЕМО-ПРЕДАВАТЕЛЕН ПРОТОКОЛ (ВРЪЩАНЕ)\n\n" +
+            "Днес, ........... 20... г., в гр. .........................., се състави настоящият протокол за следното:\n" +
+            "СЛУЖИТЕЛЯТ %s, ЕГН: .........................., връща на РАБОТОДАТЕЛЯ %s,\n" +
+            "следните активи, получени за индивидуално ползване:\n" +
+            "№   Описание на актива                         Инв. №          Констатирано\n" +
+            "-----------------------------------------------------------------------\n" +
+            "%s\n\n" +
+            "КОНСТАТАЦИИ:\n" +
+            "( ) Активите са върнати в пълна окомплектовка и добро техническо състояние,\n" +
+            "    съответстващо на нормалното изхабяване.\n" +
+            "( ) Констатирани са следните липси или повреди: .......................................................................\n\n" +
+            "ЗАКЛЮЧЕНИЕ:\n" +
+            "С подписването на настоящия протокол страните потвърждават, че нямат/имат\n" +
+            "финансови претенции една към друга във връзка с върнатите активи.\n\n" +
+            "ВЪРНАЛ: .......................... (Подпис)\n" +
+            "ПРИЕЛ (за Работодателя): .......................... (Подпис)",
+            employeeName, orgName, assetsBlock);
     }
 
     private void createDocumentWithContent(String content, Path filePath) {
@@ -322,22 +357,38 @@ public class ProtocolService {
             throw new RuntimeException("Failed to read protocol PDF: " + filename + ". Error: " + e.getMessage(), e);
         }
     }
-    private String userAssetsToString(List<Assignment> userAssignments) {
+    private String formatAssetsForAssignment(List<Assignment> userAssignments) {
         if (userAssignments == null || userAssignments.isEmpty()) {
-            return "No assets assigned.";
+            return "Няма предоставени активи.";
         }
+        int[] idx = {1};
         return userAssignments.stream()
                 .map(a -> {
-                    Long productId = a.getProduct().getId();
-                    Product p = productRepository.findById(productId)
-                            .orElseThrow(() -> new IllegalArgumentException("Product with id " + productId + " not found"));
-                    return String.format(
-                "- %s | Brand: %s | Model: %s | Asset Tag: %s ",
-                            p.getProductType(),
-                            p.getProductBrand(),
-                            p.getProductModel(),
-                p.getAssetTag()
-                    );
+                    Product p = productRepository.findById(a.getProduct().getId())
+                            .orElseThrow(() -> new IllegalArgumentException("Product not found"));
+                    return String.format("%-4d%-46s%-16s%s",
+                            idx[0]++,
+                            p.getProductType() + " - " + p.getProductBrand() + " " + p.getProductModel(),
+                            p.getAssetTag(),
+                            "употребявано");
+                })
+                .collect(Collectors.joining("\n"));
+    }
+
+    private String formatAssetsForReturn(List<Assignment> userAssignments) {
+        if (userAssignments == null || userAssignments.isEmpty()) {
+            return "Няма върнати активи.";
+        }
+        int[] idx = {1};
+        return userAssignments.stream()
+                .map(a -> {
+                    Product p = productRepository.findById(a.getProduct().getId())
+                            .orElseThrow(() -> new IllegalArgumentException("Product not found"));
+                    return String.format("%-4d%-46s%-16s%s",
+                            idx[0]++,
+                            p.getProductType() + " - " + p.getProductBrand() + " " + p.getProductModel(),
+                            p.getAssetTag(),
+                            "........................");
                 })
                 .collect(Collectors.joining("\n"));
     }

@@ -4,24 +4,18 @@ import { Button } from "@/app/components/shared/ui/Button";
 import { Input } from "@/app/components/shared/ui/Input";
 import { Label } from "@/app/components/shared/ui/Label";
 import { getRoleLabel, useTranslations } from "@/app/lib/i18n";
-import type { UserDto } from "@/app/lib/types";
 
 import { EmptyState, FeedbackMessage, SectionCard, SelectField } from "../shared";
 import type { AccountWorkspaceState } from "../useAccountWorkspace";
 import { getRoleBadgeClass } from "../utils";
-
-function isUnemployedUser(user: UserDto) {
-  return user.role === "EMPLOYEE" && user.organizationId == null;
-}
 
 export function UsersSection({ workspace }: { workspace: AccountWorkspaceState }) {
   const { t } = useTranslations();
   const [userSearch, setUserSearch] = useState("");
   const {
     canDeleteUsers,
+    currentUser,
     deleteUserId,
-    directoryUserOptions,
-    directoryUsers,
     feedbackByKey,
     getOrganizationName,
     handleDeleteUser,
@@ -38,9 +32,15 @@ export function UsersSection({ workspace }: { workspace: AccountWorkspaceState }
     userOptions,
     users,
   } = workspace;
-  const allVisibleUsers = isLeader ? directoryUsers : users;
-  const allVisibleUserOptions = isLeader ? directoryUserOptions : userOptions;
-  const visibleUsers = useMemo(() => allVisibleUsers.filter(isUnemployedUser), [allVisibleUsers]);
+
+  // Leaders receive an org-scoped `users` list from the workspace.
+  // Admins receive all users — filter to their own org when they have one.
+  const visibleUsers = useMemo(() => {
+    if (isLeader) return users;
+    const orgId = currentUser?.organizationId;
+    return orgId != null ? users.filter((u) => u.organizationId === orgId) : users;
+  }, [users, isLeader, currentUser?.organizationId]);
+
   const visibleUserIds = useMemo(
     () =>
       new Set(
@@ -51,10 +51,10 @@ export function UsersSection({ workspace }: { workspace: AccountWorkspaceState }
     [visibleUsers],
   );
   const visibleUserOptions = useMemo(
-    () => allVisibleUserOptions.filter((option) => visibleUserIds.has(Number(option.value))),
-    [allVisibleUserOptions, visibleUserIds],
+    () => userOptions.filter((option) => visibleUserIds.has(Number(option.value))),
+    [userOptions, visibleUserIds],
   );
-  const selectedVisibleUser = selectedUser && isUnemployedUser(selectedUser) ? selectedUser : null;
+  const selectedVisibleUser = selectedUser && visibleUserIds.has(selectedUser.id ?? -1) ? selectedUser : null;
   const deferredUserSearch = useDeferredValue(userSearch);
   const filteredUsers = useMemo(() => {
     const query = deferredUserSearch.trim().toLowerCase();
@@ -83,7 +83,7 @@ export function UsersSection({ workspace }: { workspace: AccountWorkspaceState }
       title={t("users.title")}
       description={
         isLeader
-          ? t("users.descriptionLeader")
+          ? t("users.descriptionLeaderCompany")
           : t("users.descriptionAdmin")
       }
       actions={
@@ -275,7 +275,7 @@ export function UsersSection({ workspace }: { workspace: AccountWorkspaceState }
               title={t("users.noUsersLoadedTitle")}
               description={
                 isLeader
-                  ? t("users.noUsersLoadedDescriptionLeader")
+                  ? t("users.noUsersLoadedDescriptionLeaderCompany")
                   : t("users.noUsersLoadedDescriptionAdmin")
               }
             />

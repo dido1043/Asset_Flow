@@ -94,10 +94,18 @@ export async function apiRequest<T>(path: string, options: ApiRequestOptions = {
     headers: requestHeaders,
     body: json !== undefined ? JSON.stringify(json) : body,
     cache: "no-store",
+    redirect: "manual",
   });
 
+  if (response.type === "opaqueredirect" || response.status === 0) {
+    if (auth) {
+      clearAuthSession();
+    }
+    throw new ApiError("Your session has expired. Please sign in again.", 401);
+  }
+
   if (!response.ok) {
-    if (auth && (response.status === 401 || response.status === 403)) {
+    if (auth && response.status === 401) {
       clearAuthSession();
     }
 

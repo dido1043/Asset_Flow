@@ -1,20 +1,14 @@
 import { Button } from "@/app/components/shared/ui/Button";
 import { Input } from "@/app/components/shared/ui/Input";
 import { Label } from "@/app/components/shared/ui/Label";
+import { buildApiUrl, getErrorMessage } from "@/app/lib/api";
 import { useTranslations } from "@/app/lib/i18n";
+import { readAuthSession } from "@/app/lib/session";
 import type { ProtocolDto, ProtocolType } from "@/app/lib/types";
 import React from "react";
 
 import { FeedbackMessage, FieldHint, SectionCard, SelectField } from "../shared";
 import type { AccountWorkspaceState } from "../useAccountWorkspace";
-
-function getProtocolHref(protocolUri: string) {
-  if (/^https?:\/\//i.test(protocolUri) || protocolUri.startsWith("/api/protocol-file")) {
-    return protocolUri;
-  }
-
-  return `/api/protocol-file?path=${encodeURIComponent(protocolUri)}`;
-}
 
 function normalizeProtocolType(type?: ProtocolDto["type"]): ProtocolType {
   return type === "ASSET_RETURN" ? "ASSET_RETURN" : "ASSET_ASSIGNMENT";
@@ -42,7 +36,10 @@ export function ProtocolsSection({ workspace }: { workspace: AccountWorkspaceSta
 
   const [editingProtocolId, setEditingProtocolId] = React.useState<number | null>(null);
   const [editContent, setEditContent] = React.useState("");
+  const [expandedProtocolIds, setExpandedProtocolIds] = React.useState<Set<number>>(new Set());
   const [protocolTypeFilter, setProtocolTypeFilter] = React.useState<"" | ProtocolType>("");
+  const [openError, setOpenError] = React.useState<string | null>(null);
+  const [openingProtocolId, setOpeningProtocolId] = React.useState<number | null>(null);
   const protocolTypeOptions = React.useMemo(
     () => [
       { value: "ASSET_ASSIGNMENT", label: t("protocols.assignmentProtocol") },
@@ -95,6 +92,50 @@ export function ProtocolsSection({ workspace }: { workspace: AccountWorkspaceSta
     }
   };
 
+  const handleOpenProtocol = async (protocolId: number) => {
+    setOpenError(null);
+    setOpeningProtocolId(protocolId);
+
+    const headers: HeadersInit = { Accept: "application/pdf" };
+    const session = readAuthSession();
+    if (session?.token) {
+      headers.Authorization = `Bearer ${session.token}`;
+    }
+
+    try {
+      const response = await fetch(buildApiUrl(`/protocol/download/${protocolId}`), {
+        headers,
+        cache: "no-store",
+      });
+
+      if (!response.ok) {
+        const text = await response.text().catch(() => "");
+        throw new Error(text || `Request failed with ${response.status}`);
+      }
+
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      window.open(url, "_blank", "noopener,noreferrer");
+      window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
+    } catch (error) {
+      setOpenError(getErrorMessage(error));
+    } finally {
+      setOpeningProtocolId(null);
+    }
+  };
+
+  const togglePreview = (protocolId: number) => {
+    setExpandedProtocolIds((previous) => {
+      const next = new Set(previous);
+      if (next.has(protocolId)) {
+        next.delete(protocolId);
+      } else {
+        next.add(protocolId);
+      }
+      return next;
+    });
+  };
+
   return (
     <SectionCard
       id="protocols"
@@ -107,6 +148,7 @@ export function ProtocolsSection({ workspace }: { workspace: AccountWorkspaceSta
     >
       <div className="space-y-5">
         <FeedbackMessage feedback={feedbackByKey.protocols} />
+        {openError ? <FeedbackMessage feedback={{ tone: "error", message: openError }} /> : null}
 
         <form onSubmit={handleCreateProtocol} className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
           <p className="text-sm font-semibold text-slate-900">{t("protocols.createProtocol")}</p>
@@ -227,8 +269,10 @@ export function ProtocolsSection({ workspace }: { workspace: AccountWorkspaceSta
                         value={editContent}
                         onChange={(e) => setEditContent(e.target.value)}
                         placeholder={t("protocols.enterProtocolContent")}
-                        className="w-full min-h-48 rounded-xl border-2 border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 placeholder-slate-400 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200 font-mono"
-                        rows={10}
+                        className="w-full min-h-[28rem] rounded-xl border-2 border-slate-300 bg-white px-4 py-3 text-xs text-slate-900 placeholder-slate-400 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200 font-mono whitespace-pre"
+                        rows={28}
+                        spellCheck={false}
+                        wrap="off"
                       />
                       <div className="flex gap-2">
                         <Button
@@ -259,14 +303,20 @@ export function ProtocolsSection({ workspace }: { workspace: AccountWorkspaceSta
                           </span>
                         </div>
                         <div className="flex gap-2">
-                          <a
-                            href={getProtocolHref(protocol.protocolUri)}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="inline-flex h-10 items-center justify-center rounded-xl bg-indigo-600 px-4 text-sm font-semibold text-white transition hover:bg-indigo-700 whitespace-nowrap"
+                          <Button
+                            variant="outline"
+                            onClick={() => protocol.id != null && togglePreview(protocol.id)}
+                          >
+                            {protocol.id != null && expandedProtocolIds.has(protocol.id)
+                              ? t("protocols.hidePreview")
+                              : t("protocols.previewContent")}
+                          </Button>
+                          <Button
+                            onClick={() => protocol.id != null && handleOpenProtocol(protocol.id)}
+                            disabled={protocol.id == null || openingProtocolId === protocol.id}
                           >
                             {t("protocols.openProtocol")}
-                          </a>
+                          </Button>
                           {canEditProtocol(protocol) && (
                             <Button
                               variant="outline"
@@ -278,6 +328,11 @@ export function ProtocolsSection({ workspace }: { workspace: AccountWorkspaceSta
                           )}
                         </div>
                       </div>
+                      {protocol.id != null && expandedProtocolIds.has(protocol.id) && (
+                        <pre className="mt-4 max-h-[32rem] overflow-auto whitespace-pre rounded-xl border border-slate-200 bg-white px-4 py-3 text-xs text-slate-800 font-mono">
+                          {protocol.content?.trim() ? protocol.content : t("protocols.noContent")}
+                        </pre>
+                      )}
                     </>
                   )}
                 </div>

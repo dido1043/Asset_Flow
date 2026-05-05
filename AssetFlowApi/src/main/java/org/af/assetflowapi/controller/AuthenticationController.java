@@ -40,7 +40,7 @@ public class AuthenticationController {
     @Value("${frontend.url:http://localhost:3000}")
     private String frontendUrl;
 
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'LEADER')")
     @GetMapping("/users")
     public ResponseEntity<List<UserDto>> getAllUsers() {
         return ResponseEntity.ok(authenticationService.getUsers());
