@@ -30,10 +30,11 @@ services:
       - .env
     environment:
       OLLAMA_BASE_URL: http://ollama:11434
+      APP_PROTOCOL_STORAGE: /var/lib/assetflow/protocols
     ports:
       - "${APP_PORT}:8080"
     volumes:
-      - ./protocols:/app/target/protocols
+      - protocol_data:/var/lib/assetflow/protocols
     depends_on:
       db:
         condition: service_healthy
@@ -56,3 +57,4 @@ services:
 volumes:
   postgres_data:
   ollama_data:
+  protocol_data:
