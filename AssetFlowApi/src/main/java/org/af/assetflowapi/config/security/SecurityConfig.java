@@ -35,6 +35,7 @@ public class SecurityConfig {
     private final AuthenticationProvider authenticationProvider;
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
     private final ObjectProvider<ClientRegistrationRepository> clientRegistrationRepositoryProvider;
+    private final OAuth2AuthenticationSuccessHandler oAuth2AuthenticationSuccessHandler;
 
    
     @Bean
@@ -57,7 +58,6 @@ public class SecurityConfig {
                                     "/auth/register",
                                     "/auth/oauth2/**",
                                     "/auth/oauth/exchange",
-                                    "/auth/loginSuccess",
                                     "/auth/logout",
                                     "/swagger-ui/**",
                                     "/v3/api-docs/**").permitAll()
@@ -71,7 +71,7 @@ public class SecurityConfig {
             if (clientRegistrationRepositoryProvider.getIfAvailable() != null) {
                 http.oauth2Login(oAuth2 -> oAuth2
                         .loginPage("/auth/oauth2/login")
-                        .defaultSuccessUrl("/auth/loginSuccess", true)
+                        .successHandler(oAuth2AuthenticationSuccessHandler)
                         .authorizationEndpoint(endpoint -> endpoint
                                 .authorizationRequestRepository(new HttpCookieOAuth2AuthorizationRequestRepository()))
                         .permitAll());
