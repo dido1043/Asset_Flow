@@ -14,6 +14,9 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.security.web.authentication.www.BasicAuthenticationFilter;
+import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
+import org.springframework.security.web.csrf.CsrfTokenRequestAttributeHandler;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
@@ -37,9 +40,17 @@ public class SecurityConfig {
     @Bean
         public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
 
+            CsrfTokenRequestAttributeHandler csrfRequestHandler = new CsrfTokenRequestAttributeHandler();
+            csrfRequestHandler.setCsrfRequestAttributeName(null);
+
             http
                     .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-                    .csrf(csrf -> csrf.disable())
+                    .csrf(csrf -> csrf
+                            .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
+                            .csrfTokenRequestHandler(csrfRequestHandler)
+                            .ignoringRequestMatchers("/auth/login", "/auth/register", "/auth/oauth2/**", "/auth/oauth/exchange", "/auth/logout")
+                    )
+                    .addFilterAfter(new CsrfCookieFilter(), BasicAuthenticationFilter.class)
                     .authorizeHttpRequests(auth -> auth
                             .requestMatchers(
                                     "/auth/login",
@@ -47,12 +58,13 @@ public class SecurityConfig {
                                     "/auth/oauth2/**",
                                     "/auth/oauth/exchange",
                                     "/auth/loginSuccess",
+                                    "/auth/logout",
                                     "/swagger-ui/**",
                                     "/v3/api-docs/**").permitAll()
                             .anyRequest().authenticated()
                     )
                     .sessionManagement(
-                            session -> session.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED))
+                            session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                     .authenticationProvider(authenticationProvider)
                     .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
@@ -60,6 +72,8 @@ public class SecurityConfig {
                 http.oauth2Login(oAuth2 -> oAuth2
                         .loginPage("/auth/oauth2/login")
                         .defaultSuccessUrl("/auth/loginSuccess", true)
+                        .authorizationEndpoint(endpoint -> endpoint
+                                .authorizationRequestRepository(new HttpCookieOAuth2AuthorizationRequestRepository()))
                         .permitAll());
             }
             return http.build();
@@ -70,7 +84,7 @@ public class SecurityConfig {
                 CorsConfiguration configuration = new CorsConfiguration();
 
                 configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
-                configuration.setAllowedHeaders(List.of("Authorization", "Content-Type", "Accept", "Origin", "X-Requested-With"));
+                configuration.setAllowedHeaders(List.of("Authorization", "Content-Type", "Accept", "Origin", "X-Requested-With", "X-XSRF-TOKEN"));
                 configuration.setExposedHeaders(List.of("Content-Disposition", "X-Total-Count"));
                 configuration.setAllowCredentials(true);
                 configuration.setAllowedOriginPatterns(List.of(frontendUrl));

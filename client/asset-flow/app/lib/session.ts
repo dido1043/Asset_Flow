@@ -21,7 +21,7 @@ function isValidSession(value: unknown): value is AuthSession {
   }
 
   const session = value as Partial<AuthSession>;
-  return Boolean(session.token) && typeof session.userId === "number" && typeof session.expiresIn === "number";
+  return typeof session.userId === "number" && typeof session.expiresIn === "number";
 }
 
 export function readAuthSession(): AuthSession | null {

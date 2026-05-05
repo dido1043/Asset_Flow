@@ -3,10 +3,9 @@
 import { useRouter } from "next/navigation";
 import React from "react";
 
-import { apiRequest, getErrorMessage } from "@/app/lib/api";
+import { apiRequest, getErrorMessage, signOut } from "@/app/lib/api";
 import { getRoleLabel, useTranslations } from "@/app/lib/i18n";
 import {
-  clearAuthSession,
   readAuthSession,
   subscribeToAuthChanges,
 } from "@/app/lib/session";
@@ -227,7 +226,7 @@ export function useAccountWorkspace() {
   );
 
   const handleSignOut = React.useCallback(() => {
-    clearAuthSession();
+    signOut();
     router.replace("/user/login");
   }, [router]);
 
