@@ -12,7 +12,8 @@ import com.itextpdf.kernel.pdf.PdfDocument;
 import com.itextpdf.kernel.pdf.PdfWriter;
 import com.itextpdf.layout.Document;
 import com.itextpdf.layout.element.Paragraph;
-import lombok.AllArgsConstructor;
+import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.af.assetflowapi.data.enums.ProtocolType;
 import org.af.assetflowapi.data.dto.ProtocolDto;
 import org.af.assetflowapi.data.model.*;
@@ -31,8 +32,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+
 @Service
-@AllArgsConstructor
+@RequiredArgsConstructor
 public class ProtocolService {
     private static final ObjectMapper CONTENT_MAPPER = new ObjectMapper();
 
@@ -40,6 +42,9 @@ public class ProtocolService {
     private final ProtocolRepository protocolRepository;
     private final UserRepository userRepository;
     private final ProductRepository productRepository;
+
+    @Value("${app.protocol.storage}")
+    private String protocolStoragePath;
 
     public List<ProtocolDto> getProtocolsByEmployee(Long employeeId) {
         return protocolRepository.findByEmployeeId(employeeId).stream()
@@ -161,7 +166,7 @@ public class ProtocolService {
     }
 
     public Map<String, String> generateProtocolPdfUri(Organization organization, User user, ProtocolType type) {
-        Path targetDir = Path.of("target", "protocols");
+        Path targetDir = Path.of(protocolStoragePath);
         try {
             Files.createDirectories(targetDir);
         } catch (IOException e) {
