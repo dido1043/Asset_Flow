@@ -36,12 +36,13 @@ public class HttpCookieOAuth2AuthorizationRequestRepository
                                          HttpServletRequest request,
                                          HttpServletResponse response) {
         if (authorizationRequest == null) {
-            removeCookie(response);
+            removeCookie(request, response);
             return;
         }
+        boolean secure = request.isSecure();
         ResponseCookie cookie = ResponseCookie.from(COOKIE_NAME, serialize(authorizationRequest))
                 .httpOnly(true)
-                .secure(true)
+                .secure(secure)
                 .sameSite("Lax")
                 .path("/")
                 .maxAge(COOKIE_TTL)
@@ -53,7 +54,7 @@ public class HttpCookieOAuth2AuthorizationRequestRepository
     public OAuth2AuthorizationRequest removeAuthorizationRequest(HttpServletRequest request,
                                                                  HttpServletResponse response) {
         OAuth2AuthorizationRequest authorizationRequest = loadAuthorizationRequest(request);
-        removeCookie(response);
+        removeCookie(request, response);
         return authorizationRequest;
     }
 
@@ -70,10 +71,10 @@ public class HttpCookieOAuth2AuthorizationRequestRepository
         return null;
     }
 
-    private void removeCookie(HttpServletResponse response) {
+    private void removeCookie(HttpServletRequest request, HttpServletResponse response) {
         ResponseCookie cookie = ResponseCookie.from(COOKIE_NAME, "")
                 .httpOnly(true)
-                .secure(true)
+                .secure(request.isSecure())
                 .sameSite("Lax")
                 .path("/")
                 .maxAge(0)
