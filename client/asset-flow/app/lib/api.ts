@@ -1,4 +1,4 @@
-import { clearAuthSession, readAuthSession } from "./session";
+import { clearAuthSession } from "./session";
 
 type Primitive = string | number | boolean;
 
@@ -72,8 +72,21 @@ async function buildApiError(response: Response) {
   return new ApiError(text || `Request failed with ${response.status}`, response.status, text);
 }
 
+function getCsrfToken(): string | null {
+  if (typeof document === "undefined") return null;
+  return document.cookie
+    .split("; ")
+    .find((c) => c.startsWith("XSRF-TOKEN="))
+    ?.split("=")[1] ?? null;
+}
+
+export function signOut(): void {
+  fetch(buildApiUrl("/auth/logout"), { method: "POST", credentials: "include" }).catch(() => {});
+  clearAuthSession();
+}
+
 export async function apiRequest<T>(path: string, options: ApiRequestOptions = {}): Promise<T> {
-  const { auth = true, json, searchParams, headers, body, ...rest } = options;
+  const { auth = true, json, searchParams, headers, body, method = "GET", ...rest } = options;
   const requestHeaders = new Headers(headers);
 
   requestHeaders.set("Accept", "application/json, text/plain, */*");
@@ -82,19 +95,19 @@ export async function apiRequest<T>(path: string, options: ApiRequestOptions = {
     requestHeaders.set("Content-Type", "application/json");
   }
 
-  if (auth) {
-    const session = readAuthSession();
-    if (session?.token) {
-      requestHeaders.set("Authorization", `Bearer ${session.token}`);
-    }
+  const csrfToken = getCsrfToken();
+  if (csrfToken && ["POST", "PUT", "PATCH", "DELETE"].includes(method.toUpperCase())) {
+    requestHeaders.set("X-XSRF-TOKEN", csrfToken);
   }
 
   const response = await fetch(buildApiUrl(path, searchParams), {
     ...rest,
+    method,
     headers: requestHeaders,
     body: json !== undefined ? JSON.stringify(json) : body,
     cache: "no-store",
     redirect: "manual",
+    credentials: "include",
   });
 
   if (response.type === "opaqueredirect" || response.status === 0) {

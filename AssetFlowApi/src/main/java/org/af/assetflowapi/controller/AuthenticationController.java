@@ -13,7 +13,9 @@ import org.af.assetflowapi.service.auth.JwtService;
 import org.af.assetflowapi.service.auth.OAuthCodeService;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
@@ -25,6 +27,7 @@ import java.io.IOException;
 import java.net.URI;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.util.List;
 
 @RestController
@@ -67,7 +70,8 @@ public class AuthenticationController {
     }
 
     @PostMapping("/login")
-    public ResponseEntity<LoginResponse> login(@RequestBody LoginUserDto loginUserDto) {
+    public ResponseEntity<LoginResponse> login(@RequestBody LoginUserDto loginUserDto,
+                                               HttpServletResponse response) {
         User authenticatedUser = modelMapper.map(authenticationService.login(loginUserDto), User.class);
 
         String jwtToken = jwtService.generateToken(authenticatedUser);
@@ -77,6 +81,7 @@ public class AuthenticationController {
         loginResponse.setRole(authenticatedUser.getRole().toString());
         loginResponse.setUserId(authenticatedUser.getId());
 
+        addAuthCookie(response, jwtToken);
         return ResponseEntity.ok(loginResponse);
     }
 
@@ -113,11 +118,13 @@ public class AuthenticationController {
     }
 
     @PostMapping("/oauth/exchange")
-    public ResponseEntity<LoginResponse> exchangeOAuthCode(@RequestBody OAuthCodeExchangeRequest request) {
+    public ResponseEntity<LoginResponse> exchangeOAuthCode(@RequestBody OAuthCodeExchangeRequest request,
+                                                           HttpServletResponse httpResponse) {
         LoginResponse response = oAuthCodeService.consumeCode(request.code());
         if (response == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
+        addAuthCookie(httpResponse, response.getToken());
         return ResponseEntity.ok(response);
     }
 
@@ -130,9 +137,33 @@ public class AuthenticationController {
         return ResponseEntity.ok(authenticationService.editProfile(userId, userDto));
     }
 
+    @PostMapping("/logout")
+    public ResponseEntity<Void> logout(HttpServletResponse response) {
+        ResponseCookie expired = ResponseCookie.from("jwt", "")
+                .httpOnly(true)
+                .secure(true)
+                .sameSite("Strict")
+                .path("/")
+                .maxAge(0)
+                .build();
+        response.addHeader(HttpHeaders.SET_COOKIE, expired.toString());
+        return ResponseEntity.noContent().build();
+    }
+
     @PreAuthorize("hasRole('ADMIN')")
     @DeleteMapping("/user/delete/{userId}")
     public ResponseEntity<UserDto> deleteUser(@PathVariable Long userId) {
         return ResponseEntity.ok(authenticationService.deleteUser(userId));
+    }
+
+    private void addAuthCookie(HttpServletResponse response, String jwtToken) {
+        ResponseCookie cookie = ResponseCookie.from("jwt", jwtToken)
+                .httpOnly(true)
+                .secure(true)
+                .sameSite("Strict")
+                .path("/")
+                .maxAge(Duration.ofMillis(jwtService.getExpirationTime()))
+                .build();
+        response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
     }
 }

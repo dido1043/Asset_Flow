@@ -3,7 +3,6 @@ import { Input } from "@/app/components/shared/ui/Input";
 import { Label } from "@/app/components/shared/ui/Label";
 import { buildApiUrl, getErrorMessage } from "@/app/lib/api";
 import { useTranslations } from "@/app/lib/i18n";
-import { readAuthSession } from "@/app/lib/session";
 import type { ProtocolDto, ProtocolType } from "@/app/lib/types";
 import React from "react";
 
@@ -96,16 +95,11 @@ export function ProtocolsSection({ workspace }: { workspace: AccountWorkspaceSta
     setOpenError(null);
     setOpeningProtocolId(protocolId);
 
-    const headers: HeadersInit = { Accept: "application/pdf" };
-    const session = readAuthSession();
-    if (session?.token) {
-      headers.Authorization = `Bearer ${session.token}`;
-    }
-
     try {
       const response = await fetch(buildApiUrl(`/protocol/download/${protocolId}`), {
-        headers,
+        headers: { Accept: "application/pdf" },
         cache: "no-store",
+        credentials: "include",
       });
 
       if (!response.ok) {

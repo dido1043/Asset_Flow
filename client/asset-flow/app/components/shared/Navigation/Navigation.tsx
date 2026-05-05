@@ -4,7 +4,9 @@ import React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-import { clearAuthSession, readAuthSession, subscribeToAuthChanges } from "@/app/lib/session";
+
+import { readAuthSession, subscribeToAuthChanges } from "@/app/lib/session";
+import { signOut } from "@/app/lib/api";
 import type { AuthSession } from "@/app/lib/types";
 import { getRoleLabel, useTranslations } from "@/app/lib/i18n";
 
@@ -31,7 +33,7 @@ const Navigation = () => {
   }, [pathname]);
 
   const logout = () => {
-    clearAuthSession();
+    signOut();
     window.location.href = "/user/login";
   };
 

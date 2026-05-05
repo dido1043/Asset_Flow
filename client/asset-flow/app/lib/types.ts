@@ -2,7 +2,6 @@ export type Role = "ADMIN" | "LEADER" | "EMPLOYEE";
 export type ProtocolType = "ASSET_ASSIGNMENT" | "ASSET_RETURN";
 
 export type AuthSession = {
-  token: string;
   expiresIn: number;
   userId: number;
   role: Role | string;
