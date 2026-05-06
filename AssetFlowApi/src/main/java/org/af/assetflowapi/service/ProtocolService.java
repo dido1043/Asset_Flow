@@ -356,7 +356,7 @@ public class ProtocolService {
             if (!Files.exists(filePath)) {
                 throw new IOException("File does not exist at path: " + filePath.toAbsolutePath());
             }
-            
+
             return Files.readAllBytes(filePath);
         } catch (IOException e) {
             throw new RuntimeException("Failed to read protocol PDF: " + filename + ". Error: " + e.getMessage(), e);
