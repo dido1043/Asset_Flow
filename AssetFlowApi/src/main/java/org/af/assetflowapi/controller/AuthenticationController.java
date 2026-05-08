@@ -12,6 +12,7 @@ import org.af.assetflowapi.service.auth.AuthenticationService;
 import org.af.assetflowapi.service.auth.JwtService;
 import org.af.assetflowapi.service.auth.OAuthCodeService;
 import org.modelmapper.ModelMapper;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseCookie;
@@ -28,6 +29,9 @@ import java.util.List;
 @RequestMapping("/auth")
 @RequiredArgsConstructor
 public class AuthenticationController {
+    @Value("${app.cookie.secure:false}")
+    private boolean cookieSecure;
+
     private final AuthenticationService authenticationService;
     private final JwtService jwtService;
     private final OAuthCodeService oAuthCodeService;
@@ -106,7 +110,7 @@ public class AuthenticationController {
     public ResponseEntity<Void> logout(HttpServletResponse response) {
         ResponseCookie expired = ResponseCookie.from("jwt", "")
                 .httpOnly(true)
-                .secure(true)
+                .secure(cookieSecure)
                 .sameSite("Strict")
                 .path("/")
                 .maxAge(0)
@@ -124,7 +128,7 @@ public class AuthenticationController {
     private void addAuthCookie(HttpServletResponse response, String jwtToken) {
         ResponseCookie cookie = ResponseCookie.from("jwt", jwtToken)
                 .httpOnly(true)
-                .secure(true)
+                .secure(cookieSecure)
                 .sameSite("Strict")
                 .path("/")
                 .maxAge(Duration.ofMillis(jwtService.getExpirationTime()))

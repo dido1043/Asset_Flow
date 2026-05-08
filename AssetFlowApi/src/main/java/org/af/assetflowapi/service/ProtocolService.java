@@ -98,7 +98,6 @@ public class ProtocolService {
         protocol.setProtocolUri(uri.keySet().stream().findFirst().orElse(null)); // Store the filename as the protocol URI
         protocol.setContent(uri.values().stream().findFirst().orElse("")); // Store the generated content in the protocol
         protocol.setType(ProtocolType.ASSET_ASSIGNMENT);
-        //TODO: For testing
         Protocol saved = protocolRepository.save(protocol);
 
         ProtocolDto result = new ProtocolDto();
@@ -198,7 +197,7 @@ public class ProtocolService {
             throw new IllegalStateException("Protocol with id " + protocolId + " does not have a valid filename");
         }
 
-        Path targetDir = Path.of("target", "protocols");
+        Path targetDir = Path.of(protocolStoragePath);
         Path filePath = targetDir.resolve(currentFilename);
 
         try {
@@ -350,9 +349,8 @@ public class ProtocolService {
         }
 
         try {
-            Path filePath = Path.of("target", "protocols", filename);
-            
-            // Check if file exists
+            Path filePath = Path.of(protocolStoragePath).resolve(filename);
+
             if (!Files.exists(filePath)) {
                 throw new IOException("File does not exist at path: " + filePath.toAbsolutePath());
             }

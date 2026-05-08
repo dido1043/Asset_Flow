@@ -6,6 +6,7 @@ import org.af.assetflowapi.data.model.User;
 import org.af.assetflowapi.service.AuthorizationService;
 import org.af.assetflowapi.service.ProtocolService;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -48,6 +49,7 @@ public class ProtocolController {
         authorizationService.requireProtocolAccessOrAdmin(caller, id);
         byte[] file = protocolService.downloadProtocol(id);
         return ResponseEntity.ok()
+                .contentType(MediaType.APPLICATION_PDF)
                 .header("Content-Disposition", "attachment; filename=\"protocol-" + id + ".pdf\"")
                 .body(file);
     }
