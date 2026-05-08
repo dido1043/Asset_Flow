@@ -2,6 +2,7 @@ package org.af.assetflowapi.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.af.assetflowapi.data.dto.ProductDto;
+import org.af.assetflowapi.service.AuthorizationService;
 import org.af.assetflowapi.service.ProductService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -30,6 +31,9 @@ class ProductControllerTest {
     @Mock
     ProductService productService;
 
+    @Mock
+    AuthorizationService authorizationService;
+
     @InjectMocks
     ProductController productController;
 
@@ -52,13 +56,32 @@ class ProductControllerTest {
 
     @Test
     void createProduct_returnsCreated() throws Exception {
-        ProductDto dto = new ProductDto(null, "Laptop", "Brand", "Model", "AT-2", null);
-        ProductDto created = new ProductDto(5L, "Laptop", "Brand", "Model", "AT-2", null);
+        ProductDto dto = new ProductDto(null, "Laptop", "Brand", "Model", "AT-2", 1L);
+        ProductDto created = new ProductDto(5L, "Laptop", "Brand", "Model", "AT-2", 1L);
         when(productService.addProduct(any(ProductDto.class))).thenReturn(created);
 
         mockMvc.perform(post("/product").contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(dto)))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.id").value(5));
+    }
+
+    @Test
+    void createProduct_withoutOrganization_andNotAdmin_throwsAccessDenied() {
+        org.af.assetflowapi.data.model.User caller = new org.af.assetflowapi.data.model.User();
+        caller.setId(2L);
+        caller.setRole(org.af.assetflowapi.data.enums.RoleEnum.EMPLOYEE);
+
+        ProductDto dto = new ProductDto();
+        dto.setProductType("Laptop");
+        dto.setAssetTag("AT-404");
+        dto.setOrganizationId(null);
+
+        org.springframework.security.access.AccessDeniedException ex = org.junit.jupiter.api.Assertions.assertThrows(
+                org.springframework.security.access.AccessDeniedException.class,
+                () -> productController.createProduct(caller, dto)
+        );
+
+        org.junit.jupiter.api.Assertions.assertTrue(ex.getMessage().contains("Only ADMIN"));
     }
 }

@@ -2,6 +2,7 @@ package org.af.assetflowapi.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.af.assetflowapi.data.dto.OrganizationDto;
+import org.af.assetflowapi.service.AuthorizationService;
 import org.af.assetflowapi.service.OrganizationService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -27,6 +28,9 @@ class OrganizationControllerTest {
 
     @Mock
     OrganizationService organizationService;
+
+    @Mock
+    AuthorizationService authorizationService;
 
     @InjectMocks
     OrganizationController organizationController;
@@ -55,5 +59,20 @@ class OrganizationControllerTest {
         mockMvc.perform(post("/org/create/1").contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(dto)))
                 .andExpect(status().isOk());
+    }
+
+    @Test
+    void getOrganizationInventory_checksAuthorization_andReturnsOk() {
+        org.af.assetflowapi.data.model.User caller = new org.af.assetflowapi.data.model.User();
+        caller.setId(4L);
+
+        when(organizationService.getOrganizationProducts(9L)).thenReturn(java.util.List.of(new org.af.assetflowapi.data.dto.ProductDto()));
+
+        org.springframework.http.ResponseEntity<java.util.List<org.af.assetflowapi.data.dto.ProductDto>> response =
+                organizationController.getOrganizationInventory(caller, 9L);
+
+        org.mockito.Mockito.verify(authorizationService).requireOrgMemberOrAdmin(caller, 9L);
+        org.junit.jupiter.api.Assertions.assertEquals(org.springframework.http.HttpStatus.OK, response.getStatusCode());
+        org.junit.jupiter.api.Assertions.assertNotNull(response.getBody());
     }
 }
