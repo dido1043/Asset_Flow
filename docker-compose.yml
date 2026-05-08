@@ -6,6 +6,7 @@ services:
       - .env
     ports:
       - "${POSTGRES_PORT}:5432"
+
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
       interval: 5s
@@ -13,23 +14,12 @@ services:
       retries: 5
     volumes:
       - postgres_data:/var/lib/postgresql/data
-
-  ollama:
-    image: ${OLLAMA_IMAGE}
-    container_name: ${OLLAMA_CONTAINER_NAME}
-    env_file:
-      - .env
-    ports:
-      - "${OLLAMA_PORT}:11434"
-    volumes:
-      - ollama_data:/root/.ollama
   app:
     build: .
     container_name: ${APP_CONTAINER_NAME}
     env_file:
       - .env
     environment:
-      OLLAMA_BASE_URL: http://ollama:11434
       APP_PROTOCOL_STORAGE: /var/lib/assetflow/protocols
     ports:
       - "${APP_PORT}:8080"
@@ -38,8 +28,6 @@ services:
     depends_on:
       db:
         condition: service_healthy
-      ollama:
-        condition: service_started
   frontend:
     build:
       context: ./client/asset-flow
@@ -56,5 +44,4 @@ services:
         condition: service_started
 volumes:
   postgres_data:
-  ollama_data:
   protocol_data:

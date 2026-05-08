@@ -94,7 +94,7 @@ public class DatabaseSeeder implements ApplicationRunner {
                 admin.setFullName("Admin User");
                 admin.setEmail("admin@example.com");
                 admin.setPassword(passwordEncoder.encode("adminpass"));
-                admin.setRole(RoleEnum.LEADER);
+                admin.setRole(RoleEnum.ADMIN);
 
                 // link to first organization if exists
                 organizationRepository.findAll().stream().findFirst().ifPresent(admin::setOrganization);

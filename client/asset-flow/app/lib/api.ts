@@ -74,10 +74,13 @@ async function buildApiError(response: Response) {
 
 function getCsrfToken(): string | null {
   if (typeof document === "undefined") return null;
-  return document.cookie
+  const raw = document.cookie
     .split("; ")
     .find((c) => c.startsWith("XSRF-TOKEN="))
-    ?.split("=")[1] ?? null;
+    ?.split("=")
+    .slice(1)
+    .join("=");
+  return raw ? decodeURIComponent(raw) : null;
 }
 
 export function signOut(): void {

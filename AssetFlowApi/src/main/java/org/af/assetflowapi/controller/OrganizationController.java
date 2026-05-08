@@ -36,7 +36,7 @@ public class OrganizationController {
         return ResponseEntity.ok(organizationService.getOrganizationProducts(organizationId));
     }
 
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'LEADER')")
     @PostMapping("/create/{leaderId}")
     public ResponseEntity<OrganizationDto> createOrganization(@PathVariable Long leaderId,
                                                               @RequestBody OrganizationDto dto) {
