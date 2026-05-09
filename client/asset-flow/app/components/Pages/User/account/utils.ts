@@ -15,8 +15,7 @@ export const workspaceSections: WorkspaceSection[] = [
   { href: "#products", path: "/user/account/products", label: "workspace.sections.products.label", helper: "workspace.sections.products.helper" },
   { href: "#assignments", path: "/user/account/assignments", label: "workspace.sections.assignments.label", helper: "workspace.sections.assignments.helper" },
   { href: "#protocols", path: "/user/account/protocols", label: "workspace.sections.protocols.label", helper: "workspace.sections.protocols.helper" },
-  { href: "#ai-tools", path: "/user/account/ai", label: "workspace.sections.ai.label", helper: "workspace.sections.ai.helper" },
-];
+ ];
 
 export function getWorkspaceSections(role?: string | null) {
   if (role === "EMPLOYEE") {

@@ -32,5 +32,4 @@ jobs:
           chmod +x mvnw || true
           bash -n mvnw || true
       - name: Build
-        run: bash ./mvnw -B package -DskipTests
-      
+        run: bash ./mvnw -B package
