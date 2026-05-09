@@ -3,6 +3,7 @@ package org.af.assetflowapi.repository;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
@@ -13,8 +14,9 @@ import javax.sql.DataSource;
 
 @SpringBootTest
 @ExtendWith(SpringExtension.class)
+@ActiveProfiles("dev")
 @Transactional
-abstract class RepositoryIntegrationTestBase {
+public abstract class RepositoryIntegrationTestBase {
 
     static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:15.4")
             .withDatabaseName("testdb")

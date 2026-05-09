@@ -1,10 +1,9 @@
 package org.af.assetflowapi;
 
+import org.af.assetflowapi.repository.RepositoryIntegrationTestBase;
 import org.junit.jupiter.api.Test;
-import org.springframework.boot.test.context.SpringBootTest;
 
-@SpringBootTest
-class AssetFlowApiApplicationTests {
+class AssetFlowApiApplicationTests extends RepositoryIntegrationTestBase {
 
     @Test
     void contextLoads() {
