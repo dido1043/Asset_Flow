@@ -6,6 +6,8 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 BACKEND_DIR="$ROOT_DIR/AssetFlowApi"
 FRONTEND_DIR="$ROOT_DIR/client/asset-flow"
 
+export SPRING_PROFILES_ACTIVE="${SPRING_PROFILES_ACTIVE:-dev}"
+
 if ! command -v mvn >/dev/null 2>&1; then
   if [ ! -f "$BACKEND_DIR/mvnw" ]; then
     echo "mvn not found and $BACKEND_DIR/mvnw is missing. Please install Maven." >&2
