@@ -88,7 +88,7 @@ public class SecurityConfig {
                 configuration.setAllowedHeaders(List.of("Authorization", "Content-Type", "Accept", "Origin", "X-Requested-With", "X-XSRF-TOKEN"));
                 configuration.setExposedHeaders(List.of("Content-Disposition", "X-Total-Count"));
                 configuration.setAllowCredentials(true);
-                configuration.setAllowedOriginPatterns(List.of(frontendUrl));
+                configuration.setAllowedOriginPatterns(List.of(frontendUrl, "http://localhost:5173/"));
                 configuration.setMaxAge(3600L);
 
                 UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
