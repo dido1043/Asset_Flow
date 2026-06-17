@@ -3,6 +3,7 @@ import Register from './pages/Register'
 import Login from './pages/Login'
 import Dashboard from './pages/Dashboard'
 import Home from './pages/Home'
+import ProfilePage from './pages/ProfilePage'
 import OAuthCallback from './pages/OAuthCallback'
 import Navigation from './components/shared/Navigation'
 
@@ -15,6 +16,7 @@ function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/oauth/callback" element={<OAuthCallback />} />
+        <Route path="/profile" element={<ProfilePage />} />
         <Route path="/" element={<Home />} />
       </Routes>
     </Router>

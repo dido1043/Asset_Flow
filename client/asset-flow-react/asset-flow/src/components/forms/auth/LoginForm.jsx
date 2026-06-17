@@ -35,9 +35,13 @@ const LoginForm = () => {
         e.preventDefault();
         setLoading(true)
         try {
-            await login(credentials);
+            const response = await login(credentials);
+
             navigate('/dashboard');
             window.location.reload();
+            console.log(response.data);
+            localStorage.setItem('user', JSON.stringify(response.data));
+
         } catch (error) {
             console.log(error);
             setError('An error occurred while submitting the form.');

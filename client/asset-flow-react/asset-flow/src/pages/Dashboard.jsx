@@ -1,4 +1,18 @@
+import { useState } from 'react'
+import ProfilePage from './ProfilePage'
+
+const SECTIONS = [
+    { label: 'Overview',    helper: 'Start page',                  key: 'overview'    },
+    { label: 'Profile',     helper: 'Account and session',          key: 'profile'     },
+    { label: 'Organizations', helper: 'Company structure and teams',   key: 'organizations' },
+    { label: 'Products',    helper: 'Inventory and assets',         key: 'products'    },
+    { label: 'Assignments', helper: 'Issued equipment',             key: 'assignments' },
+    { label: 'Protocols',   helper: 'Standard operating procedures',key: 'protocols'   }
+]
+
 const Dashboard = () => {
+    const [activeSection, setActiveSection] = useState('overview')
+
     return (
         <main className="page-enter min-h-screen px-4 py-8 sm:px-6 lg:px-8">
             <div className="mx-auto w-full max-w-7xl">
@@ -31,22 +45,26 @@ const Dashboard = () => {
                                     </div>
                                     <div className="rounded-3xl border border-white/10 bg-white/10 p-5 backdrop-blur">
                                         <p className="text-xs font-semibold uppercase tracking-[0.25em] text-slate-400">Current page</p>
-                                        <p className="mt-3 text-lg font-semibold text-white">Overview</p>
-                                        <p className="mt-2 text-sm text-slate-300">Start page</p>
+                                        <p className="mt-3 text-lg font-semibold text-white">
+                                            {SECTIONS.find(s => s.key === activeSection)?.label}
+                                        </p>
+                                        <p className="mt-2 text-sm text-slate-300">
+                                            {SECTIONS.find(s => s.key === activeSection)?.helper}
+                                        </p>
                                     </div>
                                 </div>
                             </div>
 
                             <div className="grid content-start gap-4 sm:grid-cols-2">
                                 {[
-                                    { label: 'Users', hint: 'Teammates visible in your access scope' },
-                                    { label: 'Products', hint: 'Assets loaded for your organization view' },
-                                    { label: 'Assignments', hint: 'Assignment records currently loaded' },
-                                    { label: 'My assignments', hint: 'Assets currently linked to your account' },
+                                    { label: 'Users', hint: 'Teammates visible in your access scope', num: 128 },
+                                    { label: 'Products', hint: 'Assets loaded for your organization view', num: 42 },
+                                    { label: 'Assignments', hint: 'Assignment records currently loaded', num: 64 },
+                                    { label: 'My assignments', hint: 'Assets currently linked to your account', num: 16 },
                                 ].map((stat) => (
                                     <div key={stat.label} className="rounded-3xl border border-white/10 bg-white/10 p-5 backdrop-blur">
                                         <p className="text-xs font-semibold uppercase tracking-[0.25em] text-slate-400">{stat.label}</p>
-                                        <p className="mt-3 text-4xl font-bold text-white">—</p>
+                                        <p className="mt-3 text-4xl font-bold text-white">{stat.num}</p>
                                         <p className="mt-2 text-xs text-slate-400">{stat.hint}</p>
                                     </div>
                                 ))}
@@ -65,37 +83,36 @@ const Dashboard = () => {
                                 <p className="text-xs font-semibold uppercase tracking-[0.25em] text-slate-500">Dashboard pages</p>
                                 <p className="mt-2 text-sm text-slate-600">Open the asset operation you need next.</p>
                                 <nav className="mt-5 space-y-2">
-                                    {[
-                                        { label: 'Overview',     helper: 'Start page',            active: true  },
-                                        { label: 'Profile',      helper: 'Account and session',    active: false },
-                                        { label: 'Products',     helper: 'Inventory and assets',   active: false },
-                                        { label: 'Assignments',  helper: 'Issued equipment',       active: false },
-                                    ].map((item) => (
-                                        <div
-                                            key={item.label}
-                                            className={`flex cursor-pointer items-center justify-between rounded-3xl border px-4 py-3 text-sm transition ${
-                                                item.active
-                                                    ? 'border-slate-900 bg-slate-900 shadow-lg shadow-slate-900/10'
-                                                    : 'border-slate-200 bg-slate-50/80 hover:border-slate-300 hover:bg-white'
-                                            }`}
-                                        >
-                                            <span>
-                                                <span className={`block font-semibold ${item.active ? 'text-white' : 'text-slate-900'}`}>
-                                                    {item.label}
+                                    {SECTIONS.map((item) => {
+                                        const active = item.key === activeSection
+                                        return (
+                                            <button
+                                                key={item.key}
+                                                type="button"
+                                                onClick={() => setActiveSection(item.key)}
+                                                className={`flex w-full cursor-pointer items-center justify-between rounded-3xl border px-4 py-3 text-sm transition ${
+                                                    active
+                                                        ? 'border-slate-900 bg-slate-900 shadow-lg shadow-slate-900/10'
+                                                        : 'border-slate-200 bg-slate-50/80 hover:border-slate-300 hover:bg-white'
+                                                }`}
+                                            >
+                                                <span className="text-left">
+                                                    <span className={`block font-semibold ${active ? 'text-white' : 'text-slate-900'}`}>
+                                                        {item.label}
+                                                    </span>
+                                                    <span className={`block text-xs ${active ? 'text-slate-300' : 'text-slate-500'}`}>
+                                                        {item.helper}
+                                                    </span>
                                                 </span>
-                                                <span className={`block text-xs ${item.active ? 'text-slate-300' : 'text-slate-500'}`}>
-                                                    {item.helper}
+                                                <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${active ? 'bg-white/10 text-white' : 'bg-white text-slate-700 shadow-sm'}`}>
+                                                    {active ? 'Current' : 'Open'}
                                                 </span>
-                                            </span>
-                                            <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${item.active ? 'bg-white/10 text-white' : 'bg-white text-slate-700 shadow-sm'}`}>
-                                                {item.active ? 'Current' : 'Open'}
-                                            </span>
-                                        </div>
-                                    ))}
+                                            </button>
+                                        )
+                                    })}
                                 </nav>
                             </div>
 
-                            {/* Quick actions */}
                             <div className="rounded-[2rem] bg-slate-950 p-5 text-white shadow-[0_20px_60px_rgba(15,23,42,0.14)]">
                                 <p className="text-xs font-semibold uppercase tracking-[0.25em] text-slate-400">Quick actions</p>
                                 <p className="mt-3 break-words text-lg font-semibold leading-tight">Active teammate</p>
@@ -134,12 +151,39 @@ const Dashboard = () => {
 
                         {/* Main content area */}
                         <div className="space-y-6">
-                            <div className="rounded-[2rem] border border-white/80 bg-white/90 p-6 shadow-[0_20px_60px_rgba(15,23,42,0.08)] backdrop-blur sm:p-8">
-                                <h2 className="text-xl font-semibold text-slate-950">Welcome back</h2>
-                                <p className="mt-2 text-sm text-slate-600">
-                                    Choose a page to manage the part of the asset lifecycle you need: people, products, assignments and protocols.
-                                </p>
-                            </div>
+                            {activeSection === 'overview' && (
+                                <div className="rounded-[2rem] border border-white/80 bg-white/90 p-6 shadow-[0_20px_60px_rgba(15,23,42,0.08)] backdrop-blur sm:p-8">
+                                    <h2 className="text-xl font-semibold text-slate-950">Welcome back</h2>
+                                    <p className="mt-2 text-sm text-slate-600">
+                                        Choose a page to manage the part of the asset lifecycle you need: people, products, assignments and protocols.
+                                    </p>
+                                </div>
+                            )}
+                            {activeSection === 'profile' && <ProfilePage />}
+                            {activeSection === 'products' && (
+                                <div className="rounded-[2rem] border border-white/80 bg-white/90 p-6 shadow-[0_20px_60px_rgba(15,23,42,0.08)] backdrop-blur sm:p-8">
+                                    <h2 className="text-xl font-semibold text-slate-950">Products</h2>
+                                    <p className="mt-2 text-sm text-slate-600">Inventory and asset management coming soon.</p>
+                                </div>
+                            )}
+                            {activeSection === 'assignments' && (
+                                <div className="rounded-[2rem] border border-white/80 bg-white/90 p-6 shadow-[0_20px_60px_rgba(15,23,42,0.08)] backdrop-blur sm:p-8">
+                                    <h2 className="text-xl font-semibold text-slate-950">Assignments</h2>
+                                    <p className="mt-2 text-sm text-slate-600">Issued equipment tracking coming soon.</p>
+                                </div>
+                            )}
+                            {activeSection === 'protocols' && (
+                                <div className="rounded-[2rem] border border-white/80 bg-white/90 p-6 shadow-[0_20px_60px_rgba(15,23,42,0.08)] backdrop-blur sm:p-8">
+                                    <h2 className="text-xl font-semibold text-slate-950">Protocols</h2>
+                                    <p className="mt-2 text-sm text-slate-600">Standard operating procedures coming soon.</p>
+                                </div>
+                            )}
+                             {activeSection === 'organizations' && (
+                                <div className="rounded-[2rem] border border-white/80 bg-white/90 p-6 shadow-[0_20px_60px_rgba(15,23,42,0.08)] backdrop-blur sm:p-8">
+                                    <h2 className="text-xl font-semibold text-slate-950">Organizations</h2>
+                                    <p className="mt-2 text-sm text-slate-600">Company structure and teams coming soon.</p>
+                                </div>
+                            )}
                         </div>
                     </div>
 
