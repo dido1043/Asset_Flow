@@ -4,7 +4,7 @@ import React from "react";
 
 import Navigation from "./components/shared/Navigation/Navigation";
 import { LanguageProvider } from "./lib/i18n";
-import "./globals.css";
+
 
 export const metadata: Metadata = {
   title: "Asset Flow",
