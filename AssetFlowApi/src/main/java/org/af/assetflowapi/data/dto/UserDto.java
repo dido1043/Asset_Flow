@@ -1,5 +1,6 @@
 package org.af.assetflowapi.data.dto;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -14,6 +15,7 @@ public class UserDto {
     private Long id;
     private String fullName;
     private String email;
+    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     private String password;
     private RoleEnum role;
     private Integer age;
