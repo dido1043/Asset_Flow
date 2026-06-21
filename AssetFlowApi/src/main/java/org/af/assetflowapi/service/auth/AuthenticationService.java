@@ -97,7 +97,7 @@ public class AuthenticationService {
 
         user.setFullName(userDto.getFullName());
         user.setEmail(userDto.getEmail());
-        user.setRole(userDto.getRole());
+
         user.setAge(userDto.getAge());
         if (userDto.getPassword() != null && !userDto.getPassword().trim().isEmpty()) {
             user.setPassword(passwordEncoder.encode(userDto.getPassword()));

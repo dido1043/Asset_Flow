@@ -48,13 +48,8 @@ public class SecurityConfig {
 
             http
                     .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-                    .csrf(csrf -> csrf
-                            .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
-                            .csrfTokenRequestHandler(csrfRequestHandler)
-                            .ignoringRequestMatchers("/auth/login", "/auth/register", "/auth/oauth2/**", "/auth/oauth/exchange", "/auth/logout")
-                            .ignoringRequestMatchers(request -> request.getHeader("Authorization") != null)
-                    )
-                    .addFilterAfter(new CsrfCookieFilter(), BasicAuthenticationFilter.class)
+                    .csrf(csrf -> csrf.disable())
+//                    .addFilterAfter(new CsrfCookieFilter(), BasicAuthenticationFilter.class)
                     .authorizeHttpRequests(auth -> auth
                             .requestMatchers(
                                     "/auth/login",

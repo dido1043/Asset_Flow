@@ -34,8 +34,8 @@ public class DatabaseSeeder implements ApplicationRunner {
     private final AssignmentRepository assignmentRepository;
     private final PasswordEncoder passwordEncoder;
 
-    // Allow disabling seeding in tests (default true)
-    @Value("${app.db.seed:true}")
+
+    @Value("${app.db.seed:false}")
     private boolean seedEnabled;
 
     // Explicit constructor - do not include seedEnabled so it is injected via @Value on the field
@@ -57,74 +57,12 @@ public class DatabaseSeeder implements ApplicationRunner {
             log.info("Database seeding disabled by app.db.seed=false");
             return;
         }
-        seedOrganizations();
-        seedUsers();
+
         seedProducts();
-        seedAssignments();
     }
 
-    @Transactional
-    protected void seedOrganizations() {
-        try {
-            if (organizationRepository.count() > 0) {
-                log.debug("Organizations already seeded");
-                return;
-            }
 
-            Organization org1 = new Organization();
-            org1.setOrganizationName("Default Organization");
 
-            Organization org2 = new Organization();
-            org2.setOrganizationName("Contoso Ltd.");
-
-            organizationRepository.saveAll(List.of(org1, org2));
-            log.info("Seeded organizations: {}", List.of(org1.getOrganizationName(), org2.getOrganizationName()));
-        } catch (Exception ex) {
-            log.error("Failed to seed organizations", ex);
-        }
-    }
-
-    @Transactional
-    protected void seedUsers() {
-        try {
-            // admin
-            Optional<User> adminOpt = userRepository.findByEmail("admin@example.com");
-            if (adminOpt.isEmpty()) {
-                User admin = new User();
-                admin.setFullName("Admin User");
-                admin.setEmail("admin@example.com");
-                admin.setPassword(passwordEncoder.encode("adminpass"));
-                admin.setRole(RoleEnum.ADMIN);
-
-                // link to first organization if exists
-                organizationRepository.findAll().stream().findFirst().ifPresent(admin::setOrganization);
-
-                userRepository.save(admin);
-                log.info("Seeded admin user: {}", admin.getEmail());
-            } else {
-                log.debug("Admin already exists: {}", adminOpt.get().getEmail());
-            }
-
-            // regular user
-            Optional<User> userOpt = userRepository.findByEmail("user@example.com");
-            if (userOpt.isEmpty()) {
-                User user = new User();
-                user.setFullName("Regular User");
-                user.setEmail("user@example.com");
-                user.setPassword(passwordEncoder.encode("userpass"));
-                user.setRole(RoleEnum.EMPLOYEE);
-
-                organizationRepository.findAll().stream().findFirst().ifPresent(user::setOrganization);
-
-                userRepository.save(user);
-                log.info("Seeded user: {}", user.getEmail());
-            } else {
-                log.debug("User already exists: {}", userOpt.get().getEmail());
-            }
-        } catch (Exception ex) {
-            log.error("Failed to seed users", ex);
-        }
-    }
 
     @Transactional
     protected void seedProducts() {
@@ -155,37 +93,6 @@ public class DatabaseSeeder implements ApplicationRunner {
             log.info("Seeded products: {}, {}", p1.getAssetTag(), p2.getAssetTag());
         } catch (Exception ex) {
             log.error("Failed to seed products", ex);
-        }
-    }
-
-    @Transactional
-    protected void seedAssignments() {
-        try {
-            if (assignmentRepository.count() > 0) {
-                log.debug("Assignments already seeded");
-                return;
-            }
-
-            // fetch a user and a product
-            Optional<User> userOpt = userRepository.findByEmail("user@example.com");
-            List<Product> products = productRepository.findAll();
-
-            if (userOpt.isPresent() && !products.isEmpty()) {
-                User user = userOpt.get();
-                Product product = products.get(0);
-
-                Assignment a = new Assignment();
-                a.setEmployee(user);
-                a.setProduct(product);
-                a.setDateAssigned(ZonedDateTime.now());
-
-                assignmentRepository.save(a);
-                log.info("Seeded assignment for user {} and product {}", user.getEmail(), product.getAssetTag());
-            } else {
-                log.debug("Skipping assignment seed - missing user or product");
-            }
-        } catch (Exception ex) {
-            log.error("Failed to seed assignments", ex);
         }
     }
 }

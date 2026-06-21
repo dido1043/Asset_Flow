@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import React from "react";
+import "./globals.css";
 
 import Navigation from "./components/shared/Navigation/Navigation";
 import { LanguageProvider } from "./lib/i18n";
