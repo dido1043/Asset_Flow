@@ -23,10 +23,13 @@ import org.af.assetflowapi.repository.ProtocolRepository;
 import org.af.assetflowapi.repository.UserRepository;
 import org.springframework.stereotype.Service;
 
+import org.springframework.transaction.annotation.Transactional;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -188,6 +191,7 @@ public class ProtocolService {
         result.put(filename, content);
         return result;
     }
+    @Transactional
     public ProtocolDto editProtocolText(Long protocolId, String content){
         Protocol protocol = protocolRepository.findById(protocolId)
                 .orElseThrow(() -> new IllegalArgumentException("Protocol with id " + protocolId + " not found"));
@@ -199,22 +203,36 @@ public class ProtocolService {
 
         Path targetDir = Path.of(protocolStoragePath);
         Path filePath = targetDir.resolve(currentFilename);
-
-        try {
-            if (Files.exists(filePath)) {
-                Files.delete(filePath);
-            }
-        } catch (IOException e) {
-            throw new RuntimeException("Failed to delete old protocol PDF", e);
-        }
+        Path tempPath = targetDir.resolve(currentFilename + ".tmp");
 
         String normalizedContent = normalizeProtocolContent(content);
 
-        createDocumentWithContent(normalizedContent, filePath);
+        // Step 1: write new content to a temp file — old file untouched
+        try {
+            createDocumentWithContent(normalizedContent, tempPath);
+        } catch (Exception e) {
+            deleteSilently(tempPath);
+            throw new RuntimeException("Failed to write new protocol PDF", e);
+        }
 
-        protocol.setContent(normalizedContent);
-        Protocol updatedProtocol = protocolRepository.save(protocol);
+        // Step 2: save to DB — if this throws, @Transactional rolls back and we clean up the temp file
+        try {
+            protocol.setContent(normalizedContent);
+            protocolRepository.save(protocol);
+        } catch (Exception e) {
+            deleteSilently(tempPath);
+            throw e;
+        }
 
+        // Step 3: atomically replace the old file — old file is only removed here, after both writes succeeded
+        try {
+            Files.move(tempPath, filePath, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
+        } catch (IOException e) {
+            deleteSilently(tempPath);
+            throw new RuntimeException("Failed to replace protocol PDF", e);
+        }
+
+        Protocol updatedProtocol = protocolRepository.findById(protocolId).orElseThrow();
         ProtocolDto result = new ProtocolDto();
         result.setId(updatedProtocol.getId());
         result.setProtocolUri(updatedProtocol.getProtocolUri());
@@ -225,6 +243,12 @@ public class ProtocolService {
         }
 
         return result;
+    }
+
+    private void deleteSilently(Path path) {
+        try {
+            Files.deleteIfExists(path);
+        } catch (IOException ignored) {}
     }
 
     private String buildAssignmentTemplate(String orgName, String employeeName, String assetsBlock) {
