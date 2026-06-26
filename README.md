@@ -10,14 +10,7 @@ A role-based asset management and tracking system for organizations. AssetFlow l
 - [Tech Stack](#tech-stack)
 - [Architecture Overview](#architecture-overview)
 - [Roles & Permissions](#roles--permissions)
-- [Getting Started](#getting-started)
-  - [Prerequisites](#prerequisites)
-  - [Environment Configuration](#environment-configuration)
-  - [Running with Docker](#running-with-docker)
-  - [Running Locally (Manual)](#running-locally-manual)
-- [API Reference](#api-reference)
-- [Database Schema](#database-schema)
-- [Project Structure](#project-structure)
+
 
 ---
 
