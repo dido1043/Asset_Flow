@@ -1,0 +1,32 @@
+databaseChangeLog:
+  - changeSet:
+      id: 0008-deduplicate-active-assignments
+      author: dev
+      comment: "Resolve duplicate active assignments per product before adding unique index"
+      changes:
+        - sql:
+            sql: >
+              UPDATE assignment a
+              SET date_returned = CURRENT_TIMESTAMP
+              WHERE a.date_returned IS NULL
+                AND a.id NOT IN (
+                  SELECT DISTINCT ON (b.product_id) b.id
+                  FROM assignment b
+                  WHERE b.date_returned IS NULL
+                  ORDER BY b.product_id, b.date_assigned DESC
+                );
+
+  - changeSet:
+      id: 0008-unique-active-assignment-per-product
+      author: dev
+      preConditions:
+        - onFail: MARK_RAN
+        - not:
+            - indexExists:
+                indexName: ux_assignment_active_product
+      changes:
+        - sql:
+            sql: >
+              CREATE UNIQUE INDEX ux_assignment_active_product
+              ON assignment (product_id)
+              WHERE date_returned IS NULL;
