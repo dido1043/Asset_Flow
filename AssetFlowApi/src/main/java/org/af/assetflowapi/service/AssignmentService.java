@@ -11,7 +11,9 @@ import org.af.assetflowapi.repository.OrganizationRepository;
 import org.af.assetflowapi.repository.ProductRepository;
 import org.af.assetflowapi.repository.UserRepository;
 import org.modelmapper.ModelMapper;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 
 import java.util.List;
@@ -35,6 +37,7 @@ public class AssignmentService {
                 .toList();
     }
 
+    @Transactional
     public AssignmentDto createAssignmentToUser(AssignmentDto assignmentDtoDto) {
         if (assignmentDtoDto == null) throw new IllegalArgumentException("AssignmentDto cannot be null");
 
@@ -44,10 +47,14 @@ public class AssignmentService {
                 .orElseThrow(() -> new IllegalArgumentException("Product with id " + assignmentDtoDto.getProductId() + " not found"));
         Organization organization = organizationRepository.findById(employee.getOrganization().getId())
                 .orElseThrow(() -> new IllegalArgumentException("Organization for user with id " + assignmentDtoDto.getEmployeeId() + " not found"));
-        
+
         if (organization.getInventory() == null || !organization.getInventory().contains(product)) {
             throw new IllegalArgumentException("Product with id " + assignmentDtoDto.getProductId() +
                     " does not belong to the organization of user with id " + assignmentDtoDto.getEmployeeId());
+        }
+
+        if (assignmentRepository.findByProductIdAndDateReturnedIsNull(product.getId()).isPresent()) {
+            throw new IllegalStateException("Product with id " + product.getId() + " is already assigned to another user");
         }
 
         Assignment assignment = new Assignment();
@@ -56,8 +63,15 @@ public class AssignmentService {
         assignment.setDateAssigned(assignmentDtoDto.getDateAssigned());
         assignment.setDateReturned(assignmentDtoDto.getDateReturned());
 
-        Assignment saved = assignmentRepository.save(assignment);
-        return mapToDto(saved);
+        try {
+            Assignment saved = assignmentRepository.save(assignment);
+            return mapToDto(saved);
+        } catch (DataIntegrityViolationException e) {
+            // Final safety net: the DB-level unique index (ux_assignment_active_product)
+            // catches the race a concurrent request can slip through between the check
+            // above and this save.
+            throw new IllegalStateException("Product with id " + product.getId() + " is already assigned to another user", e);
+        }
     }
     public AssignmentDto getAssignment(Long id) {
         Assignment assignment = assignmentRepository.findById(id)
