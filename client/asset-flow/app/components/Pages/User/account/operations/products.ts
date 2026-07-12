@@ -65,22 +65,20 @@ export function createProductOperations({
     organizationId: isLeader ? currentUser?.organizationId ?? null : parseOptionalNumber(productForm.organizationId),
   });
 
-  const handleCreateProduct = async (legacy = false) => {
+  const handleCreateProduct = async () => {
     if (!canManageProducts) {
       setFeedback("products", { tone: "error", message: t("feedback.restrictedAssetView") });
       return;
     }
 
-    const endpoint = legacy ? "/product/add" : "/product";
-
     const product = await runAction(
       "products",
       () =>
-        apiRequest<ProductDto>(endpoint, {
+        apiRequest<ProductDto>("/product", {
           method: "POST",
           json: buildProductPayload(),
         }),
-      legacy ? t("feedback.productCreatedCompatibility") : t("feedback.productCreated"),
+      t("feedback.productCreated"),
     );
 
     if (!product) {

@@ -16,8 +16,6 @@ export function AssignmentsSection({ workspace }: { workspace: AccountWorkspaceS
     assignmentForm,
     assignmentLookupId,
     assignmentOptions,
-    assignmentProductId,
-    assignmentUserId,
     canManageAssignments,
     currentAssignments,
     employeeOptions,
@@ -27,9 +25,6 @@ export function AssignmentsSection({ workspace }: { workspace: AccountWorkspaceS
     handleCreateAssignment,
     handleDeleteAssignment,
     handleLoadAllAssignments,
-    handleLoadAssignmentsByProduct,
-    handleLoadAssignmentsByUser,
-    handleLoadCurrentAssignments,
     handleLookupAssignment,
     handleUpdateAssignment,
     isEmployee,
@@ -41,10 +36,7 @@ export function AssignmentsSection({ workspace }: { workspace: AccountWorkspaceS
     selectedAssignment,
     setAssignmentForm,
     setAssignmentLookupId,
-    setAssignmentProductId,
-    setAssignmentUserId,
     userAssignments,
-    userOptions,
   } = workspace;
   const deferredAssignmentSearch = useDeferredValue(assignmentSearch);
   const filteredCollections = useMemo(() => {
@@ -246,7 +238,7 @@ export function AssignmentsSection({ workspace }: { workspace: AccountWorkspaceS
 
           <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
             <p className="text-sm font-semibold text-slate-900">{t("assignments.readFilterDelete")}</p>
-            <div className="mt-4 grid gap-4 sm:grid-cols-2">
+            <div className="mt-4">
               {assignmentOptions.length > 0 ? (
                 <SelectField
                   id="assignment-lookup-id"
@@ -267,72 +259,10 @@ export function AssignmentsSection({ workspace }: { workspace: AccountWorkspaceS
                   />
                 </div>
               )}
-              {userOptions.length > 0 ? (
-                <SelectField
-                  id="assignment-user-filter"
-                  label={t("common.teammate")}
-                  value={assignmentUserId}
-                  onChange={setAssignmentUserId}
-                  options={userOptions}
-                  placeholder={t("users.selectTeammate")}
-                />
-              ) : (
-                <div>
-                  <Label htmlFor="assignment-user-filter">{t("users.teammateReference")}</Label>
-                  <Input
-                    id="assignment-user-filter"
-                    type="number"
-                    value={assignmentUserId}
-                    onChange={(event) => setAssignmentUserId(event.target.value)}
-                  />
-                </div>
-              )}
-              {productOptions.length > 0 ? (
-                <SelectField
-                  id="assignment-product-filter"
-                  label={t("common.asset")}
-                  value={assignmentProductId}
-                  onChange={setAssignmentProductId}
-                  options={productOptions}
-                  placeholder={t("products.selectAsset")}
-                  className="sm:col-span-2"
-                />
-              ) : (
-                <div className="sm:col-span-2">
-                  <Label htmlFor="assignment-product-filter">{t("products.assetReference")}</Label>
-                  <Input
-                    id="assignment-product-filter"
-                    type="number"
-                    value={assignmentProductId}
-                    onChange={(event) => setAssignmentProductId(event.target.value)}
-                  />
-                </div>
-              )}
             </div>
             <div className="mt-5 flex flex-wrap gap-3">
               <Button variant="outline" onClick={handleLookupAssignment} disabled={Boolean(pendingByKey.assignments)}>
                 {t("products.loadDetails")}
-              </Button>
-              <Button
-                variant="outline"
-                onClick={handleLoadAssignmentsByUser}
-                disabled={Boolean(pendingByKey.assignments)}
-              >
-                {t("assignments.loadByTeammate")}
-              </Button>
-              <Button
-                variant="outline"
-                onClick={handleLoadAssignmentsByProduct}
-                disabled={Boolean(pendingByKey.assignments)}
-              >
-                {t("assignments.loadByAsset")}
-              </Button>
-              <Button
-                variant="outline"
-                onClick={handleLoadCurrentAssignments}
-                disabled={Boolean(pendingByKey.assignments)}
-              >
-                {t("assignments.loadCurrent")}
               </Button>
               {canManageAssignments ? (
                 <Button variant="danger" onClick={handleDeleteAssignment} disabled={Boolean(pendingByKey.assignments)}>

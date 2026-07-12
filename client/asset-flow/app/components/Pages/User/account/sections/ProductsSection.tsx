@@ -188,15 +188,8 @@ export function ProductsSection({ workspace }: { workspace: AccountWorkspaceStat
                 </div>
               </div>
               <div className="mt-5 flex flex-wrap gap-3">
-                <Button onClick={() => handleCreateProduct(false)} disabled={Boolean(pendingByKey.products)}>
+                <Button onClick={handleCreateProduct} disabled={Boolean(pendingByKey.products)}>
                   {t("products.createProduct")}
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={() => handleCreateProduct(true)}
-                  disabled={Boolean(pendingByKey.products)}
-                >
-                  {t("products.createProductCompatibility")}
                 </Button>
                 <Button variant="secondary" onClick={handleUpdateProduct} disabled={Boolean(pendingByKey.products)}>
                   {t("products.updateProduct")}

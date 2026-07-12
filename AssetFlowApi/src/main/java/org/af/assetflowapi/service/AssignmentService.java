@@ -143,8 +143,12 @@ public class AssignmentService {
     }
     private AssignmentDto mapToDto(Assignment assignment) {
         AssignmentDto dto = modelMapper.map(assignment, AssignmentDto.class);
-        if (assignment.getEmployee() != null) dto.setEmployeeId(assignment.getEmployee().getId());
-        if (assignment.getProduct() != null) dto.setProductId(assignment.getProduct().getId());
+        if (assignment.getEmployee() != null) {
+            dto.setEmployeeId(assignment.getEmployee().getId());
+        }
+        if (assignment.getProduct() != null) {
+            dto.setProductId(assignment.getProduct().getId());
+        }
         return dto;
     }
 }

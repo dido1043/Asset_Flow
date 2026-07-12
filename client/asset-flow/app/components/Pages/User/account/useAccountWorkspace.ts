@@ -133,8 +133,6 @@ export function useAccountWorkspace() {
     dateReturned: "",
   });
   const [assignmentLookupId, setAssignmentLookupId] = React.useState("");
-  const [assignmentUserId, setAssignmentUserId] = React.useState("");
-  const [assignmentProductId, setAssignmentProductId] = React.useState("");
 
   const [protocolLookupId, setProtocolLookupId] = React.useState("");
   const [protocolCreateForm, setProtocolCreateForm] = React.useState<ProtocolCreateFormState>({
@@ -696,7 +694,6 @@ export function useAccountWorkspace() {
     setBecomeLeaderForm((previous) => ({ ...previous, userId: userIdValue }));
     setInventoryOrgId(organizationIdValue);
     setAssignmentForm((previous) => ({ ...previous, employeeId: userIdValue }));
-    setAssignmentUserId(userIdValue);
     setProtocolCreateForm((previous) => ({ ...previous, userId: userIdValue, organizationId: organizationIdValue }));
 
     seededIdsRef.current = true;
@@ -1191,72 +1188,6 @@ export function useAccountWorkspace() {
     }
   };
 
-  const handleLoadAssignmentsByUser = async () => {
-    const userId =
-      isEmployee && currentUser?.id != null
-        ? currentUser.id
-        : parseRequiredNumber(assignmentUserId, requiredFieldMessage("fields.teammate"));
-
-    if (!isAdmin && !accessibleUserIds.has(userId)) {
-      setFeedback("assignments", {
-        tone: "error",
-        message: t("feedback.onlyScopeTeammateHistory"),
-      });
-      return;
-    }
-
-    const result = await runAction(
-      "assignments",
-      () =>
-        isAdmin
-          ? apiRequest<AssignmentDto[]>(`/assignment/user/${userId}`)
-          : Promise.resolve(assignments.filter((assignment) => assignment.employeeId === userId)),
-      t("feedback.userAssignmentsLoaded"),
-    );
-
-    if (result) {
-      setUserAssignments(result);
-    }
-  };
-
-  const handleLoadAssignmentsByProduct = async () => {
-    const productId = parseRequiredNumber(assignmentProductId, requiredFieldMessage("fields.asset"));
-
-    if (!isAdmin && !accessibleProductIds.has(productId)) {
-      setFeedback("assignments", {
-        tone: "error",
-        message: t("feedback.onlyScopeAssetHistory"),
-      });
-      return;
-    }
-
-    const result = await runAction(
-      "assignments",
-      () =>
-        isAdmin
-          ? apiRequest<AssignmentDto[]>(`/assignment/product/${productId}`)
-          : Promise.resolve(assignments.filter((assignment) => assignment.productId === productId)),
-      t("feedback.productAssignmentsLoaded"),
-    );
-
-    if (result) {
-      setProductAssignments(result);
-    }
-  };
-
-  const handleLoadCurrentAssignments = async () => {
-    const result = await runAction(
-      "assignments",
-      () =>
-        isAdmin ? apiRequest<AssignmentDto[]>("/assignment/current") : Promise.resolve(assignments.filter((assignment) => !assignment.dateReturned)),
-      t("feedback.currentAssignmentsLoaded"),
-    );
-
-    if (result) {
-      setCurrentAssignments(result);
-    }
-  };
-
   const handleDeleteAssignment = async () => {
     if (!canManageAssignments) {
       setFeedback("assignments", { tone: "error", message: t("feedback.onlyAdminsLeadersDeleteAssignments") });
@@ -1373,8 +1304,6 @@ export function useAccountWorkspace() {
     assignmentForm,
     assignmentLookupId,
     assignmentOptions,
-    assignmentProductId,
-    assignmentUserId,
     assignments,
     becomeLeaderForm,
     bootstrapError,
@@ -1402,9 +1331,6 @@ export function useAccountWorkspace() {
     handleJoinOrganization,
     handleLoadAllAssignments,
     handleLoadAllProducts,
-    handleLoadAssignmentsByProduct,
-    handleLoadAssignmentsByUser,
-    handleLoadCurrentAssignments,
     handleLoadOrganizationInventory,
     handleLoadUsers,
     handleLookupAssignment,
@@ -1457,8 +1383,6 @@ export function useAccountWorkspace() {
     setAiPrompt,
     setAssignmentForm,
     setAssignmentLookupId,
-    setAssignmentProductId,
-    setAssignmentUserId,
     setBecomeLeaderForm,
     setDeleteUserId,
     setInventoryOrgId,
