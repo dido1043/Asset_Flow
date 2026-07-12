@@ -76,9 +76,6 @@ function WorkspaceShellInner({ children }: { children: React.ReactNode }) {
               <span className="inline-flex rounded-full border border-white/10 bg-white/10 px-3 py-1 text-xs font-semibold text-slate-100">
                 {workspaceScopeLabel}
               </span>
-              <span className="inline-flex rounded-full border border-white/10 bg-white/10 px-3 py-1 text-xs font-semibold text-slate-100">
-                {visibleSections.length}
-              </span>
             </div>
 
             <h1 className="mt-5 text-3xl font-semibold tracking-tight sm:text-4xl">
@@ -205,16 +202,7 @@ function WorkspaceShellInner({ children }: { children: React.ReactNode }) {
             <p className="text-xs font-semibold uppercase tracking-[0.25em] text-slate-400">
               {t("workspace.shell.quickActions")}
             </p>
-            <p className="mt-3 break-words text-lg font-semibold leading-tight">
-              {currentUser?.fullName || t("common.activeTeammate")}
-            </p>
-            <div className="mt-3 flex flex-wrap items-center gap-2 text-sm">
-              <span className="rounded-full bg-white/10 px-3 py-1 text-xs font-semibold text-white">
-                {getRoleLabel(currentUser?.role || session.role, t)}
-              </span>
-              <span className="text-slate-300">{workspaceScopeLabel}</span>
-            </div>
-            <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
+            <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
               <Button
                 variant="outline"
                 className="w-full border-white/10 bg-transparent text-white hover:bg-white/10 hover:text-white disabled:border-white/10 disabled:bg-transparent disabled:text-slate-200"
@@ -247,10 +235,6 @@ function WorkspaceShellInner({ children }: { children: React.ReactNode }) {
               <div className="flex items-center justify-between gap-4">
                 <span>{t("workspace.shell.companiesKnown")}</span>
                 <span className="font-semibold text-slate-900">{allOrganizations.length}</span>
-              </div>
-              <div className="flex items-center justify-between gap-4">
-                <span>{t("workspace.shell.sessionStorage")}</span>
-                <span className="text-right font-semibold text-slate-900">{t("common.currentTabOnly")}</span>
               </div>
             </div>
           </div>

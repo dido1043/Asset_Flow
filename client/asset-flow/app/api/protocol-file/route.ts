@@ -13,8 +13,6 @@ export async function GET(request: NextRequest) {
     return Response.json({ error: "Protocol id or path is required." }, { status: 400 });
   }
 
-  console.log("[protocol-file API] Received id:", protocolId, "path:", requestedPath);
-
   // If only path is provided, extract the ID from it
   if (!protocolId && requestedPath) {
     const match = requestedPath.match(/\/protocol\/download\/(\d+)/);
@@ -30,9 +28,7 @@ export async function GET(request: NextRequest) {
   }
 
   const backendUrl = `${getBackendBaseUrl()}/protocol/download/${protocolId}`;
-  
-  console.log("[protocol-file API] Fetching from backend:", backendUrl);
-  
+
   try {
     const requestHeaders = new Headers({
       Accept: "application/pdf",
@@ -57,7 +53,6 @@ export async function GET(request: NextRequest) {
     }
 
     const file = await response.arrayBuffer();
-    console.log("[protocol-file API] Successfully fetched file:", file.byteLength, "bytes");
 
     return new Response(file, {
       headers: {
