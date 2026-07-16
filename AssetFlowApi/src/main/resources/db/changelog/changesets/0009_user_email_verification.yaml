@@ -1,0 +1,28 @@
+databaseChangeLog:
+  - changeSet:
+      id: 0009-app-user-email-verification
+      author: dev
+      preConditions:
+        - onFail: MARK_RAN
+        - tableExists:
+            tableName: app_user
+        - not:
+            - columnExists:
+                tableName: app_user
+                columnName: enabled
+      changes:
+        - addColumn:
+            tableName: app_user
+            columns:
+              - column:
+                  name: enabled
+                  type: BOOLEAN
+                  defaultValueBoolean: true
+                  constraints:
+                    nullable: false
+              - column:
+                  name: verification_token
+                  type: VARCHAR(255)
+              - column:
+                  name: token_expiry
+                  type: TIMESTAMP
