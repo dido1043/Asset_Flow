@@ -5,7 +5,9 @@ import lombok.RequiredArgsConstructor;
 import org.af.assetflowapi.data.dto.UserDto;
 import org.af.assetflowapi.data.dto.auth.LoginUserDto;
 import org.af.assetflowapi.data.dto.auth.OAuthCodeExchangeRequest;
+import org.af.assetflowapi.data.dto.auth.ResendVerificationRequest;
 import org.af.assetflowapi.data.dto.response.LoginResponse;
+import org.af.assetflowapi.data.dto.response.MessageResponse;
 import org.af.assetflowapi.data.model.User;
 import org.af.assetflowapi.service.AuthorizationService;
 import org.af.assetflowapi.service.auth.AuthenticationService;
@@ -60,8 +62,27 @@ public class AuthenticationController {
     }
 
     @PostMapping("/register")
-    public ResponseEntity<UserDto> register(@RequestBody UserDto user) {
-        return ResponseEntity.status(201).body(authenticationService.register(user));
+    public ResponseEntity<MessageResponse> register(@RequestBody UserDto user) {
+        authenticationService.register(user);
+        return ResponseEntity.status(201).body(MessageResponse.of(
+                "Registration successful. Check your inbox for a verification link."
+        ));
+    }
+
+    @GetMapping("/verify-email")
+    public ResponseEntity<MessageResponse> verifyEmail(@RequestParam("token") String token) {
+        authenticationService.verifyEmail(token);
+        return ResponseEntity.ok(MessageResponse.of(
+                "Email verified. You can now sign in."
+        ));
+    }
+
+    @PostMapping("/resend-verification")
+    public ResponseEntity<MessageResponse> resendVerification(@RequestBody ResendVerificationRequest request) {
+        authenticationService.resendVerification(request.getEmail());
+        return ResponseEntity.ok(MessageResponse.of(
+                "If an unverified account exists for that email, a new link has been sent."
+        ));
     }
 
     @PostMapping("/login")

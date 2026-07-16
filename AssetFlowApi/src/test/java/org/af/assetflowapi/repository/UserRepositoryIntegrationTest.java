@@ -6,9 +6,13 @@ import org.af.assetflowapi.data.model.User;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
+import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -32,6 +36,26 @@ class UserRepositoryIntegrationTest extends RepositoryIntegrationTestBase {
 
         assertNotNull(found);
         assertEquals("User One", found.getFullName());
+    }
+
+    @Test
+    void findByVerificationToken_returnsUser_andPersistsVerificationFields() {
+        String token = UUID.randomUUID().toString();
+        User user = new User();
+        user.setFullName("Verify Me");
+        user.setEmail("verify@example.com");
+        user.setRole(RoleEnum.EMPLOYEE);
+        user.setEnabled(false);
+        user.setVerificationToken(token);
+        user.setTokenExpiry(Instant.now().plus(1, ChronoUnit.HOURS));
+        userRepository.saveAndFlush(user);
+
+        User found = userRepository.findByVerificationToken(token).orElse(null);
+
+        assertNotNull(found);
+        assertEquals("verify@example.com", found.getEmail());
+        assertFalse(found.isEnabled());
+        assertNotNull(found.getTokenExpiry());
     }
 
     @Test

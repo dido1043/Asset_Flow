@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 
 import { apiRequest, buildApiUrl, getErrorMessage } from "@/app/lib/api";
 import { useTranslations } from "@/app/lib/i18n";
@@ -28,7 +27,6 @@ interface RegisterFormData {
 }
 
 const RegisterForm = () => {
-  const router = useRouter();
   const { t } = useTranslations();
   const [formData, setFormData] = useState<RegisterFormData>({
     fullName: "",
@@ -163,15 +161,12 @@ const RegisterForm = () => {
     setSuccess(false);
 
     try {
-      await apiRequest<UserDto>("/auth/register", {
+      await apiRequest<{ message: string }>("/auth/register", {
         method: "POST",
         auth: false,
         json: buildPayload(),
       });
       setSuccess(true);
-      window.setTimeout(() => {
-        router.push("/user/login");
-      }, 1200);
     } catch (submitError: unknown) {
       const message = getErrorMessage(submitError) || t("registerForm.errorFallback");
       setError(message);
@@ -365,11 +360,10 @@ const RegisterForm = () => {
         </p>
       ) : null}
       {success ? (
-        <p
-          className="mt-4 rounded-2xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-sm text-emerald-700"
-        >
-          {t("registerForm.success")}
-        </p>
+        <div className="mt-4 rounded-2xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+          <p className="font-semibold">{t("registerForm.successTitle")}</p>
+          <p className="mt-1">{t("registerForm.successBody")}</p>
+        </div>
       ) : null}
     </div>
   );

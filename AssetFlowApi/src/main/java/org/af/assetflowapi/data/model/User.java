@@ -9,6 +9,7 @@ import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
+import java.time.Instant;
 import java.util.Collection;
 import java.util.List;
 
@@ -47,6 +48,15 @@ public class User implements UserDetails {
     @JoinColumn(name = "organization_id", nullable = true)
     private Organization organization;
 
+    @Column(name = "enabled", nullable = false)
+    private boolean enabled = false;
+
+    @Column(name = "verification_token")
+    private String verificationToken;
+
+    @Column(name = "token_expiry")
+    private Instant tokenExpiry;
+
     // Employee-specific: assignments
     @OneToMany(mappedBy = "employee", cascade = CascadeType.ALL)
     @JsonIgnore
@@ -77,10 +87,5 @@ public class User implements UserDetails {
     @Override
     public boolean isCredentialsNonExpired() {
         return UserDetails.super.isCredentialsNonExpired();
-    }
-
-    @Override
-    public boolean isEnabled() {
-        return UserDetails.super.isEnabled();
     }
 }

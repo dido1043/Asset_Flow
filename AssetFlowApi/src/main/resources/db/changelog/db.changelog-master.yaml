@@ -15,4 +15,6 @@ databaseChangeLog:
       file: db/changelog/changesets/0007_add_protocol_type.yaml
   - include:
       file: db/changelog/changesets/0008_unique_active_assignment_per_product.yaml
+  - include:
+      file: db/changelog/changesets/0009_user_email_verification.yaml
 

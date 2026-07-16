@@ -9,4 +9,5 @@ import java.util.List;
 public interface UserRepository extends JpaRepository<User, Long> {
     Optional<User> findByEmail(String email);
     Optional<List<User>> findByOrganizationId(Long organizationId);
+    Optional<User> findByVerificationToken(String verificationToken);
 }
